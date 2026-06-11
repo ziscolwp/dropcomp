@@ -589,18 +589,43 @@ function setThumbFromActiveComp(libraryPath, category, uniqueId) {
 }
 
 // ---------- relink missing footage ----------
-// filename -> full path map of every file in the library tree
+function relinkBaseName(p) {
+    var s = String(p).replace(/\\/g, '/');
+    return s.substring(s.lastIndexOf('/') + 1);
+}
+
+// URI-decode + lowercase so encoding/case differences never block a match
+function relinkNormName(n) {
+    var s = String(n);
+    try { s = decodeURI(s); } catch (e) { }
+    return s.toLowerCase();
+}
+
+// normalized filename -> full path map of every file under a root
 // (library/category/item/(Footage) is depth 3; cap at 5 for safety)
 function collectFilesRecursive(folder, map, depth) {
     if (depth > 5) return;
     var items = folder.getFiles();
     for (var i = 0; i < items.length; i++) {
         if (items[i] instanceof File) {
-            if (!map[items[i].name]) map[items[i].name] = items[i].fsName;
+            var key = relinkNormName(items[i].name);
+            if (!map[key]) map[key] = items[i].fsName;
         } else if (items[i] instanceof Folder) {
             collectFilesRecursive(items[i], map, depth + 1);
         }
     }
+}
+
+// missingFootagePath survives placeholder conversion; mainSource.file may not
+function missingSourcePath(item) {
+    var p = null;
+    try { p = item.missingFootagePath; } catch (e) { }
+    if (!p) {
+        try {
+            if (item.mainSource && item.mainSource.file) p = item.mainSource.file.fsName;
+        } catch (e2) { }
+    }
+    return p;
 }
 
 function relinkMissingFootage(libraryPath) {
@@ -610,34 +635,46 @@ function relinkMissingFootage(libraryPath) {
         var i;
         for (i = 1; i <= app.project.numItems; i++) {
             var item = app.project.item(i);
-            if (item instanceof FootageItem && item.mainSource && item.mainSource.file &&
-                (item.footageMissing || !item.mainSource.file.exists)) {
+            if (item instanceof FootageItem && item.footageMissing) {
                 missing.push(item);
             }
         }
-        if (missing.length === 0) return '{"ok":true,"missing":0,"relinked":0}';
+        if (missing.length === 0) {
+            return JSON.stringify({ ok: true, missing: 0, relinked: 0, notFound: [] });
+        }
 
         var map = {};
         var lib = new Folder(libraryPath);
-        if (!lib.exists) return jerr('Library folder not found.');
-        collectFilesRecursive(lib, map, 0);
+        if (lib.exists) collectFilesRecursive(lib, map, 0);
+        if (app.project.file && app.project.file.parent) {
+            collectFilesRecursive(app.project.file.parent, map, 0);
+        }
 
         var relinked = 0;
+        var notFound = [];
         for (i = 0; i < missing.length; i++) {
-            var found = map[missing[i].mainSource.file.name];
-            if (!found) continue;
+            var srcPath = missingSourcePath(missing[i]);
+            var nm = srcPath ? relinkBaseName(srcPath) : String(missing[i].name);
+            var found = map[relinkNormName(nm)];
+            if (!found) {
+                notFound.push(nm);
+                continue;
+            }
             try {
-                var isSequenceImage = !missing[i].mainSource.isStill &&
-                    /\.(png|jpe?g|tiff?|exr|dpx|tga)$/i.test(missing[i].mainSource.file.name);
+                var isSequenceImage = missing[i].mainSource &&
+                    missing[i].mainSource.isStill === false &&
+                    /\.(png|jpe?g|tiff?|exr|dpx|tga)$/i.test(nm);
                 if (isSequenceImage) {
                     missing[i].replaceWithSequence(new File(found), false);
                 } else {
                     missing[i].replace(new File(found));
                 }
                 relinked++;
-            } catch (e2) { }
+            } catch (e3) {
+                notFound.push(nm);
+            }
         }
-        return '{"ok":true,"missing":' + missing.length + ',"relinked":' + relinked + '}';
+        return JSON.stringify({ ok: true, missing: missing.length, relinked: relinked, notFound: notFound });
     } catch (e) {
         return jerr(e.toString());
     }

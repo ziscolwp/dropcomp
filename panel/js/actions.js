@@ -14,11 +14,11 @@ var DCActions = (function () {
   var deleteTarget = null;
   var toastTimer = null;
 
-  function toast(msg, isErr) {
+  function toast(msg, isErr, ms) {
     if (toastTimer) clearTimeout(toastTimer);
     els.toast.textContent = String(msg).replace(/^(Success!|Success:|Error:)\s*/, '');
     els.toast.className = 'show ' + (isErr ? 'error' : 'success');
-    toastTimer = setTimeout(function () { els.toast.classList.remove('show'); }, 3000);
+    toastTimer = setTimeout(function () { els.toast.classList.remove('show'); }, ms || 3000);
   }
   function spinner(show) { els.spinner.classList.toggle('hidden', !show); }
   function show(elName) {
@@ -370,9 +370,14 @@ var DCActions = (function () {
         if (r.missing === 0) {
           toast('No missing footage in this project.', false);
         } else if (r.relinked === r.missing) {
-          toast('Relinked all ' + r.relinked + ' missing file' + (r.relinked === 1 ? '' : 's') + '. Save your project.', false);
+          toast('Relinked all ' + r.relinked + ' missing file' + (r.relinked === 1 ? '' : 's') + '. Save your project.', false, 5000);
         } else {
-          toast('Relinked ' + r.relinked + ' of ' + r.missing + ' - the rest are not in the library.', r.relinked === 0);
+          var names = (r.notFound || []).slice(0, 3).join(', ');
+          var more = (r.notFound || []).length > 3 ? ' +' + (r.notFound.length - 3) + ' more' : '';
+          toast('Relinked ' + r.relinked + ' of ' + r.missing +
+            (r.relinked > 0 ? ' - save your project.' : '.') +
+            (names ? ' Not found: ' + names + more : ''), r.relinked === 0, 7000);
+          console.warn('DropComp relink - not found:', r.notFound);
         }
       } else {
         toast((r && r.error) || result, true);
