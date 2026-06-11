@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DropComp</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="welcome-overlay" class="screen hidden">
+  <div class="logo-glyph glyph-big" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+  <h2>DropComp</h2>
+  <p>Pick the folder where your comp library lives (or where it should be created).</p>
+  <button id="welcome-browse-btn" class="btn-gold">Select Library Folder</button>
+</div>
+
+<div id="drive-missing" class="screen hidden">
+  <h2>Library not found</h2>
+  <p id="drive-missing-path" class="mono"></p>
+  <p>Connect the drive, or choose a different folder.</p>
+  <div class="row gap">
+    <button id="retry-library-btn" class="btn-dark">Retry</button>
+    <button id="missing-change-path-btn" class="btn-gold">Change Folder</button>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <header id="app-header">
+    <div class="logo-glyph" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+    <span class="app-name">DropComp</span>
+    <span class="app-version">2.0</span>
+    <div class="spacer"></div>
+    <button id="settings-btn" class="icon-btn" title="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    </button>
+  </header>
+
+  <nav id="tabs">
+    <button class="tab active" id="tab-library">Library</button>
+    <button class="tab" id="tab-assets" title="Coming in 2.1" disabled>Assets · soon</button>
+  </nav>
+
+  <div id="toolbar">
+    <div class="row gap">
+      <input type="text" id="search-input" placeholder="Search library...">
+      <select id="sort-select" title="Sort by">
+        <option value="recent">Recently used</option>
+        <option value="mostUsed">Most used</option>
+        <option value="name">Name</option>
+        <option value="dateAdded">Date added</option>
+      </select>
+      <button id="favorites-btn" class="icon-btn" title="Favorites only">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+      </button>
+      <div id="display-menu-wrap">
+        <button id="display-btn" class="icon-btn" title="Display options">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+        </button>
+        <div id="display-menu" class="hidden">
+          <label><input type="checkbox" id="show-names-cb" checked> Show names</label>
+          <label><input type="checkbox" id="show-meta-cb" checked> Show info</label>
+        </div>
+      </div>
+    </div>
+    <div class="row gap">
+      <button id="add-comp-btn" class="btn-gold grow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        <span>Add Selected Comp</span>
+      </button>
+      <button id="add-aep-btn" class="btn-dark icon-btn" title="Add .aep from disk">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><polyline points="9 15 12 12 15 15"></polyline></svg>
+      </button>
+      <input type="range" id="thumb-slider" min="90" max="240" step="10" title="Thumbnail size">
+    </div>
+  </div>
+
+  <main id="library"></main>
+</div>
+
+<div id="category-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3 id="category-modal-title">Add Composition</h3>
+    <div class="form-group">
+      <label for="existing-category-select">Existing category:</label>
+      <select id="existing-category-select"></select>
+    </div>
+    <div class="form-group">
+      <label for="new-category-input">Or create new:</label>
+      <input type="text" id="new-category-input" placeholder="e.g. Titles, Lower Thirds...">
+    </div>
+    <div class="modal-buttons">
+      <button class="btn-dark" id="cancel-category-btn">Cancel</button>
+      <button class="btn-gold" id="confirm-category-btn">Add</button>
+    </div>
+  </div>
+</div>
+
+<div id="rename-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3>Rename Item</h3>
+    <div class="form-group">
+      <label for="new-name-input">New name:</label>
+      <input type="text" id="new-name-input" placeholder="Enter new name...">
+    </div>
+    <p class="hint">The folder on disk is renamed to match.</p>
+    <div class="modal-buttons">
+      <button class="btn-dark" id="cancel-rename-btn">Cancel</button>
+      <button class="btn-gold" id="confirm-rename-btn">Rename</button>
+    </div>
+  </div>
+</div>
+
+<div id="delete-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3>Delete Item</h3>
+    <p>Delete "<span id="delete-name"></span>" from your library? This cannot be undone.</p>
+    <div class="modal-buttons">
+      <button class="btn-dark" id="cancel-delete-btn">Cancel</button>
+      <button class="btn-danger" id="confirm-delete-btn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="settings-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3>Settings</h3>
+    <div class="form-group">
+      <label>Library folder:</label>
+      <p id="settings-path" class="mono"></p>
+    </div>
+    <div class="modal-buttons stack">
+      <button class="btn-dark" id="open-finder-btn">Open Library in Finder</button>
+      <button class="btn-dark" id="refresh-library-btn">Refresh Library</button>
+      <button class="btn-dark" id="change-path-btn">Change Folder</button>
+      <button class="btn-gold" id="close-settings-btn">Close</button>
+    </div>
+    <p class="hint">DropComp 2.0.0</p>
+  </div>
+</div>
+
+<div id="loading-spinner" class="hidden"></div>
+<div id="toast"></div>
+
+<script src="js/CSInterface.js"></script>
+<script src="js/validate.js"></script>
+<script src="js/state.js"></script>
+<script src="js/bridge.js"></script>
+<script src="js/render.js"></script>
+<script src="js/actions.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
