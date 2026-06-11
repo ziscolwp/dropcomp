@@ -2044,8 +2044,10 @@ git commit -m "docs: assets tab in README, tick plan"
 
 ### Task 10: Review + merge
 
-- [ ] **Step 1: Use superpowers:requesting-code-review** on the full branch range (base = main), fix Critical/Important findings.
-- [ ] **Step 2: Use superpowers:finishing-a-development-branch** to merge `feature/assets-tab` into `main` and delete the branch.
+- [x] **Step 1: Use superpowers:requesting-code-review** on the full branch range (base = main), fix Critical/Important findings.
+  Verdict: ready with fixes; refactor confirmed behavior-preserving. Fixed: host-error masking in assets load/refresh (false "refreshed" toast), cross-tab render race (load finishing after tab switch painted wrong card kind), stale cached data on drive-missing Retry, busy-toast on load, dot-files skip-reported on add, stale-index dedupe on re-add, ghost-entry delete, zero-valid-files message with format list, asset thumb cache-bust, version bump 2.1.0, settings button label. Host fixes re-verified live in the AE engine.
+  Deferred (recorded): case-only rename fails on APFS (parity with comp rename); DCValidate accepts ".." as category (pre-existing, self-inflicted-only); comp usage still increments before import (pre-existing).
+- [x] **Step 2: Use superpowers:finishing-a-development-branch** to merge `feature/assets-tab` into `main` and delete the branch.
 
 ---
 
