@@ -36,7 +36,7 @@ test('loadHostModules verifies the exports actually landed before reporting ok',
 // relink helpers called by hostscript must all exist in relink.jsx - guards
 // against renaming a helper in one file but not the other.
 test('relink functions referenced by hostscript.jsx are defined in relink.jsx', () => {
-  const used = ['collectMissingFootage', 'collectFilesRecursive', 'relinkItems', 'relinkProjectFootage'];
+  const used = ['collectMissingFootage', 'collectFilesRecursive', 'relinkItems', 'relinkProjectFootage', 'absorbHealedFootage'];
   for (const name of used) {
     assert.ok(hostSrc.includes(name + '('), `expected hostscript.jsx to call ${name}`);
     assert.match(relinkSrc, new RegExp(`^function\\s+${name}\\s*\\(`, 'm'), `${name} missing from relink.jsx`);

@@ -44,6 +44,7 @@ function missingSourcePath(item) {
 function relinkItems(items, map) {
     var relinked = 0;
     var notFound = [];
+    var healed = [];
     for (var i = 0; i < items.length; i++) {
         var srcPath = missingSourcePath(items[i]);
         var nm = srcPath ? relinkBaseName(srcPath) : String(items[i].name);
@@ -62,11 +63,39 @@ function relinkItems(items, map) {
                 items[i].replace(new File(found));
             }
             relinked++;
+            healed.push(items[i]);
         } catch (e3) {
             notFound.push(nm);
         }
     }
-    return { relinked: relinked, notFound: notFound };
+    return { relinked: relinked, notFound: notFound, healed: healed };
+}
+
+// After a heal resolved files from outside this item's folder, copy them into
+// the item's (Footage) folder and re-point the imported items at the copies.
+// The library item becomes self-contained, so the next import heals instantly
+// from the local folder scan instead of re-searching the whole library.
+function absorbHealedFootage(healedItems, itemFolderPath) {
+    var absorbed = 0;
+    if (!healedItems.length) return 0;
+    var footageFolder = new Folder(itemFolderPath + '/(Footage)');
+    if (!footageFolder.exists && !footageFolder.create()) return 0;
+    for (var i = 0; i < healedItems.length; i++) {
+        try {
+            var it = healedItems[i];
+            if (!(it.mainSource && it.mainSource.file)) continue;
+            var src = it.mainSource.file;
+            var fp = src.fsName;
+            if (fp.indexOf(itemFolderPath + '/') === 0 || fp.indexOf(itemFolderPath + '\\') === 0) continue;
+            // image sequences are relinked in place only: copying one frame would break the sequence
+            if (it.mainSource.isStill === false && /\.(png|jpe?g|tiff?|exr|dpx|tga)$/i.test(src.name)) continue;
+            var dest = new File(footageFolder.fsName + '/' + src.name);
+            if (!dest.exists && !src.copy(dest)) continue;
+            it.replace(dest);
+            absorbed++;
+        } catch (e) { }
+    }
+    return absorbed;
 }
 
 // missing FootageItems inside one imported folder subtree
@@ -132,6 +161,7 @@ $.global.relinkNormName = relinkNormName;
 $.global.collectFilesRecursive = collectFilesRecursive;
 $.global.missingSourcePath = missingSourcePath;
 $.global.relinkItems = relinkItems;
+$.global.absorbHealedFootage = absorbHealedFootage;
 $.global.collectMissingFootage = collectMissingFootage;
 $.global.relinkMissingFootage = relinkMissingFootage;
 $.global.relinkProjectFootage = relinkProjectFootage;

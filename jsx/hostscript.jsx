@@ -279,14 +279,16 @@ function importComp(aepPath) {
         // self-heal: the saved aep keeps absolute footage paths that break when
         // the item folder is renamed or the library moves - relink on every import
         var stillMissing = 0;
+        var absorbed = 0;
         if (ensureHostModules()) {
             var missingInImport = [];
             collectMissingFootage(importedFolder, missingInImport);
             if (missingInImport.length) {
                 var localMap = {};
                 collectFilesRecursive(fileToImport.parent, localMap, 0);
-                var healed = relinkItems(missingInImport, localMap);
-                if (healed.notFound.length) {
+                var localHeal = relinkItems(missingInImport, localMap);
+                var healedItems = localHeal.healed;
+                if (localHeal.notFound.length) {
                     var libRoot = null;
                     try { libRoot = fileToImport.parent.parent.parent; } catch (eL) { }
                     if (libRoot && libRoot.exists) {
@@ -294,9 +296,13 @@ function importComp(aepPath) {
                         collectFilesRecursive(libRoot, libMap, 0);
                         var leftovers = [];
                         collectMissingFootage(importedFolder, leftovers);
-                        relinkItems(leftovers, libMap);
+                        var libHeal = relinkItems(leftovers, libMap);
+                        healedItems = healedItems.concat(libHeal.healed);
                     }
                 }
+                // copy the found files into this item's (Footage) folder so the
+                // next import resolves locally instead of re-searching the library
+                absorbed = absorbHealedFootage(healedItems, fileToImport.parent.fsName);
                 var finalCheck = [];
                 collectMissingFootage(importedFolder, finalCheck);
                 stillMissing = finalCheck.length;
@@ -329,10 +335,13 @@ function importComp(aepPath) {
         var missingNote = stillMissing
             ? ' Warning: ' + stillMissing + ' asset' + (stillMissing === 1 ? '' : 's') + ' missing (not in library).'
             : '';
+        var healNote = absorbed
+            ? ' ' + absorbed + ' relinked file' + (absorbed === 1 ? '' : 's') + ' saved into the library item.'
+            : '';
         if (mainComp) {
-            return "Success: '" + compName + "' imported" + (addedToTimeline ? ' and added to timeline.' : '.') + missingNote;
+            return "Success: '" + compName + "' imported" + (addedToTimeline ? ' and added to timeline.' : '.') + missingNote + healNote;
         }
-        return 'Success: Project imported, but no composition found to add to timeline.' + missingNote;
+        return 'Success: Project imported, but no composition found to add to timeline.' + missingNote + healNote;
     } catch (e) {
         try { if (suppressing) app.endSuppressDialogs(false); } catch (e2) { }
         return 'Error: ' + e.toString();
