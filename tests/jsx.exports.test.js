@@ -26,17 +26,23 @@ for (const mod of LOADED_MODULES) {
 }
 
 test('loadHostModules verifies the exports actually landed before reporting ok', () => {
-  const fnBody = hostSrc.slice(
-    hostSrc.indexOf('function loadHostModules'),
+  // marker names live in the DC_MODULE_MARKERS array; the loader loop checks each
+  const loaderRegion = hostSrc.slice(
+    hostSrc.indexOf('var DC_MODULE_MARKERS'),
     hostSrc.indexOf('DC_MODULES_LOADED = true;')
   );
   for (const marker of MARKERS) {
     assert.match(
-      fnBody,
+      loaderRegion,
       new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
       `loadHostModules must check ${marker} before setting DC_MODULES_LOADED`
     );
   }
+  assert.match(
+    loaderRegion,
+    /typeof \$\.global\[DC_MODULE_MARKERS\[i\]\] !== 'function'/,
+    'loadHostModules must typeof-check each module marker on $.global'
+  );
 });
 
 // relink helpers called by hostscript must all exist in relink.jsx - guards
