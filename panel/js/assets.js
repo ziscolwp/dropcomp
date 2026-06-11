@@ -21,11 +21,13 @@ var DCAssets = (function () {
   function resetLoaded() { loadedOnce = false; }
 
   function load() {
-    if (!DCBridge.acquire('loading assets')) return;
+    if (!DCBridge.acquire('loading assets')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return; }
     DCUI.spinner(true);
     DCBridge.call('getAssets', [libPath()], function (result) {
       try {
-        allAssets = (result && result !== '[]' && !DCUI.isError(result)) ? JSON.parse(result) : [];
+        // a host error must not masquerade as an empty library
+        if (DCUI.isError(result)) { DCUI.toast(result, true); return; }
+        allAssets = (result && result !== '[]') ? JSON.parse(result) : [];
         loadedOnce = true;
         var r = DCState.cleanupStaleMetadata(usageMeta, allAssets);
         if (r.removed > 0) { usageMeta = r.usageMeta; persistUsage(); }
@@ -44,7 +46,8 @@ var DCAssets = (function () {
     DCUI.spinner(true);
     DCBridge.call('rebuildAssetsIndex', [libPath()], function (result) {
       try {
-        allAssets = (result && result !== '[]' && !DCUI.isError(result)) ? JSON.parse(result) : [];
+        if (DCUI.isError(result)) { DCUI.toast(result, true); return; }
+        allAssets = (result && result !== '[]') ? JSON.parse(result) : [];
         loadedOnce = true;
         rerender();
         DCUI.toast('Assets refreshed.', false);
@@ -58,6 +61,8 @@ var DCAssets = (function () {
   }
 
   function rerender() {
+    // a load finishing after the user switched tabs must not paint over the other tab
+    if (DCShell.getPrefs().activeTab !== 'assets') return;
     var prefs = DCShell.getPrefs();
     var filtered = DCState.filterComps(allAssets, {
       search: els().search.value,
@@ -116,12 +121,16 @@ var DCAssets = (function () {
       DCBridge.release();
       var r = DCBridge.parseJson(result);
       if (r && r.ok) {
+        if (r.added === 0) {
+          DCUI.toast('No supported image files selected (png, jpg, gif, bmp, tif, tga, psd, ai, eps).', true, 6000);
+          return;
+        }
         var msg = r.added + ' asset' + (r.added === 1 ? '' : 's') + ' added.';
         if (r.skipped && r.skipped.length) {
           msg += ' Skipped: ' + r.skipped.slice(0, 3).join(', ') +
             (r.skipped.length > 3 ? ' +' + (r.skipped.length - 3) + ' more' : '');
         }
-        DCUI.toast(msg, r.added === 0, r.skipped && r.skipped.length ? 6000 : 3000);
+        DCUI.toast(msg, false, r.skipped && r.skipped.length ? 6000 : 3000);
         load();
       } else {
         DCUI.toast((r && r.error) || result, true);

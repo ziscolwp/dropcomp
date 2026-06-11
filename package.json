@@ -1,8 +1,8 @@
 {
   "name": "dropcomp",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
-  "description": "DropComp 2.0 - After Effects comp library CEP panel",
+  "description": "DropComp 2.1 - After Effects comp and asset library CEP panel",
   "scripts": {
     "test": "node --test \"tests/**/*.test.js\""
   }

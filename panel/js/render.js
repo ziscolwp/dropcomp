@@ -102,7 +102,8 @@ var DCRender = (function () {
       var img = document.createElement('img');
       img.loading = 'lazy';
       img.alt = '';
-      img.src = thumbUrl(asset.filePath, null);
+      // addedAt changes when the same filename is re-added, busting the stale cache
+      img.src = thumbUrl(asset.filePath, asset.addedAt || null);
       img.onerror = function () { img.style.display = 'none'; };
       thumbWrap.appendChild(img);
     } else {

@@ -117,11 +117,23 @@ function addAssetFiles(libraryPath, categoryName, pathsJson) {
         for (var i = 0; i < paths.length; i++) {
             var src = new File(paths[i]);
             var srcName = decodeURI(src.name);
-            if (!src.exists || !isSupportedAsset(srcName)) { skipped.push(srcName); continue; }
+            // dot-files would be copied but never indexed (assetEntryFromFile skips them)
+            if (!src.exists || srcName.charAt(0) === '.' || !isSupportedAsset(srcName)) {
+                skipped.push(srcName);
+                continue;
+            }
             var target = uniqueAssetTarget(catFolder, srcName);
             if (!target || !src.copy(target)) { skipped.push(srcName); continue; }
             var entry = assetEntryFromFile(categoryName, new File(target.fsName));
-            if (entry) { entry.addedAt = now; assets.push(entry); added++; }
+            if (entry) {
+                entry.addedAt = now;
+                // drop any stale index entry with this id (file was deleted on disk)
+                for (var x = assets.length - 1; x >= 0; x--) {
+                    if (assets[x].uniqueId === entry.uniqueId) assets.splice(x, 1);
+                }
+                assets.push(entry);
+                added++;
+            }
         }
         saveAssetsIndex(libraryPath, assets);
         var skippedJson = [];
@@ -177,8 +189,8 @@ function renameAsset(libraryPath, category, fileName, newName) {
 function deleteAsset(libraryPath, category, fileName) {
     try {
         var file = new File(libraryPath + '/Assets/' + category + '/' + fileName);
-        if (!file.exists) return jerr('Asset not found on disk.');
-        if (!file.remove()) return jerr('Could not delete the file.');
+        // file already gone: still drop the index entry so the ghost card disappears
+        if (file.exists && !file.remove()) return jerr('Could not delete the file.');
         var assets = loadAssetsIndex(libraryPath) || [];
         var out = [];
         var id = category + '/' + fileName;

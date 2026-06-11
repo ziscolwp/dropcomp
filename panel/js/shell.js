@@ -54,6 +54,9 @@ var DCShell = (function () {
     DCBridge.call('checkLibraryPath', [libraryPath], function (status) {
       if (status === 'ok') {
         DCUI.show('app');
+        // boot / retry / folder change all re-read disk, never cached tab data
+        DCLibrary.resetLoaded();
+        if (hasAssets()) DCAssets.resetLoaded();
         setActiveTab(prefs.activeTab, true);
       } else {
         els.driveMissingPath.textContent = libraryPath;
@@ -79,8 +82,6 @@ var DCShell = (function () {
       DCUI.spinner(false);
       if (path && path !== 'null') {
         libraryPath = path;
-        DCLibrary.resetLoaded();
-        if (hasAssets()) DCAssets.resetLoaded();
         verifyAndLoad();
       }
     });

@@ -22,7 +22,7 @@ var DCLibrary = (function () {
   function resetLoaded() { loadedOnce = false; }
 
   function load() {
-    if (!DCBridge.acquire('loading library')) return;
+    if (!DCBridge.acquire('loading library')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return; }
     DCUI.spinner(true);
     DCBridge.call('getStashedComps', [libPath()], function (result) {
       try {
@@ -59,6 +59,8 @@ var DCLibrary = (function () {
   }
 
   function rerender() {
+    // a load finishing after the user switched tabs must not paint over the other tab
+    if (DCShell.getPrefs().activeTab === 'assets' && typeof DCAssets !== 'undefined') return;
     var prefs = DCShell.getPrefs();
     var filtered = DCState.filterComps(allComps, {
       search: els().search.value,
