@@ -4,6 +4,6 @@
   "private": true,
   "description": "DropComp 2.0 - After Effects comp library CEP panel",
   "scripts": {
-    "test": "node --test tests/"
+    "test": "node --test \"tests/**/*.test.js\""
   }
 }
