@@ -439,6 +439,10 @@ function stashSelectedComp(libraryPath, categoryName) {
             source: 'stash'
         });
 
+        // The finally block reopens originalProjectFile from disk, so any edits
+        // made since the user's last manual save must be persisted first.
+        app.project.save();
+
         app.beginUndoGroup('DropComp Stash');
         secretTempAEP = new File(Folder.temp.fsName + '/dropcomp_temp_' + timestamp + '.aep');
         app.project.save(secretTempAEP);
@@ -668,6 +672,13 @@ function setThumbFromActiveComp(libraryPath, category, uniqueId) {
 // ---------- transactional rename ----------
 function renameStashedComp(libraryPath, category, uniqueId, newName) {
     try {
+        // re-check the name host-side (mirrors panel DCValidate; ES3 - no trim())
+        newName = String(newName).replace(/^\s+|\s+$/g, '');
+        if (!newName) return jerr('Name cannot be empty.');
+        if (newName.length > 200) return jerr('Name is too long (max 200 characters).');
+        if (/[<>:"\/\\|?*\x00-\x1F]/.test(newName)) return jerr('Name contains invalid characters (< > : " / \\ | ? *).');
+        if (/^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i.test(newName)) return jerr('Name uses a reserved system name.');
+
         var m = /_(\d{10,})$/.exec(uniqueId);
         if (!m) return jerr('Cannot parse this item id.');
         var safe = safeNameJsx(newName);
@@ -715,7 +726,9 @@ function renameStashedComp(libraryPath, category, uniqueId, newName) {
         });
         if (!patched) rebuildLibraryIndex(libraryPath);
 
-        relinkProjectFootage(new Folder(catPath + '/' + uniqueId).fsName, folder.fsName);
+        if (ensureHostModules()) {
+            relinkProjectFootage(new Folder(catPath + '/' + uniqueId).fsName, folder.fsName);
+        }
 
         return '{"ok":true,"newUniqueId":"' + jsonEscape(newUniqueId) + '"}';
     } catch (e) {
