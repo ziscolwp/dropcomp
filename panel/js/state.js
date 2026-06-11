@@ -28,7 +28,54 @@ var DCState = (function () {
     return comp.addedAt || parseTimestamp(comp.uniqueId) || 0;
   }
 
+  function getUsage(usageMeta, uniqueId) {
+    return (usageMeta && usageMeta[uniqueId]) || { lastUsed: 0, useCount: 0, isFavorite: false };
+  }
+
+  function byName(a, b) { return a.name.localeCompare(b.name); }
+
+  function sortComps(comps, mode, usageMeta) {
+    var arr = comps.slice();
+    if (mode === 'recent') {
+      arr.sort(function (a, b) {
+        return (getUsage(usageMeta, b.uniqueId).lastUsed - getUsage(usageMeta, a.uniqueId).lastUsed) || byName(a, b);
+      });
+    } else if (mode === 'mostUsed') {
+      arr.sort(function (a, b) {
+        return (getUsage(usageMeta, b.uniqueId).useCount - getUsage(usageMeta, a.uniqueId).useCount) || byName(a, b);
+      });
+    } else if (mode === 'dateAdded') {
+      arr.sort(function (a, b) { return (addedAt(b) - addedAt(a)) || byName(a, b); });
+    } else {
+      arr.sort(byName);
+    }
+    return arr;
+  }
+
+  function filterComps(comps, opts) {
+    var search = (opts.search || '').toLowerCase();
+    return comps.filter(function (c) {
+      if (search && c.name.toLowerCase().indexOf(search) === -1) return false;
+      if (opts.favoritesOnly && !getUsage(opts.usageMeta, c.uniqueId).isFavorite) return false;
+      return true;
+    });
+  }
+
+  function groupByCategory(comps) {
+    var map = {};
+    comps.forEach(function (c) {
+      if (!map[c.category]) map[c.category] = [];
+      map[c.category].push(c);
+    });
+    return Object.keys(map).sort(function (a, b) { return a.localeCompare(b); })
+      .map(function (cat) { return { category: cat, items: map[cat] }; });
+  }
+
   return {
+    getUsage: getUsage,
+    sortComps: sortComps,
+    filterComps: filterComps,
+    groupByCategory: groupByCategory,
     safeName: safeName,
     parseTimestamp: parseTimestamp,
     computeRenameTarget: computeRenameTarget,
