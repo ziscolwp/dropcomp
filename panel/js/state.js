@@ -71,7 +71,71 @@ var DCState = (function () {
       .map(function (cat) { return { category: cat, items: map[cat] }; });
   }
 
+  var PREFS_KEY = 'dropcomp_prefs';
+  var USAGE_KEY = 'dropcomp_metadata';
+
+  function defaultPrefs() {
+    return { thumbMin: 130, sort: 'recent', showNames: true, showMeta: true, favoritesOnly: false, collapsed: [] };
+  }
+
+  function loadPrefs(storage) {
+    var prefs = defaultPrefs();
+    try {
+      var raw = storage.getItem(PREFS_KEY);
+      if (raw) {
+        var saved = JSON.parse(raw);
+        Object.keys(prefs).forEach(function (k) {
+          if (saved[k] !== undefined) prefs[k] = saved[k];
+        });
+        return prefs;
+      }
+      if (storage.getItem('dropcomp_density') === 'compact') prefs.thumbMin = 100;
+      storage.removeItem('dropcomp_view');
+      storage.removeItem('dropcomp_density');
+    } catch (e) { return defaultPrefs(); }
+    return prefs;
+  }
+
+  function savePrefs(storage, prefs) {
+    try { storage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (e) {}
+  }
+
+  function loadUsageMeta(storage) {
+    try { return JSON.parse(storage.getItem(USAGE_KEY)) || {}; } catch (e) { return {}; }
+  }
+
+  function saveUsageMeta(storage, meta) {
+    try { storage.setItem(USAGE_KEY, JSON.stringify(meta)); } catch (e) {}
+  }
+
+  function cleanupStaleMetadata(usageMeta, comps) {
+    var valid = {};
+    comps.forEach(function (c) { valid[c.uniqueId] = true; });
+    var cleaned = {};
+    var removed = 0;
+    Object.keys(usageMeta).forEach(function (k) {
+      if (valid[k]) cleaned[k] = usageMeta[k];
+      else removed++;
+    });
+    return { usageMeta: cleaned, removed: removed };
+  }
+
+  function migrateMetadataKey(usageMeta, oldId, newId) {
+    if (oldId !== newId && usageMeta[oldId]) {
+      usageMeta[newId] = usageMeta[oldId];
+      delete usageMeta[oldId];
+    }
+    return usageMeta;
+  }
+
   return {
+    defaultPrefs: defaultPrefs,
+    loadPrefs: loadPrefs,
+    savePrefs: savePrefs,
+    loadUsageMeta: loadUsageMeta,
+    saveUsageMeta: saveUsageMeta,
+    cleanupStaleMetadata: cleanupStaleMetadata,
+    migrateMetadataKey: migrateMetadataKey,
     getUsage: getUsage,
     sortComps: sortComps,
     filterComps: filterComps,
