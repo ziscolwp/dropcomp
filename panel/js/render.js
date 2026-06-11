@@ -39,7 +39,10 @@ var DCRender = (function () {
       var img = document.createElement('img');
       img.loading = 'lazy';
       img.alt = '';
-      img.src = 'file:///' + String(comp.thumbPath).replace(/\\/g, '/') + (bust ? '?t=' + bust : '');
+      // encodeURI leaves # and ? alone, but either would truncate a file:// URL
+      var thumbUrl = encodeURI(String(comp.thumbPath).replace(/\\/g, '/'))
+        .replace(/#/g, '%23').replace(/\?/g, '%3F');
+      img.src = 'file:///' + thumbUrl + (bust ? '?t=' + bust : '');
       img.onerror = function () { img.style.display = 'none'; };
       thumbWrap.appendChild(img);
     } else {

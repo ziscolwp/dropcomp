@@ -26,7 +26,10 @@ var DCActions = (function () {
       els[k].classList.toggle('hidden', k !== elName);
     });
   }
-  function isError(result) { return typeof result === 'string' && result.indexOf('Error') === 0; }
+  function isError(result) {
+    return typeof result === 'string' &&
+      (result.indexOf('Error') === 0 || result.indexOf('EvalScript error') === 0);
+  }
 
   function init(elements) {
     els = elements;
