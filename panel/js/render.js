@@ -28,6 +28,13 @@ var DCRender = (function () {
     return b;
   }
 
+  // encodeURI leaves # and ? alone, but either would truncate a file:// URL
+  function thumbUrl(path, bust) {
+    var encoded = encodeURI(String(path).replace(/\\/g, '/'))
+      .replace(/#/g, '%23').replace(/\?/g, '%3F');
+    return 'file:///' + encoded + (bust ? '?t=' + bust : '');
+  }
+
   function buildCard(comp, usage, prefs, bust) {
     var card = el('article', 'card' + (usage.isFavorite ? ' has-fav' : ''));
     card.dataset.uniqueId = comp.uniqueId;
@@ -39,10 +46,7 @@ var DCRender = (function () {
       var img = document.createElement('img');
       img.loading = 'lazy';
       img.alt = '';
-      // encodeURI leaves # and ? alone, but either would truncate a file:// URL
-      var thumbUrl = encodeURI(String(comp.thumbPath).replace(/\\/g, '/'))
-        .replace(/#/g, '%23').replace(/\?/g, '%3F');
-      img.src = 'file:///' + thumbUrl + (bust ? '?t=' + bust : '');
+      img.src = thumbUrl(comp.thumbPath, bust);
       img.onerror = function () { img.style.display = 'none'; };
       thumbWrap.appendChild(img);
     } else {
@@ -85,8 +89,59 @@ var DCRender = (function () {
     return card;
   }
 
-  function buildSection(group, prefs, usageMeta, busts) {
-    var collapsed = prefs.collapsed.indexOf(group.category) !== -1;
+  var RENDERABLE_EXTS = { png: 1, jpg: 1, jpeg: 1, gif: 1, bmp: 1 };
+
+  function buildAssetCard(asset, usage, prefs) {
+    var card = el('article', 'card card--asset' + (usage.isFavorite ? ' has-fav' : ''));
+    card.dataset.uniqueId = asset.uniqueId;
+    card.dataset.category = asset.category;
+    card.title = asset.name + '\nDouble-click to import';
+
+    var thumbWrap = el('div', 'card-thumb');
+    if (RENDERABLE_EXTS[asset.ext]) {
+      var img = document.createElement('img');
+      img.loading = 'lazy';
+      img.alt = '';
+      img.src = thumbUrl(asset.filePath, null);
+      img.onerror = function () { img.style.display = 'none'; };
+      thumbWrap.appendChild(img);
+    } else {
+      var ph = el('div', 'thumb-placeholder');
+      ph.appendChild(el('span', 'ext-badge', String(asset.ext || '?').toUpperCase()));
+      thumbWrap.appendChild(ph);
+    }
+
+    var actions = el('div', 'card-actions');
+    actions.appendChild(iconBtn('favorite', 'Favorite',
+      usage.isFavorite ? ICONS.starFilled : ICONS.star,
+      usage.isFavorite ? 'fav-on' : ''));
+    actions.appendChild(iconBtn('rename', 'Rename', ICONS.pencil));
+    actions.appendChild(iconBtn('reveal', 'Reveal in Finder', ICONS.folder));
+    actions.appendChild(iconBtn('delete', 'Delete', ICONS.trash));
+    thumbWrap.appendChild(actions);
+
+    var importBar = el('button', 'import-bar');
+    importBar.dataset.action = 'import';
+    importBar.innerHTML = ICONS.download;
+    importBar.appendChild(el('span', null, 'Import'));
+    thumbWrap.appendChild(importBar);
+    card.appendChild(thumbWrap);
+
+    if (prefs.showNames || prefs.showMeta) {
+      var info = el('div', 'card-info');
+      if (prefs.showNames) info.appendChild(el('div', 'card-name', asset.name));
+      if (prefs.showMeta) {
+        var meta = DCState.formatAssetMetaLine(asset);
+        if (meta) info.appendChild(el('div', 'card-meta', meta));
+      }
+      if (info.childNodes.length) card.appendChild(info);
+    }
+    return card;
+  }
+
+  function buildSection(group, prefs, usageMeta, busts, kind) {
+    var collapsedList = kind === 'asset' ? prefs.collapsedAssets : prefs.collapsed;
+    var collapsed = collapsedList.indexOf(group.category) !== -1;
     var section = el('section', 'category' + (collapsed ? ' collapsed' : ''));
     section.dataset.category = group.category;
 
@@ -98,21 +153,24 @@ var DCRender = (function () {
     section.appendChild(header);
 
     var grid = el('div', 'grid');
-    group.items.forEach(function (comp) {
-      grid.appendChild(buildCard(comp, DCState.getUsage(usageMeta, comp.uniqueId), prefs, busts[comp.uniqueId]));
+    group.items.forEach(function (item) {
+      var usage = DCState.getUsage(usageMeta, item.uniqueId);
+      grid.appendChild(kind === 'asset'
+        ? buildAssetCard(item, usage, prefs)
+        : buildCard(item, usage, prefs, busts[item.uniqueId]));
     });
     section.appendChild(grid);
     return section;
   }
 
-  function render(container, groups, prefs, usageMeta, busts, emptyMessage) {
+  function render(container, groups, prefs, usageMeta, busts, emptyMessage, kind) {
     container.innerHTML = '';
     if (groups.length === 0) {
       container.appendChild(el('div', 'placeholder', emptyMessage));
       return;
     }
     groups.forEach(function (g) {
-      container.appendChild(buildSection(g, prefs, usageMeta, busts));
+      container.appendChild(buildSection(g, prefs, usageMeta, busts, kind));
     });
   }
 
