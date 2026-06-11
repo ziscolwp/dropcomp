@@ -12,6 +12,8 @@
     driveMissingPath: $('drive-missing-path'),
     app: $('app'),
     library: $('library'),
+    tabLibrary: $('tab-library'),
+    tabAssets: $('tab-assets'),
     search: $('search-input'),
     sortSelect: $('sort-select'),
     favoritesBtn: $('favorites-btn'),
@@ -21,6 +23,7 @@
     showMetaCb: $('show-meta-cb'),
     addCompBtn: $('add-comp-btn'),
     addAepBtn: $('add-aep-btn'),
+    addAssetsBtn: $('add-assets-btn'),
     thumbSlider: $('thumb-slider'),
     settingsBtn: $('settings-btn'),
     categoryModal: $('category-modal'),
@@ -37,22 +40,31 @@
     toast: $('toast')
   };
 
-  DCActions.init(els);
+  DCUI.init(els);
+  DCShell.init(els);
+  DCLibrary.init();
+  if (typeof DCAssets !== 'undefined') DCAssets.init();
 
-  $('welcome-browse-btn').addEventListener('click', DCActions.selectLibraryFolder);
-  $('retry-library-btn').addEventListener('click', DCActions.verifyAndLoad);
-  $('missing-change-path-btn').addEventListener('click', DCActions.selectLibraryFolder);
+  $('welcome-browse-btn').addEventListener('click', DCShell.selectLibraryFolder);
+  $('retry-library-btn').addEventListener('click', DCShell.verifyAndLoad);
+  $('missing-change-path-btn').addEventListener('click', DCShell.selectLibraryFolder);
 
-  els.search.addEventListener('input', DCActions.onSearch);
-  els.sortSelect.addEventListener('change', DCActions.onSortChange);
-  els.favoritesBtn.addEventListener('click', DCActions.onFavoritesToggle);
-  $('relink-btn').addEventListener('click', DCActions.relinkMissing);
-  els.showNamesCb.addEventListener('change', DCActions.onDisplayChange);
-  els.showMetaCb.addEventListener('change', DCActions.onDisplayChange);
-  els.thumbSlider.addEventListener('input', DCActions.onSlider);
-  els.addCompBtn.addEventListener('click', DCActions.stashFlow);
-  els.addAepBtn.addEventListener('click', DCActions.addAepFlow);
-  els.settingsBtn.addEventListener('click', DCActions.openSettings);
+  els.tabLibrary.addEventListener('click', function () { DCShell.setActiveTab('library'); });
+  els.tabAssets.addEventListener('click', function () { DCShell.setActiveTab('assets'); });
+
+  els.search.addEventListener('input', DCShell.onSearch);
+  els.sortSelect.addEventListener('change', DCShell.onSortChange);
+  els.favoritesBtn.addEventListener('click', DCShell.onFavoritesToggle);
+  $('relink-btn').addEventListener('click', DCLibrary.relinkMissing);
+  els.showNamesCb.addEventListener('change', DCShell.onDisplayChange);
+  els.showMetaCb.addEventListener('change', DCShell.onDisplayChange);
+  els.thumbSlider.addEventListener('input', DCShell.onSlider);
+  els.addCompBtn.addEventListener('click', DCLibrary.stashFlow);
+  els.addAepBtn.addEventListener('click', DCLibrary.addAepFlow);
+  if (els.addAssetsBtn && typeof DCAssets !== 'undefined') {
+    els.addAssetsBtn.addEventListener('click', DCAssets.addFlow);
+  }
+  els.settingsBtn.addEventListener('click', DCShell.openSettings);
 
   els.displayBtn.addEventListener('click', function (e) {
     e.stopPropagation();
@@ -65,54 +77,46 @@
     }
   });
 
-  $('cancel-category-btn').addEventListener('click', function () { DCActions.closeModal(els.categoryModal); });
-  $('confirm-category-btn').addEventListener('click', DCActions.confirmCategoryModal);
-  $('cancel-rename-btn').addEventListener('click', function () { DCActions.closeModal(els.renameModal); });
-  $('confirm-rename-btn').addEventListener('click', DCActions.confirmRename);
-  $('cancel-delete-btn').addEventListener('click', function () { DCActions.closeModal(els.deleteModal); });
-  $('confirm-delete-btn').addEventListener('click', DCActions.confirmDelete);
-  $('close-settings-btn').addEventListener('click', function () { DCActions.closeModal(els.settingsModal); });
-  $('open-finder-btn').addEventListener('click', DCActions.openLibraryInFinder);
-  $('refresh-library-btn').addEventListener('click', DCActions.refreshLibrary);
-  $('change-path-btn').addEventListener('click', DCActions.changeFolder);
+  $('cancel-category-btn').addEventListener('click', function () { DCUI.closeModal(els.categoryModal); });
+  $('confirm-category-btn').addEventListener('click', DCShell.confirmCategoryModal);
+  $('cancel-rename-btn').addEventListener('click', function () { DCUI.closeModal(els.renameModal); });
+  $('confirm-rename-btn').addEventListener('click', DCShell.confirmRename);
+  $('cancel-delete-btn').addEventListener('click', function () { DCUI.closeModal(els.deleteModal); });
+  $('confirm-delete-btn').addEventListener('click', DCShell.confirmDelete);
+  $('close-settings-btn').addEventListener('click', function () { DCUI.closeModal(els.settingsModal); });
+  $('open-finder-btn').addEventListener('click', DCShell.openLibraryInFinder);
+  $('refresh-library-btn').addEventListener('click', DCShell.refreshActive);
+  $('change-path-btn').addEventListener('click', DCShell.changeFolder);
 
   els.library.addEventListener('click', function (e) {
     var actionEl = e.target.closest('[data-action]');
     if (!actionEl) return;
     var action = actionEl.dataset.action;
     if (action === 'toggleSection') {
-      DCActions.toggleSection(actionEl.closest('.category').dataset.category);
+      DCShell.toggleSection(actionEl.closest('.category').dataset.category);
       return;
     }
     var card = actionEl.closest('.card');
     if (!card) return;
-    var id = card.dataset.uniqueId;
-    var cat = card.dataset.category;
-    if (action === 'import') DCActions.importItem(id);
-    else if (action === 'favorite') DCActions.toggleFavorite(id);
-    else if (action === 'rename') DCActions.renameFlow(id, cat);
-    else if (action === 'delete') DCActions.deleteFlow(id, cat);
-    else if (action === 'generate') DCActions.generateThumb(id, cat);
-    else if (action === 'setThumb') DCActions.setThumb(id, cat);
-    else if (action === 'reveal') DCActions.revealItem(id, cat);
+    DCShell.onCardAction(action, card.dataset.uniqueId, card.dataset.category);
   });
 
   els.library.addEventListener('dblclick', function (e) {
     var card = e.target.closest('.card');
     if (card && !e.target.closest('[data-action]')) {
-      DCActions.importItem(card.dataset.uniqueId);
+      DCShell.onCardDblClick(card.dataset.uniqueId);
     }
   });
 
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') DCActions.closeAllModals();
+    if (e.key === 'Escape') DCShell.closeAllModals();
     if (e.key === 'Enter') {
-      if (!els.renameModal.classList.contains('hidden')) DCActions.confirmRename();
-      else if (!els.categoryModal.classList.contains('hidden')) DCActions.confirmCategoryModal();
+      if (!els.renameModal.classList.contains('hidden')) DCShell.confirmRename();
+      else if (!els.categoryModal.classList.contains('hidden')) DCShell.confirmCategoryModal();
     }
   });
 
-  // host modules must load before any relink-dependent call (import, relink)
+  // host modules must load before any relink/assets-dependent call
   DCBridge.call('loadHostModules', [csInterface.getSystemPath(SystemPath.EXTENSION)], function (r) {
     if (r !== 'ok') console.error('DropComp: host module load failed -', r);
 
@@ -121,10 +125,10 @@
     if (oldPath) {
       DCBridge.call('setLibraryPath', [oldPath], function () {
         window.localStorage.removeItem('ae_asset_stash_path');
-        DCActions.boot();
+        DCShell.boot();
       });
     } else {
-      DCActions.boot();
+      DCShell.boot();
     }
   });
 }());
