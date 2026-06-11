@@ -112,14 +112,19 @@
     }
   });
 
-  // one-time v1 -> v2 settings migration (path used to live in panel localStorage)
-  var oldPath = window.localStorage.getItem('ae_asset_stash_path');
-  if (oldPath) {
-    DCBridge.call('setLibraryPath', [oldPath], function () {
-      window.localStorage.removeItem('ae_asset_stash_path');
+  // host modules must load before any relink-dependent call (import, relink)
+  DCBridge.call('loadHostModules', [csInterface.getSystemPath(SystemPath.EXTENSION)], function (r) {
+    if (r !== 'ok') console.error('DropComp: host module load failed -', r);
+
+    // one-time v1 -> v2 settings migration (path used to live in panel localStorage)
+    var oldPath = window.localStorage.getItem('ae_asset_stash_path');
+    if (oldPath) {
+      DCBridge.call('setLibraryPath', [oldPath], function () {
+        window.localStorage.removeItem('ae_asset_stash_path');
+        DCActions.boot();
+      });
+    } else {
       DCActions.boot();
-    });
-  } else {
-    DCActions.boot();
-  }
+    }
+  });
 }());

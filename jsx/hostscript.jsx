@@ -1,10 +1,20 @@
 // DropComp 2.0 host script (ExtendScript, ES3 only)
 
-// relink helpers live in relink.jsx (keeps both files under the 800-line limit)
-try {
-    $.evalFile(new File(new File($.fileName).parent.fsName + '/relink.jsx'));
-} catch (eRelinkLoad) {
-    $.writeln('DropComp: failed to load relink.jsx - ' + eRelinkLoad.toString());
+// relink helpers live in relink.jsx (keeps both files under the 800-line limit).
+// $.fileName is NOT set when CEP evaluates this file, so the panel must call
+// loadHostModules(extensionRoot) once at boot before any relink-dependent call.
+var DC_MODULES_LOADED = false;
+function loadHostModules(extPath) {
+    try {
+        if (DC_MODULES_LOADED) return 'ok';
+        var moduleFile = new File(extPath + '/jsx/relink.jsx');
+        if (!moduleFile.exists) return 'Error: relink.jsx not found at ' + moduleFile.fsName;
+        $.evalFile(moduleFile);
+        DC_MODULES_LOADED = true;
+        return 'ok';
+    } catch (e) {
+        return 'Error: ' + e.toString();
+    }
 }
 
 // ---------- generic helpers ----------
