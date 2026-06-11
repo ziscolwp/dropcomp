@@ -50,7 +50,9 @@ var DCUpdate = (function () {
       if (xhr.status === 200) {
         try { latest = JSON.parse(xhr.responseText).tag_name || null; } catch (e) { latest = null; }
       }
-      if (latest) writeCache(storage, { ts: now, latest: latest });
+      // cache failures too (latest: null) so rate-limited/offline boots
+      // don't re-fire the request until the window passes
+      writeCache(storage, { ts: now, latest: latest });
       cb(latest && isNewer(latest, VERSION) ? latest : null);
     };
     try { xhr.send(); } catch (e) { cb(null); }

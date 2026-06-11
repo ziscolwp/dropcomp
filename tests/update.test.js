@@ -31,6 +31,59 @@ test('VERSION constant matches package.json and the CSXS manifest', () => {
     manifest.includes(`ExtensionBundleVersion="${pkg.version}"`),
     'manifest ExtensionBundleVersion out of sync with package.json'
   );
+  assert.ok(
+    manifest.includes(`<Extension Id="com.DropComp.ext" Version="${pkg.version}"`),
+    'manifest Extension element Version out of sync with package.json'
+  );
+});
+
+test('check fetches once, caches the result, and throttles failures too', () => {
+  const store = {};
+  const storage = {
+    getItem: (k) => (k in store ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+  };
+  const now = 1000000000000;
+  let constructed = 0;
+  try {
+    global.XMLHttpRequest = function () {
+      constructed++;
+      this.open = () => {};
+      this.send = function () {
+        this.readyState = 4;
+        this.status = 200;
+        this.responseText = JSON.stringify({ tag_name: 'v9.9.9' });
+        this.onreadystatechange();
+      };
+    };
+    let got;
+    DCUpdate.check(storage, now, (l) => { got = l; });
+    assert.equal(got, 'v9.9.9');
+    assert.equal(constructed, 1);
+    DCUpdate.check(storage, now + 1000, (l) => { got = l; });
+    assert.equal(constructed, 1, 'second check inside the window must not hit the network');
+    assert.equal(got, 'v9.9.9');
+
+    delete store[DCUpdate.CHECK_KEY];
+    global.XMLHttpRequest = function () {
+      constructed++;
+      this.open = () => {};
+      this.send = function () {
+        this.readyState = 4;
+        this.status = 500;
+        this.responseText = 'oops';
+        this.onreadystatechange();
+      };
+    };
+    DCUpdate.check(storage, now, (l) => { got = l; });
+    assert.equal(got, null);
+    assert.equal(constructed, 2);
+    DCUpdate.check(storage, now + 1000, (l) => { got = l; });
+    assert.equal(constructed, 2, 'a failed check must also be throttled');
+    assert.equal(got, null);
+  } finally {
+    delete global.XMLHttpRequest;
+  }
 });
 
 test('check uses the cached result inside the throttle window (no network)', () => {

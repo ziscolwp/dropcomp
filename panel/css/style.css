@@ -277,4 +277,3 @@ body {
   font-size: 10px; font-weight: 700; padding: 3px 9px; cursor: pointer; margin-left: 4px;
 }
 .update-chip:hover { background: var(--gold-hover); }
-.update-chip.hidden { display: none; }
