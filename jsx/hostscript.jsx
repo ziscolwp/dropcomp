@@ -569,3 +569,59 @@ function setThumbFromActiveComp(libraryPath, category, uniqueId) {
         return jerr(e.toString());
     }
 }
+
+// ---------- transactional rename ----------
+function renameStashedComp(libraryPath, category, uniqueId, newName) {
+    try {
+        var m = /_(\d{10,})$/.exec(uniqueId);
+        if (!m) return jerr('Cannot parse this item id.');
+        var safe = safeNameJsx(newName);
+        var newUniqueId = safe + '_' + m[1];
+        var catPath = libraryPath + '/' + category;
+        var oldFolder = new Folder(catPath + '/' + uniqueId);
+        if (!oldFolder.exists) return jerr('Item folder not found.');
+
+        if (newUniqueId !== uniqueId) {
+            if (new Folder(catPath + '/' + newUniqueId).exists) {
+                return jerr('An item with that name already exists in this category.');
+            }
+            if (!oldFolder.rename(newUniqueId)) {
+                return jerr('Could not rename the folder on disk.');
+            }
+        }
+        var folder = new Folder(catPath + '/' + newUniqueId);
+
+        var aeps = folder.getFiles('*.aep');
+        var oldAepName = aeps.length ? aeps[0].name : null;
+        if (aeps.length && aeps[0].name !== safe + '.aep') {
+            if (!aeps[0].rename(safe + '.aep')) {
+                if (newUniqueId !== uniqueId) folder.rename(uniqueId);
+                return jerr('Could not rename the project file.');
+            }
+        }
+
+        var metaFile = new File(folder.fsName + '/metadata.json');
+        var meta = readJson(metaFile) || {};
+        meta.displayName = newName;
+        if (!writeJson(metaFile, meta)) {
+            var back = folder.getFiles('*.aep');
+            if (back.length && oldAepName) back[0].rename(oldAepName);
+            if (newUniqueId !== uniqueId) folder.rename(uniqueId);
+            return jerr('Could not update metadata.');
+        }
+
+        var aepNow = folder.getFiles('*.aep');
+        var thumb = new File(folder.fsName + '/comp.png');
+        var patched = updateIndexPatchComp(libraryPath, category, uniqueId, {
+            name: newName,
+            uniqueId: newUniqueId,
+            aepPath: aepNow.length ? aepNow[0].fsName : null,
+            thumbPath: thumb.exists ? thumb.fsName : null
+        });
+        if (!patched) rebuildLibraryIndex(libraryPath);
+
+        return '{"ok":true,"newUniqueId":"' + jsonEscape(newUniqueId) + '"}';
+    } catch (e) {
+        return jerr(e.toString());
+    }
+}
