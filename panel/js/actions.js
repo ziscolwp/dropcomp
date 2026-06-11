@@ -41,7 +41,15 @@ var DCActions = (function () {
     els.showNamesCb.checked = prefs.showNames;
     els.showMetaCb.checked = prefs.showMeta;
     els.favoritesBtn.classList.toggle('active', prefs.favoritesOnly);
+    applyGridSize();
+  }
+
+  function applyGridSize() {
     document.documentElement.style.setProperty('--thumb-min', prefs.thumbMin + 'px');
+    var cls = DCState.gridSizeClass(prefs.thumbMin);
+    ['grid--s', 'grid--m', 'grid--l'].forEach(function (c) {
+      els.library.classList.toggle(c, c === cls);
+    });
   }
   function persistPrefs() { DCState.savePrefs(localStorage, prefs); }
   function persistUsage() { DCState.saveUsageMeta(localStorage, usageMeta); }
@@ -389,7 +397,7 @@ var DCActions = (function () {
   }
   function onSlider() {
     prefs.thumbMin = parseInt(els.thumbSlider.value, 10);
-    document.documentElement.style.setProperty('--thumb-min', prefs.thumbMin + 'px');
+    applyGridSize();
     persistPrefs();
   }
 

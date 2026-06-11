@@ -28,6 +28,12 @@ var DCState = (function () {
     return comp.addedAt || parseTimestamp(comp.uniqueId) || 0;
   }
 
+  function gridSizeClass(thumbMin) {
+    if (thumbMin <= 120) return 'grid--s';
+    if (thumbMin <= 180) return 'grid--m';
+    return 'grid--l';
+  }
+
   function getUsage(usageMeta, uniqueId) {
     return (usageMeta && usageMeta[uniqueId]) || { lastUsed: 0, useCount: 0, isFavorite: false };
   }
@@ -144,7 +150,8 @@ var DCState = (function () {
     parseTimestamp: parseTimestamp,
     computeRenameTarget: computeRenameTarget,
     formatMetaLine: formatMetaLine,
-    addedAt: addedAt
+    addedAt: addedAt,
+    gridSizeClass: gridSizeClass
   };
 }());
 if (typeof module !== 'undefined' && module.exports) { module.exports = DCState; }

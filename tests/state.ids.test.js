@@ -44,3 +44,12 @@ test('addedAt falls back to the uniqueId timestamp', () => {
   assert.equal(DCState.addedAt({ uniqueId: 'x_1718000000000' }), 1718000000000);
   assert.equal(DCState.addedAt({ uniqueId: 'nope' }), 0);
 });
+
+test('gridSizeClass maps slider value to size class', () => {
+  assert.equal(DCState.gridSizeClass(90), 'grid--s');
+  assert.equal(DCState.gridSizeClass(120), 'grid--s');
+  assert.equal(DCState.gridSizeClass(130), 'grid--m');
+  assert.equal(DCState.gridSizeClass(180), 'grid--m');
+  assert.equal(DCState.gridSizeClass(190), 'grid--l');
+  assert.equal(DCState.gridSizeClass(240), 'grid--l');
+});

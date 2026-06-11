@@ -35,7 +35,8 @@ body {
 .spacer { flex: 1; }
 .grow { flex: 1; }
 .row { display: flex; align-items: center; }
-.row.gap { gap: 6px; }
+.row.gap { gap: 6px; flex-wrap: wrap; }
+#search-input { min-width: 100px; }
 .mono { font-size: 11px; color: var(--text-mid); word-break: break-all; background: var(--bg-inset); padding: 8px; border-radius: 6px; text-align: left; }
 .hint { font-size: 11px; color: var(--text-dim); margin: 8px 0 0; }
 
@@ -166,7 +167,8 @@ body {
 .generate-chip:hover { background: var(--gold-bg); }
 
 .card-actions {
-  position: absolute; top: 5px; right: 5px; display: flex; gap: 4px;
+  position: absolute; top: 4px; right: 4px; left: 4px; display: flex; gap: 4px;
+  flex-wrap: wrap; justify-content: flex-end;
   opacity: 0; transition: opacity 0.15s ease;
 }
 .card:hover .card-actions { opacity: 1; }
@@ -233,3 +235,16 @@ body {
 #toast.show { opacity: 1; visibility: visible; }
 #toast.success { background: var(--gold); color: #161616; }
 #toast.error { background: var(--danger); color: #fff; }
+
+#library.grid--s .card-actions { display: none; }
+#library.grid--s .import-bar { padding: 2px 0; font-size: 10px; left: 4px; right: 4px; bottom: 4px; }
+#library.grid--s .import-bar svg { width: 9px; height: 9px; }
+#library.grid--s .card-meta { display: none; }
+#library.grid--s .card-name { font-size: 10px; }
+#library.grid--s .card-info { padding: 5px 7px; }
+#library.grid--s .generate-chip { font-size: 10px; padding: 0 7px; }
+#library.grid--s .thumb-placeholder svg { width: 13px; height: 13px; }
+#library.grid--s .card:hover .generate-chip { visibility: hidden; }
+
+#library.grid--m .card-action { width: 18px; height: 18px; }
+#library.grid--m .card-action svg { width: 10px; height: 10px; }

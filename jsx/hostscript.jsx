@@ -282,6 +282,18 @@ function compInfo(comp) {
     };
 }
 
+// saveFrameToPng writes asynchronously in recent AE versions - poll until the file lands
+function waitForFile(file, timeoutMs, minBytes) {
+    var waited = 0;
+    while (waited <= timeoutMs) {
+        var probe = new File(file.fsName);
+        if (probe.exists && probe.length >= minBytes) return true;
+        $.sleep(100);
+        waited += 100;
+    }
+    return false;
+}
+
 function saveVerifiedThumb(comp, pngFile) {
     var start = comp.workAreaStart;
     var dur = comp.workAreaDuration;
@@ -290,10 +302,10 @@ function saveVerifiedThumb(comp, pngFile) {
         try {
             if (pngFile.exists) pngFile.remove();
             comp.saveFrameToPng(times[i], pngFile);
-            if (pngFile.exists && pngFile.length > 1024) return true;
+            if (waitForFile(pngFile, 2500, 1024)) return true;
         } catch (e) { }
     }
-    return pngFile.exists && pngFile.length > 0;
+    return waitForFile(pngFile, 1000, 1);
 }
 
 // ---------- stash ----------
@@ -416,10 +428,13 @@ function stashSelectedComp(libraryPath, categoryName) {
 // ---------- silent import-and-capture engine ----------
 function captureCompInfo(aepPath, targetPngPath, preferredName) {
     var importedFolder = null;
+    var suppressing = false;
     try {
         if (!app.project) return { ok: false, error: 'Open a project first.' };
         var f = new File(aepPath);
         if (!f.exists) return { ok: false, error: 'AEP not found: ' + aepPath };
+        app.beginSuppressDialogs();
+        suppressing = true;
         app.beginUndoGroup('DropComp Capture');
         importedFolder = app.project.importFile(new ImportOptions(f));
         var comps = [];
@@ -428,6 +443,7 @@ function captureCompInfo(aepPath, targetPngPath, preferredName) {
         if (!main) {
             importedFolder.remove();
             app.endUndoGroup();
+            app.endSuppressDialogs(false);
             return { ok: false, error: 'No composition found in this project.' };
         }
         var info = compInfo(main);
@@ -436,10 +452,12 @@ function captureCompInfo(aepPath, targetPngPath, preferredName) {
         importedFolder.remove();
         importedFolder = null;
         app.endUndoGroup();
+        app.endSuppressDialogs(false);
         return info;
     } catch (e) {
         try { if (importedFolder) importedFolder.remove(); } catch (e2) { }
         try { app.endUndoGroup(); } catch (e3) { }
+        try { if (suppressing) app.endSuppressDialogs(false); } catch (e4) { }
         return { ok: false, error: e.toString() };
     }
 }
@@ -549,7 +567,7 @@ function setThumbFromActiveComp(libraryPath, category, uniqueId) {
         var png = new File(compFolder.fsName + '/comp.png');
         if (png.exists) png.remove();
         comp.saveFrameToPng(comp.time, png);
-        if (!png.exists || png.length === 0) return jerr('Could not save the frame.');
+        if (!waitForFile(png, 2500, 1)) return jerr('Could not save the frame.');
         var metaFile = new File(compFolder.fsName + '/metadata.json');
         var meta = readJson(metaFile) || {};
         meta.width = comp.width;
@@ -568,6 +586,24 @@ function setThumbFromActiveComp(libraryPath, category, uniqueId) {
     } catch (e) {
         return jerr(e.toString());
     }
+}
+
+// items imported into the open project keep absolute footage paths into the
+// library - after a folder rename those break ("file missing"), so relink them
+function relinkProjectFootage(oldPrefix, newPrefix) {
+    try {
+        if (!app.project || oldPrefix === newPrefix) return;
+        for (var i = 1; i <= app.project.numItems; i++) {
+            var item = app.project.item(i);
+            if (item instanceof FootageItem && item.mainSource && item.mainSource.file) {
+                var fp = item.mainSource.file.fsName;
+                if (fp.indexOf(oldPrefix + '/') === 0 || fp.indexOf(oldPrefix + '\\') === 0) {
+                    var relinked = new File(newPrefix + fp.substring(oldPrefix.length));
+                    if (relinked.exists) item.replace(relinked);
+                }
+            }
+        }
+    } catch (e) { }
 }
 
 // ---------- transactional rename ----------
@@ -619,6 +655,8 @@ function renameStashedComp(libraryPath, category, uniqueId, newName) {
             thumbPath: thumb.exists ? thumb.fsName : null
         });
         if (!patched) rebuildLibraryIndex(libraryPath);
+
+        relinkProjectFootage(new Folder(catPath + '/' + uniqueId).fsName, folder.fsName);
 
         return '{"ok":true,"newUniqueId":"' + jsonEscape(newUniqueId) + '"}';
     } catch (e) {
