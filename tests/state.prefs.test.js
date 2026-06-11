@@ -15,7 +15,7 @@ function mockStorage(initial) {
 test('defaultPrefs shape', () => {
   assert.deepEqual(DCState.defaultPrefs(), {
     thumbMin: 130, sort: 'recent', showNames: true, showMeta: true,
-    favoritesOnly: false, collapsed: []
+    favoritesOnly: false, collapsed: [], activeTab: 'library', collapsedAssets: []
   });
 });
 
