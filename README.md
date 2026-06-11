@@ -5,10 +5,12 @@ with thumbnails, categories, favorites, and one-click import.
 
 ## Install
 
-- Stable: run `./install.command` (copies files; backs up v1 first)
-- Development: run `./dev-link.command` (symlinks this repo as the extension)
+- macOS: run `./install.command` (copies files; backs up the previous version first)
+- Windows: double-click `install.bat` (same thing: backup, copy, enable unsigned panels)
+- Development (macOS): run `./dev-link.command` (symlinks this repo as the extension)
 
-Restart After Effects, then Window > Extensions > DropComp.
+Restart After Effects, then Window > Extensions > DropComp. Updating = run the
+installer again; your library folder, favorites, and settings are untouched.
 
 ## Library format
 
