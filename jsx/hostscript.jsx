@@ -412,3 +412,160 @@ function stashSelectedComp(libraryPath, categoryName) {
         }
     }
 }
+
+// ---------- silent import-and-capture engine ----------
+function captureCompInfo(aepPath, targetPngPath, preferredName) {
+    var importedFolder = null;
+    try {
+        if (!app.project) return { ok: false, error: 'Open a project first.' };
+        var f = new File(aepPath);
+        if (!f.exists) return { ok: false, error: 'AEP not found: ' + aepPath };
+        app.beginUndoGroup('DropComp Capture');
+        importedFolder = app.project.importFile(new ImportOptions(f));
+        var comps = [];
+        collectComps(importedFolder, comps);
+        var main = pickMainComp(comps, preferredName);
+        if (!main) {
+            importedFolder.remove();
+            app.endUndoGroup();
+            return { ok: false, error: 'No composition found in this project.' };
+        }
+        var info = compInfo(main);
+        info.ok = true;
+        info.thumbOk = targetPngPath ? saveVerifiedThumb(main, new File(targetPngPath)) : false;
+        importedFolder.remove();
+        importedFolder = null;
+        app.endUndoGroup();
+        return info;
+    } catch (e) {
+        try { if (importedFolder) importedFolder.remove(); } catch (e2) { }
+        try { app.endUndoGroup(); } catch (e3) { }
+        return { ok: false, error: e.toString() };
+    }
+}
+
+function pickAepFile() {
+    var f = File.openDialog('Select an After Effects project (.aep)');
+    if (!f) return '{"ok":false,"cancelled":true}';
+    if (!/\.aep$/i.test(f.name)) return jerr('Please choose an .aep file.');
+    return '{"ok":true,"path":"' + jsonEscape(f.fsName) + '"}';
+}
+
+function addExternalAep(libraryPath, categoryName, sourceAepPath) {
+    try {
+        var src = new File(sourceAepPath);
+        if (!src.exists) return jerr('Source file not found.');
+        var displayName = decodeURI(src.name).replace(/\.aep$/i, '');
+        var safe = safeNameJsx(displayName);
+        var catFolder = new Folder(libraryPath + '/' + categoryName);
+        if (!catFolder.exists) catFolder.create();
+        var ts = new Date().getTime();
+        var folderName = safe + '_' + ts;
+        var compFolder = new Folder(catFolder.fsName + '/' + folderName);
+        if (!compFolder.create()) return jerr('Could not create the library folder.');
+        var destAep = new File(compFolder.fsName + '/' + safe + '.aep');
+        if (!src.copy(destAep)) {
+            compFolder.remove();
+            return jerr('Could not copy the project into the library.');
+        }
+        var thumbPath = compFolder.fsName + '/comp.png';
+        var info = captureCompInfo(destAep.fsName, thumbPath, displayName);
+        writeJson(new File(compFolder.fsName + '/metadata.json'), {
+            displayName: displayName,
+            mainCompId: null,
+            mainCompName: info.ok ? info.compName : null,
+            width: info.ok ? info.width : null,
+            height: info.ok ? info.height : null,
+            duration: info.ok ? info.duration : null,
+            frameRate: info.ok ? info.frameRate : null,
+            addedAt: ts,
+            source: 'external'
+        });
+        var thumbFile = new File(thumbPath);
+        updateIndexAddComp(libraryPath, {
+            name: displayName,
+            category: categoryName,
+            uniqueId: folderName,
+            aepPath: destAep.fsName,
+            thumbPath: thumbFile.exists ? thumbFile.fsName : null,
+            mainCompId: null,
+            width: info.ok ? info.width : null,
+            height: info.ok ? info.height : null,
+            duration: info.ok ? info.duration : null,
+            frameRate: info.ok ? info.frameRate : null,
+            addedAt: ts
+        });
+        return '{"ok":true,"name":"' + jsonEscape(displayName) + '","thumbOk":' +
+            ((info.ok && info.thumbOk) ? 'true' : 'false') + '}';
+    } catch (e) {
+        return jerr(e.toString());
+    }
+}
+
+function generateThumbForItem(libraryPath, category, uniqueId) {
+    try {
+        var compFolder = new Folder(libraryPath + '/' + category + '/' + uniqueId);
+        if (!compFolder.exists) return jerr('Item folder not found.');
+        var aeps = compFolder.getFiles('*.aep');
+        if (aeps.length === 0) return jerr('No .aep found in this item.');
+        var metaFile = new File(compFolder.fsName + '/metadata.json');
+        var meta = readJson(metaFile) || {};
+        var preferred = meta.mainCompName || meta.displayName || null;
+        var thumbPath = compFolder.fsName + '/comp.png';
+        var info = captureCompInfo(aeps[0].fsName, thumbPath, preferred);
+        if (!info.ok) return jerr(info.error);
+        meta.mainCompName = info.compName;
+        meta.width = info.width;
+        meta.height = info.height;
+        meta.duration = info.duration;
+        meta.frameRate = info.frameRate;
+        if (!meta.addedAt) {
+            var m = /_(\d{10,})$/.exec(uniqueId);
+            if (m) meta.addedAt = parseInt(m[1], 10);
+        }
+        writeJson(metaFile, meta);
+        var thumbFile = new File(thumbPath);
+        updateIndexPatchComp(libraryPath, category, uniqueId, {
+            thumbPath: thumbFile.exists ? thumbFile.fsName : null,
+            width: info.width,
+            height: info.height,
+            duration: info.duration,
+            frameRate: info.frameRate
+        });
+        return '{"ok":true,"thumbOk":' + (info.thumbOk ? 'true' : 'false') + '}';
+    } catch (e) {
+        return jerr(e.toString());
+    }
+}
+
+function setThumbFromActiveComp(libraryPath, category, uniqueId) {
+    try {
+        var comp = app.project ? app.project.activeItem : null;
+        if (!comp || !(comp instanceof CompItem)) {
+            return jerr('Open a composition in the viewer first.');
+        }
+        var compFolder = new Folder(libraryPath + '/' + category + '/' + uniqueId);
+        if (!compFolder.exists) return jerr('Item folder not found.');
+        var png = new File(compFolder.fsName + '/comp.png');
+        if (png.exists) png.remove();
+        comp.saveFrameToPng(comp.time, png);
+        if (!png.exists || png.length === 0) return jerr('Could not save the frame.');
+        var metaFile = new File(compFolder.fsName + '/metadata.json');
+        var meta = readJson(metaFile) || {};
+        meta.width = comp.width;
+        meta.height = comp.height;
+        meta.duration = comp.duration;
+        meta.frameRate = comp.frameRate;
+        writeJson(metaFile, meta);
+        updateIndexPatchComp(libraryPath, category, uniqueId, {
+            thumbPath: png.fsName,
+            width: comp.width,
+            height: comp.height,
+            duration: comp.duration,
+            frameRate: comp.frameRate
+        });
+        return '{"ok":true}';
+    } catch (e) {
+        return jerr(e.toString());
+    }
+}
