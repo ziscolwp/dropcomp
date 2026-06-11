@@ -106,9 +106,10 @@ var DCLibrary = (function () {
   }
 
   function confirmCategory(mode, categoryName) {
-    DCUI.closeModal(els().categoryModal);
     if (mode === 'stash') {
+      // acquire before closing so a busy bridge keeps the typed category in the modal
       if (!DCBridge.acquire('stashing')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return; }
+      DCUI.closeModal(els().categoryModal);
       els().addCompBtn.disabled = true;
       DCUI.spinner(true);
       DCBridge.call('stashSelectedComp', [libPath(), categoryName], function (result) {
@@ -120,6 +121,7 @@ var DCLibrary = (function () {
       });
     } else {
       if (!DCBridge.acquire('adding aep')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return; }
+      DCUI.closeModal(els().categoryModal);
       DCUI.spinner(true);
       DCBridge.call('addExternalAep', [libPath(), categoryName, pendingAepPath], function (result) {
         DCUI.spinner(false);
