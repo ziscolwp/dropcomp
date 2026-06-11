@@ -248,3 +248,25 @@ body {
 
 #library.grid--m .card-action { width: 18px; height: 18px; }
 #library.grid--m .card-action svg { width: 10px; height: 10px; }
+
+/* ---- assets tab ---- */
+#add-assets-btn { display: none; }
+#app.assets-active #add-assets-btn { display: inline-flex; }
+#app.assets-active #add-comp-btn,
+#app.assets-active #add-aep-btn,
+#app.assets-active #relink-btn { display: none; }
+
+.card--asset .card-thumb img {
+  object-fit: contain;
+  padding: 10px;
+  box-sizing: border-box;
+}
+.ext-badge {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  border: 1px solid var(--border-strong);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+#library.grid--s .ext-badge { font-size: 9px; padding: 1px 5px; }

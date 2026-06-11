@@ -37,7 +37,7 @@
 
   <nav id="tabs">
     <button class="tab active" id="tab-library">Library</button>
-    <button class="tab" id="tab-assets" title="Coming in 2.1" disabled>Assets · soon</button>
+    <button class="tab" id="tab-assets">Assets</button>
   </nav>
 
   <div id="toolbar">
@@ -72,6 +72,10 @@
       </button>
       <button id="add-aep-btn" class="btn-dark icon-btn" title="Add .aep from disk">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><polyline points="9 15 12 12 15 15"></polyline></svg>
+      </button>
+      <button id="add-assets-btn" class="btn-gold grow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        <span>Add Assets</span>
       </button>
       <input type="range" id="thumb-slider" min="90" max="240" step="10" title="Thumbnail size">
     </div>
@@ -152,6 +156,7 @@
 <script src="js/ui.js"></script>
 <script src="js/shell.js"></script>
 <script src="js/library.js"></script>
+<script src="js/assets.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>
