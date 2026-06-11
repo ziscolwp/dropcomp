@@ -1,4 +1,5 @@
 // DropComp 2.0 host script (ExtendScript, ES3 only)
+// TODO: split by concern (index/stash/import/thumbs are separable modules)
 
 // relink helpers live in relink.jsx (keeps both files under the 800-line limit).
 // $.fileName is NOT set when CEP evaluates this file, so the panel must call
@@ -7,14 +8,29 @@ var DC_MODULES_LOADED = false;
 function loadHostModules(extPath) {
     try {
         if (DC_MODULES_LOADED) return 'ok';
+        $.global.DC_EXT_PATH = extPath;
         var moduleFile = new File(extPath + '/jsx/relink.jsx');
         if (!moduleFile.exists) return 'Error: relink.jsx not found at ' + moduleFile.fsName;
         $.evalFile(moduleFile);
+        // $.evalFile evaluates in THIS function's scope (ES3 eval semantics),
+        // so relink.jsx must export its functions to $.global itself - verify
+        // that actually landed instead of trusting evalFile's silence.
+        if (typeof $.global.collectMissingFootage !== 'function') {
+            return 'Error: relink.jsx loaded but did not export its functions to $.global.';
+        }
         DC_MODULES_LOADED = true;
         return 'ok';
     } catch (e) {
         return 'Error: ' + e.toString();
     }
+}
+
+// lazy fallback so an import never dies on a missing module
+function ensureHostModules() {
+    if (typeof $.global.collectMissingFootage === 'function') return true;
+    DC_MODULES_LOADED = false;
+    return typeof $.global.DC_EXT_PATH === 'string' &&
+        loadHostModules($.global.DC_EXT_PATH) === 'ok';
 }
 
 // ---------- generic helpers ----------
@@ -263,26 +279,28 @@ function importComp(aepPath) {
         // self-heal: the saved aep keeps absolute footage paths that break when
         // the item folder is renamed or the library moves - relink on every import
         var stillMissing = 0;
-        var missingInImport = [];
-        collectMissingFootage(importedFolder, missingInImport);
-        if (missingInImport.length) {
-            var localMap = {};
-            collectFilesRecursive(fileToImport.parent, localMap, 0);
-            var healed = relinkItems(missingInImport, localMap);
-            if (healed.notFound.length) {
-                var libRoot = null;
-                try { libRoot = fileToImport.parent.parent.parent; } catch (eL) { }
-                if (libRoot && libRoot.exists) {
-                    var libMap = {};
-                    collectFilesRecursive(libRoot, libMap, 0);
-                    var leftovers = [];
-                    collectMissingFootage(importedFolder, leftovers);
-                    relinkItems(leftovers, libMap);
+        if (ensureHostModules()) {
+            var missingInImport = [];
+            collectMissingFootage(importedFolder, missingInImport);
+            if (missingInImport.length) {
+                var localMap = {};
+                collectFilesRecursive(fileToImport.parent, localMap, 0);
+                var healed = relinkItems(missingInImport, localMap);
+                if (healed.notFound.length) {
+                    var libRoot = null;
+                    try { libRoot = fileToImport.parent.parent.parent; } catch (eL) { }
+                    if (libRoot && libRoot.exists) {
+                        var libMap = {};
+                        collectFilesRecursive(libRoot, libMap, 0);
+                        var leftovers = [];
+                        collectMissingFootage(importedFolder, leftovers);
+                        relinkItems(leftovers, libMap);
+                    }
                 }
+                var finalCheck = [];
+                collectMissingFootage(importedFolder, finalCheck);
+                stillMissing = finalCheck.length;
             }
-            var finalCheck = [];
-            collectMissingFootage(importedFolder, finalCheck);
-            stillMissing = finalCheck.length;
         }
 
         var allComps = [];

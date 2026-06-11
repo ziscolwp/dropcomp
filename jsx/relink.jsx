@@ -124,3 +124,15 @@ function relinkProjectFootage(oldPrefix, newPrefix) {
     } catch (e) { }
 }
 
+// $.evalFile runs inside loadHostModules(), so per ES3 eval semantics every
+// declaration above is local to that call and discarded when it returns.
+// Exporting to $.global is what actually makes these callable afterwards.
+$.global.relinkBaseName = relinkBaseName;
+$.global.relinkNormName = relinkNormName;
+$.global.collectFilesRecursive = collectFilesRecursive;
+$.global.missingSourcePath = missingSourcePath;
+$.global.relinkItems = relinkItems;
+$.global.collectMissingFootage = collectMissingFootage;
+$.global.relinkMissingFootage = relinkMissingFootage;
+$.global.relinkProjectFootage = relinkProjectFootage;
+
