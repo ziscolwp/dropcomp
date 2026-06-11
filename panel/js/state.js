@@ -24,6 +24,21 @@ var DCState = (function () {
     return parts.join(' · ');
   }
 
+  function formatBytes(n) {
+    if (n === undefined || n === null || n === '') return '';
+    if (n < 1024) return n + ' B';
+    if (n < 1048576) return Math.round(n / 1024) + ' KB';
+    return (Math.round((n / 1048576) * 10) / 10) + ' MB';
+  }
+
+  function formatAssetMetaLine(asset) {
+    var parts = [];
+    if (asset && asset.ext) parts.push(String(asset.ext).toUpperCase());
+    var size = formatBytes(asset && asset.sizeBytes);
+    if (size) parts.push(size);
+    return parts.join(' · ');
+  }
+
   function addedAt(comp) {
     return comp.addedAt || parseTimestamp(comp.uniqueId) || 0;
   }
@@ -79,9 +94,11 @@ var DCState = (function () {
 
   var PREFS_KEY = 'dropcomp_prefs';
   var USAGE_KEY = 'dropcomp_metadata';
+  var ASSETS_USAGE_KEY = 'dropcomp_assets_metadata';
 
   function defaultPrefs() {
-    return { thumbMin: 130, sort: 'recent', showNames: true, showMeta: true, favoritesOnly: false, collapsed: [] };
+    return { thumbMin: 130, sort: 'recent', showNames: true, showMeta: true,
+      favoritesOnly: false, collapsed: [], activeTab: 'library', collapsedAssets: [] };
   }
 
   function loadPrefs(storage) {
@@ -106,12 +123,12 @@ var DCState = (function () {
     try { storage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (e) {}
   }
 
-  function loadUsageMeta(storage) {
-    try { return JSON.parse(storage.getItem(USAGE_KEY)) || {}; } catch (e) { return {}; }
+  function loadUsageMeta(storage, key) {
+    try { return JSON.parse(storage.getItem(key || USAGE_KEY)) || {}; } catch (e) { return {}; }
   }
 
-  function saveUsageMeta(storage, meta) {
-    try { storage.setItem(USAGE_KEY, JSON.stringify(meta)); } catch (e) {}
+  function saveUsageMeta(storage, meta, key) {
+    try { storage.setItem(key || USAGE_KEY, JSON.stringify(meta)); } catch (e) {}
   }
 
   function cleanupStaleMetadata(usageMeta, comps) {
@@ -150,6 +167,9 @@ var DCState = (function () {
     parseTimestamp: parseTimestamp,
     computeRenameTarget: computeRenameTarget,
     formatMetaLine: formatMetaLine,
+    formatBytes: formatBytes,
+    formatAssetMetaLine: formatAssetMetaLine,
+    ASSETS_USAGE_KEY: ASSETS_USAGE_KEY,
     addedAt: addedAt,
     gridSizeClass: gridSizeClass
   };
