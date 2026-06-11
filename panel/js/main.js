@@ -46,6 +46,7 @@
   els.search.addEventListener('input', DCActions.onSearch);
   els.sortSelect.addEventListener('change', DCActions.onSortChange);
   els.favoritesBtn.addEventListener('click', DCActions.onFavoritesToggle);
+  $('relink-btn').addEventListener('click', DCActions.relinkMissing);
   els.showNamesCb.addEventListener('change', DCActions.onDisplayChange);
   els.showMetaCb.addEventListener('change', DCActions.onDisplayChange);
   els.thumbSlider.addEventListener('input', DCActions.onSlider);

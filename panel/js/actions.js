@@ -359,6 +359,27 @@ var DCActions = (function () {
     });
   }
 
+  function relinkMissing() {
+    if (!DCBridge.acquire('relinking footage')) { toast('Busy: ' + DCBridge.busyWith(), true); return; }
+    spinner(true);
+    DCBridge.call('relinkMissingFootage', [libraryPath], function (result) {
+      spinner(false);
+      DCBridge.release();
+      var r = DCBridge.parseJson(result);
+      if (r && r.ok) {
+        if (r.missing === 0) {
+          toast('No missing footage in this project.', false);
+        } else if (r.relinked === r.missing) {
+          toast('Relinked all ' + r.relinked + ' missing file' + (r.relinked === 1 ? '' : 's') + '. Save your project.', false);
+        } else {
+          toast('Relinked ' + r.relinked + ' of ' + r.missing + ' - the rest are not in the library.', r.relinked === 0);
+        }
+      } else {
+        toast((r && r.error) || result, true);
+      }
+    });
+  }
+
   function toggleSection(category) {
     var i = prefs.collapsed.indexOf(category);
     if (i === -1) prefs.collapsed.push(category);
@@ -417,7 +438,7 @@ var DCActions = (function () {
     renameFlow: renameFlow, confirmRename: confirmRename,
     deleteFlow: deleteFlow, confirmDelete: confirmDelete,
     generateThumb: generateThumb, setThumb: setThumb, revealItem: revealItem,
-    toggleSection: toggleSection,
+    relinkMissing: relinkMissing, toggleSection: toggleSection,
     openSettings: openSettings, openLibraryInFinder: openLibraryInFinder, changeFolder: changeFolder,
     onSearch: onSearch, onSortChange: onSortChange, onFavoritesToggle: onFavoritesToggle,
     onDisplayChange: onDisplayChange, onSlider: onSlider,

@@ -23,6 +23,8 @@ Restart After Effects, then Window > Extensions > DropComp.
   duration/fps captured silently inside the current project (never closes your project)
 - Generate chip on thumbnail-less items; "Set thumbnail from current frame" per card
 - Rename keeps folder, AEP, metadata, and index in sync (transactional)
+- Relink button (chain icon): finds missing footage in the open project by filename
+  across the library tree and relinks it automatically
 - Collapsible category sections, search, 4 sort modes, favorites, size slider
 - Assets tab is a stub - planned for 2.1
 

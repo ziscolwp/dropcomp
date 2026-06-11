@@ -588,6 +588,61 @@ function setThumbFromActiveComp(libraryPath, category, uniqueId) {
     }
 }
 
+// ---------- relink missing footage ----------
+// filename -> full path map of every file in the library tree
+// (library/category/item/(Footage) is depth 3; cap at 5 for safety)
+function collectFilesRecursive(folder, map, depth) {
+    if (depth > 5) return;
+    var items = folder.getFiles();
+    for (var i = 0; i < items.length; i++) {
+        if (items[i] instanceof File) {
+            if (!map[items[i].name]) map[items[i].name] = items[i].fsName;
+        } else if (items[i] instanceof Folder) {
+            collectFilesRecursive(items[i], map, depth + 1);
+        }
+    }
+}
+
+function relinkMissingFootage(libraryPath) {
+    try {
+        if (!app.project) return jerr('Open a project first.');
+        var missing = [];
+        var i;
+        for (i = 1; i <= app.project.numItems; i++) {
+            var item = app.project.item(i);
+            if (item instanceof FootageItem && item.mainSource && item.mainSource.file &&
+                (item.footageMissing || !item.mainSource.file.exists)) {
+                missing.push(item);
+            }
+        }
+        if (missing.length === 0) return '{"ok":true,"missing":0,"relinked":0}';
+
+        var map = {};
+        var lib = new Folder(libraryPath);
+        if (!lib.exists) return jerr('Library folder not found.');
+        collectFilesRecursive(lib, map, 0);
+
+        var relinked = 0;
+        for (i = 0; i < missing.length; i++) {
+            var found = map[missing[i].mainSource.file.name];
+            if (!found) continue;
+            try {
+                var isSequenceImage = !missing[i].mainSource.isStill &&
+                    /\.(png|jpe?g|tiff?|exr|dpx|tga)$/i.test(missing[i].mainSource.file.name);
+                if (isSequenceImage) {
+                    missing[i].replaceWithSequence(new File(found), false);
+                } else {
+                    missing[i].replace(new File(found));
+                }
+                relinked++;
+            } catch (e2) { }
+        }
+        return '{"ok":true,"missing":' + missing.length + ',"relinked":' + relinked + '}';
+    } catch (e) {
+        return jerr(e.toString());
+    }
+}
+
 // items imported into the open project keep absolute footage paths into the
 // library - after a folder rename those break ("file missing"), so relink them
 function relinkProjectFootage(oldPrefix, newPrefix) {
