@@ -270,3 +270,11 @@ body {
   border-radius: 4px;
 }
 #library.grid--s .ext-badge { font-size: 9px; padding: 1px 5px; }
+
+/* ---- update chip ---- */
+.update-chip {
+  background: var(--gold); color: #161616; border: none; border-radius: 999px;
+  font-size: 10px; font-weight: 700; padding: 3px 9px; cursor: pointer; margin-left: 4px;
+}
+.update-chip:hover { background: var(--gold-hover); }
+.update-chip.hidden { display: none; }

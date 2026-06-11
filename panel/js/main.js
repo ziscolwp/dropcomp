@@ -116,6 +116,21 @@
     }
   });
 
+  // version labels come from the single DCUpdate.VERSION constant
+  $('app-version').textContent = DCUpdate.VERSION.replace(/\.\d+$/, '');
+  $('settings-version').textContent = 'DropComp ' + DCUpdate.VERSION;
+
+  // free update notice: GitHub latest-release check, throttled, silent on failure
+  var updateChip = $('update-chip');
+  updateChip.addEventListener('click', function () {
+    csInterface.openURLInDefaultBrowser(DCUpdate.RELEASES_PAGE);
+  });
+  DCUpdate.check(window.localStorage, Date.now(), function (latest) {
+    if (!latest) return;
+    updateChip.textContent = 'Update ' + String(latest).replace(/^v/, '');
+    updateChip.classList.remove('hidden');
+  });
+
   // host modules must load before any relink/assets-dependent call
   DCBridge.call('loadHostModules', [csInterface.getSystemPath(SystemPath.EXTENSION)], function (r) {
     if (r !== 'ok') console.error('DropComp: host module load failed -', r);

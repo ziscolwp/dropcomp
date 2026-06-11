@@ -37,6 +37,23 @@ sidecars (the top-level `Assets` folder name is reserved). Index cache:
   thumbnail, import drops into the active comp at the playhead and reuses footage
   already in the project (one `Assets [DropComp]` bin, no duplicates)
 
+## Updates
+
+The panel checks GitHub's latest release (at most every 12 h, silent offline)
+and shows a gold "Update x.y.z" chip in the header when a newer version exists.
+Clicking it opens the download page; installing is the same one-click installer.
+
+## Releasing a new version
+
+1. Bump the version in `package.json`, `CSXS/manifest.xml`, and `panel/js/update.js`
+   (`npm test` fails if they disagree).
+2. `npm test`
+3. `./scripts/build-dist.sh`
+4. `git tag vX.Y.Z && git push origin main vX.Y.Z`
+5. `gh release create vX.Y.Z dist/DropComp-X.Y.Z.zip --title "DropComp X.Y.Z" --notes "..."`
+
+Everyone on an older version sees the update chip within 12 hours of opening the panel.
+
 ## Development
 
 - `npm test` - unit tests (node >= 18, zero deps) for the pure panel modules
