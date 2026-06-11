@@ -1,0 +1,9 @@
+{
+  "name": "dropcomp",
+  "version": "2.0.0",
+  "private": true,
+  "description": "DropComp 2.0 - After Effects comp library CEP panel",
+  "scripts": {
+    "test": "node --test tests/"
+  }
+}
