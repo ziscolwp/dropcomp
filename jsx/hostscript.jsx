@@ -5,18 +5,23 @@
 // $.fileName is NOT set when CEP evaluates this file, so the panel must call
 // loadHostModules(extensionRoot) once at boot before any relink-dependent call.
 var DC_MODULES_LOADED = false;
+var DC_MODULE_FILES = ['relink.jsx', 'assets.jsx'];
+var DC_MODULE_MARKERS = ['collectMissingFootage', 'getAssets'];
+
 function loadHostModules(extPath) {
     try {
         if (DC_MODULES_LOADED) return 'ok';
         $.global.DC_EXT_PATH = extPath;
-        var moduleFile = new File(extPath + '/jsx/relink.jsx');
-        if (!moduleFile.exists) return 'Error: relink.jsx not found at ' + moduleFile.fsName;
-        $.evalFile(moduleFile);
-        // $.evalFile evaluates in THIS function's scope (ES3 eval semantics),
-        // so relink.jsx must export its functions to $.global itself - verify
-        // that actually landed instead of trusting evalFile's silence.
-        if (typeof $.global.collectMissingFootage !== 'function') {
-            return 'Error: relink.jsx loaded but did not export its functions to $.global.';
+        for (var i = 0; i < DC_MODULE_FILES.length; i++) {
+            var moduleFile = new File(extPath + '/jsx/' + DC_MODULE_FILES[i]);
+            if (!moduleFile.exists) return 'Error: ' + DC_MODULE_FILES[i] + ' not found at ' + moduleFile.fsName;
+            $.evalFile(moduleFile);
+            // $.evalFile evaluates in THIS function's scope (ES3 eval semantics),
+            // so each module must export its functions to $.global itself - verify
+            // that actually landed instead of trusting evalFile's silence.
+            if (typeof $.global[DC_MODULE_MARKERS[i]] !== 'function') {
+                return 'Error: ' + DC_MODULE_FILES[i] + ' loaded but did not export its functions to $.global.';
+            }
         }
         DC_MODULES_LOADED = true;
         return 'ok';
@@ -27,7 +32,11 @@ function loadHostModules(extPath) {
 
 // lazy fallback so an import never dies on a missing module
 function ensureHostModules() {
-    if (typeof $.global.collectMissingFootage === 'function') return true;
+    var present = true;
+    for (var i = 0; i < DC_MODULE_MARKERS.length; i++) {
+        if (typeof $.global[DC_MODULE_MARKERS[i]] !== 'function') { present = false; break; }
+    }
+    if (present) return true;
     DC_MODULES_LOADED = false;
     return typeof $.global.DC_EXT_PATH === 'string' &&
         loadHostModules($.global.DC_EXT_PATH) === 'ok';
@@ -76,6 +85,11 @@ function writeJson(file, obj) {
 
 function safeNameJsx(name) {
     return String(name).replace(/[^a-z0-9]/gi, '_').replace(/_{2,}/g, '_');
+}
+
+// the top-level Assets folder belongs to the Assets tab, never to comp categories
+function isReservedCategory(name) {
+    return String(name).toLowerCase() === 'assets';
 }
 
 // ---------- settings ----------
@@ -165,6 +179,7 @@ function rebuildLibraryIndex(libraryPath) {
     var isFolder = function (f) { return f instanceof Folder; };
     var cats = mainFolder.getFiles(isFolder);
     for (var i = 0; i < cats.length; i++) {
+        if (isReservedCategory(decodeURI(cats[i].name))) continue;
         var subs = cats[i].getFiles(isFolder);
         for (var j = 0; j < subs.length; j++) {
             var entry = entryFromFolder(decodeURI(cats[i].name), subs[j]);
@@ -393,6 +408,7 @@ function stashSelectedComp(libraryPath, categoryName) {
     try {
         if (!app.project) return 'Error: Please open a project first.';
         if (!originalProjectFile) return 'Error: Save your project once before stashing.';
+        if (isReservedCategory(categoryName)) return 'Error: "Assets" is reserved for the Assets tab.';
 
         var compToSave = null;
         var activeComp = app.project.activeItem;
@@ -552,6 +568,7 @@ function pickAepFile() {
 
 function addExternalAep(libraryPath, categoryName, sourceAepPath) {
     try {
+        if (isReservedCategory(categoryName)) return jerr('"Assets" is reserved for the Assets tab.');
         var src = new File(sourceAepPath);
         if (!src.exists) return jerr('Source file not found.');
         var displayName = decodeURI(src.name).replace(/\.aep$/i, '');
