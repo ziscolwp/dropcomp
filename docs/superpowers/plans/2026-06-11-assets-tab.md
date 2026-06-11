@@ -14,7 +14,7 @@
 
 ### Task 0: Branch
 
-- [ ] **Step 1: Create feature branch**
+- [x] **Step 1: Create feature branch**
 
 ```bash
 cd "/Users/ziscol/Ziscol Media Projects/dropcomp"
@@ -29,7 +29,7 @@ git checkout -b feature/assets-tab
 - Modify: `panel/js/state.js`
 - Test: `tests/state.assets.test.js` (create)
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/state.assets.test.js`:
 
@@ -102,12 +102,12 @@ test('sort/filter/cleanup work on asset-shaped items (uniqueId with slash, added
 });
 ```
 
-- [ ] **Step 2: Run tests, verify they fail**
+- [x] **Step 2: Run tests, verify they fail**
 
 Run: `npm test 2>&1 | grep -E "^# (pass|fail)"`
 Expected: failures (formatBytes/formatAssetMetaLine/ASSETS_USAGE_KEY undefined; defaultPrefs missing keys).
 
-- [ ] **Step 3: Implement in state.js**
+- [x] **Step 3: Implement in state.js**
 
 In `panel/js/state.js`:
 
@@ -159,12 +159,12 @@ In `panel/js/state.js`:
 
 4. Add to the return object: `formatBytes: formatBytes, formatAssetMetaLine: formatAssetMetaLine, ASSETS_USAGE_KEY: ASSETS_USAGE_KEY,`
 
-- [ ] **Step 4: Run tests, verify all pass**
+- [x] **Step 4: Run tests, verify all pass**
 
 Run: `npm test 2>&1 | grep -E "^# (pass|fail)"`
 Expected: all pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add panel/js/state.js tests/state.assets.test.js
@@ -178,7 +178,7 @@ git commit -m "feat(panel): asset meta line, parameterized usage keys, tab prefs
 **Files:**
 - Test: `tests/jsx.es3.test.js` (create)
 
-- [ ] **Step 1: Write the test** (covers every `jsx/*.jsx`, so `assets.jsx` is guarded automatically once created)
+- [x] **Step 1: Write the test** (covers every `jsx/*.jsx`, so `assets.jsx` is guarded automatically once created)
 
 ```js
 const test = require('node:test');
@@ -203,12 +203,12 @@ for (const f of files) {
 }
 ```
 
-- [ ] **Step 2: Run, verify it passes against current files** (hostscript.jsx and relink.jsx are already clean)
+- [x] **Step 2: Run, verify it passes against current files** (hostscript.jsx and relink.jsx are already clean)
 
 Run: `npm test 2>&1 | grep -E "^# (pass|fail)"`
 Expected: all pass. If a false positive fires (e.g. `=>` inside a string), tighten the offending regex rather than weakening the rule.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add tests/jsx.es3.test.js
@@ -224,7 +224,7 @@ git commit -m "test: static ES3 guard for all jsx host modules"
 - Modify: `tests/jsx.exports.test.js`
 - Test: `tests/assets.validation.parity.test.js` (create)
 
-- [ ] **Step 1: Generalize the exports test to cover both loadable modules**
+- [x] **Step 1: Generalize the exports test to cover both loadable modules**
 
 Replace the module-reading header and first test of `tests/jsx.exports.test.js` with a loop over both modules, and extend the loader test to require both markers:
 
@@ -273,12 +273,12 @@ test('loadHostModules verifies the exports actually landed before reporting ok',
 
 Keep the existing cross-file test (relink names used by hostscript) unchanged.
 
-- [ ] **Step 2: Run tests, verify the new assertions fail** (assets.jsx missing, loader not generalized)
+- [x] **Step 2: Run tests, verify the new assertions fail** (assets.jsx missing, loader not generalized)
 
 Run: `npm test 2>&1 | grep -E "^# (pass|fail)"`
 Expected: failures.
 
-- [ ] **Step 3: Create `jsx/assets.jsx`** (ES3; uses hostscript globals `readJson`, `writeJson`, `jerr`, `jsonEscape`)
+- [x] **Step 3: Create `jsx/assets.jsx`** (ES3; uses hostscript globals `readJson`, `writeJson`, `jerr`, `jsonEscape`)
 
 ```js
 // DropComp assets module (ExtendScript, ES3 only)
@@ -562,7 +562,7 @@ $.global.findOrCreateAssetsBin = findOrCreateAssetsBin;
 $.global.importAsset = importAsset;
 ```
 
-- [ ] **Step 4: Write the rename-validation parity test**
+- [x] **Step 4: Write the rename-validation parity test**
 
 Create `tests/assets.validation.parity.test.js`:
 
@@ -586,7 +586,7 @@ test('renameAsset mirrors DCValidate invalid-chars and reserved-name rules', () 
 });
 ```
 
-- [ ] **Step 5: Syntax-check and run tests** (loader test still fails — fixed in Task 4; everything else passes)
+- [x] **Step 5: Syntax-check and run tests** (loader test still fails — fixed in Task 4; everything else passes)
 
 ```bash
 cp jsx/assets.jsx /tmp/dc_assets_check.js && node --check /tmp/dc_assets_check.js && rm /tmp/dc_assets_check.js
@@ -594,7 +594,7 @@ npm test 2>&1 | grep -E "^# (pass|fail)"
 ```
 Expected: only the loadHostModules-marker test fails.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add jsx/assets.jsx tests/jsx.exports.test.js tests/assets.validation.parity.test.js
@@ -608,7 +608,7 @@ git commit -m "feat(jsx): assets host module - index, multi-add, rename, delete,
 **Files:**
 - Modify: `jsx/hostscript.jsx` (loadHostModules, ensureHostModules, rebuildLibraryIndex, stashSelectedComp, addExternalAep)
 
-- [ ] **Step 1: Generalize the module loader** — replace `loadHostModules` and `ensureHostModules`:
+- [x] **Step 1: Generalize the module loader** — replace `loadHostModules` and `ensureHostModules`:
 
 ```js
 var DC_MODULES_LOADED = false;
@@ -650,7 +650,7 @@ function ensureHostModules() {
 }
 ```
 
-- [ ] **Step 2: Reserve the Assets folder.** Add helper near `safeNameJsx`:
+- [x] **Step 2: Reserve the Assets folder.** Add helper near `safeNameJsx`:
 
 ```js
 function isReservedCategory(name) {
@@ -676,7 +676,7 @@ In `addExternalAep`, first line of the try block:
         if (isReservedCategory(categoryName)) return jerr('"Assets" is reserved for the Assets tab.');
 ```
 
-- [ ] **Step 3: Syntax-check + full suite**
+- [x] **Step 3: Syntax-check + full suite**
 
 ```bash
 cp jsx/hostscript.jsx /tmp/dc_host_check.js && node --check /tmp/dc_host_check.js && rm /tmp/dc_host_check.js
@@ -684,7 +684,7 @@ npm test 2>&1 | grep -E "^# (pass|fail)"
 ```
 Expected: all pass (loader marker test now satisfied).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add jsx/hostscript.jsx
@@ -698,7 +698,7 @@ git commit -m "feat(jsx): load assets module at boot, reserve Assets category fo
 **Files:**
 - Modify: `panel/js/render.js`
 
-- [ ] **Step 1: Extract the thumb URL helper** (currently inline in `buildCard`). Add after `iconBtn`:
+- [x] **Step 1: Extract the thumb URL helper** (currently inline in `buildCard`). Add after `iconBtn`:
 
 ```js
   // encodeURI leaves # and ? alone, but either would truncate a file:// URL
@@ -715,7 +715,7 @@ In `buildCard`, replace the img.src lines with:
       img.src = thumbUrl(comp.thumbPath, bust);
 ```
 
-- [ ] **Step 2: Add the asset card builder** (after `buildCard`):
+- [x] **Step 2: Add the asset card builder** (after `buildCard`):
 
 ```js
   var RENDERABLE_EXTS = { png: 1, jpg: 1, jpeg: 1, gif: 1, bmp: 1 };
@@ -769,7 +769,7 @@ In `buildCard`, replace the img.src lines with:
   }
 ```
 
-- [ ] **Step 3: Thread a `kind` parameter through section + render**
+- [x] **Step 3: Thread a `kind` parameter through section + render**
 
 `buildSection` becomes:
 
@@ -812,14 +812,14 @@ In `buildCard`, replace the img.src lines with:
 
 (Existing callers omit `kind` → comp behavior unchanged.)
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 ```bash
 node --check panel/js/render.js && npm test 2>&1 | grep -E "^# (pass|fail)"
 ```
 Expected: clean + all pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add panel/js/render.js
@@ -840,7 +840,7 @@ through the new module boundaries (DCAssets hooks are added in Task 7 — shell
 references to `DCAssets` are written now but only exercised once it exists, so
 guard them: `typeof DCAssets !== 'undefined'`).
 
-- [ ] **Step 1: Create `panel/js/ui.js`** — toast/spinner/screens/modals (modal "owner" tracking is new plumbing for Task 7 but inert for comps-only):
+- [x] **Step 1: Create `panel/js/ui.js`** — toast/spinner/screens/modals (modal "owner" tracking is new plumbing for Task 7 but inert for comps-only):
 
 ```js
 var DCUI = (function () {
@@ -931,7 +931,7 @@ var DCUI = (function () {
 }());
 ```
 
-- [ ] **Step 2: Create `panel/js/shell.js`** — boot, prefs, tabs, toolbar, dispatch:
+- [x] **Step 2: Create `panel/js/shell.js`** — boot, prefs, tabs, toolbar, dispatch:
 
 ```js
 var DCShell = (function () {
@@ -1113,7 +1113,7 @@ var DCShell = (function () {
 }());
 ```
 
-- [ ] **Step 3: Create `panel/js/library.js`** — all comp flows, behavior identical to the current actions.js versions, with `els` read from `DCShell.getEls()`, `libraryPath` from `DCShell.getLibraryPath()`, `prefs` from `DCShell.getPrefs()`, toast/spinner/isError from DCUI:
+- [x] **Step 3: Create `panel/js/library.js`** — all comp flows, behavior identical to the current actions.js versions, with `els` read from `DCShell.getEls()`, `libraryPath` from `DCShell.getLibraryPath()`, `prefs` from `DCShell.getPrefs()`, toast/spinner/isError from DCUI:
 
 ```js
 var DCLibrary = (function () {
@@ -1447,7 +1447,7 @@ var DCLibrary = (function () {
 }());
 ```
 
-- [ ] **Step 4: Rewrite `panel/js/main.js`** (els gains `tabLibrary`, `tabAssets`, `addAssetsBtn`; routing goes through DCShell):
+- [x] **Step 4: Rewrite `panel/js/main.js`** (els gains `tabLibrary`, `tabAssets`, `addAssetsBtn`; routing goes through DCShell):
 
 ```js
 (function () {
@@ -1586,7 +1586,7 @@ var DCLibrary = (function () {
 }());
 ```
 
-- [ ] **Step 5: Update `panel/index.html` script tags** — replace the actions.js tag:
+- [x] **Step 5: Update `panel/index.html` script tags** — replace the actions.js tag:
 
 ```html
 <script src="js/CSInterface.js"></script>
@@ -1602,13 +1602,13 @@ var DCLibrary = (function () {
 
 (assets.js is appended in Task 7.)
 
-- [ ] **Step 6: Delete `panel/js/actions.js`**
+- [x] **Step 6: Delete `panel/js/actions.js`**
 
 ```bash
 git rm panel/js/actions.js
 ```
 
-- [ ] **Step 7: Verify syntax, suite, and line limits**
+- [x] **Step 7: Verify syntax, suite, and line limits**
 
 ```bash
 node --check panel/js/ui.js && node --check panel/js/shell.js && node --check panel/js/library.js && node --check panel/js/main.js
@@ -1617,7 +1617,7 @@ wc -l panel/js/ui.js panel/js/shell.js panel/js/library.js panel/js/main.js
 ```
 Expected: clean, all pass, every file < 400.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add -A panel/
@@ -1632,7 +1632,7 @@ git commit -m "refactor(panel): split actions.js into ui/shell/library modules"
 - Create: `panel/js/assets.js`
 - Modify: `panel/index.html`, `panel/css/style.css`
 
-- [ ] **Step 1: Create `panel/js/assets.js`**
+- [x] **Step 1: Create `panel/js/assets.js`**
 
 ```js
 var DCAssets = (function () {
@@ -1900,7 +1900,7 @@ var DCAssets = (function () {
 }());
 ```
 
-- [ ] **Step 2: Update `panel/index.html`**
+- [x] **Step 2: Update `panel/index.html`**
 
 Tab bar — enable the assets tab:
 
@@ -1928,7 +1928,7 @@ Script tags — add assets.js between library.js and main.js:
 <script src="js/main.js"></script>
 ```
 
-- [ ] **Step 3: CSS additions** (append to `panel/css/style.css`; verify variable names against the file's `:root` block and match the existing `.btn-gold` display rule when hiding/showing):
+- [x] **Step 3: CSS additions** (append to `panel/css/style.css`; verify variable names against the file's `:root` block and match the existing `.btn-gold` display rule when hiding/showing):
 
 ```css
 /* ---- assets tab ---- */
@@ -1954,7 +1954,7 @@ Script tags — add assets.js between library.js and main.js:
 #library.grid--s .ext-badge { font-size: 9px; padding: 1px 5px; }
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 ```bash
 node --check panel/js/assets.js
@@ -1963,7 +1963,7 @@ wc -l panel/js/*.js panel/css/style.css
 ```
 Expected: clean, all pass, every authored panel file < 400.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add panel/
@@ -1979,7 +1979,7 @@ The shared category-modal flow closes the modal before acquiring the op lock, lo
 **Files:**
 - Modify: `panel/js/library.js` (`confirmCategory`), `panel/js/assets.js` (`confirmCategory`)
 
-- [ ] **Step 1: Reorder library.js `confirmCategory`** — acquire first, keep the modal open on busy:
+- [x] **Step 1: Reorder library.js `confirmCategory`** — acquire first, keep the modal open on busy:
 
 ```js
   function confirmCategory(mode, categoryName) {
@@ -1990,9 +1990,9 @@ The shared category-modal flow closes the modal before acquiring the op lock, lo
 ```
 (and the same two-line swap in the `addAep` branch — acquire, then `DCUI.closeModal`.)
 
-- [ ] **Step 2: Reorder assets.js `confirmCategory`** the same way (acquire before `closeModal`; the no-paths early-out keeps closing first).
+- [x] **Step 2: Reorder assets.js `confirmCategory`** the same way (acquire before `closeModal`; the no-paths early-out keeps closing first).
 
-- [ ] **Step 3: Verify + commit**
+- [x] **Step 3: Verify + commit**
 
 ```bash
 node --check panel/js/library.js && node --check panel/js/assets.js && npm test 2>&1 | grep -E "^# (pass|fail)"
@@ -2007,9 +2007,9 @@ git commit -m "fix(panel): acquire op lock before closing category modal - busy 
 **Files:**
 - Modify: `README.md` (feature list), this plan (tick boxes)
 
-- [ ] **Step 1: README** — add an Assets bullet to the feature list mirroring the existing tone, e.g. "**Assets tab** — a second library for reusable images (icons, logos, textures): multi-add from disk, instant file thumbnails, import to the active comp at the playhead."
+- [x] **Step 1: README** — add an Assets bullet to the feature list mirroring the existing tone, e.g. "**Assets tab** — a second library for reusable images (icons, logos, textures): multi-add from disk, instant file thumbnails, import to the active comp at the playhead."
 
-- [ ] **Step 2: Full suite + line limits**
+- [x] **Step 2: Full suite + line limits**
 
 ```bash
 npm test 2>&1 | grep -E "^# (tests|pass|fail)"
@@ -2017,7 +2017,7 @@ wc -l panel/js/*.js jsx/*.jsx panel/css/style.css
 ```
 Expected: all pass; panel files < 400 (CSInterface.js exempt); jsx files < 800.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add README.md docs/

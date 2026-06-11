@@ -1,7 +1,7 @@
-# DropComp 2.0
+# DropComp 2.1
 
-After Effects CEP panel: a personal library of reusable comps with thumbnails,
-categories, favorites, and one-click import.
+After Effects CEP panel: a personal library of reusable comps and image assets
+with thumbnails, categories, favorites, and one-click import.
 
 ## Install
 
@@ -16,6 +16,10 @@ Restart After Effects, then Window > Extensions > DropComp.
 `comp.png`, `metadata.json`, `(Footage)/`. Index cache: `<Library>/.dropcomp_index.json`
 (version 2). Settings: `~/Documents/DropComp/library_path.txt`.
 
+Assets live at `<Library>/Assets/<Category>/<file>` - plain image files, no
+sidecars (the top-level `Assets` folder name is reserved). Index cache:
+`<Library>/Assets/.dropcomp_assets_index.json` (version 1).
+
 ## Features
 
 - Stash the selected comp (project must be saved once) - self-contained AEP + footage copy
@@ -26,12 +30,17 @@ Restart After Effects, then Window > Extensions > DropComp.
 - Relink button (chain icon): finds missing footage in the open project by filename
   across the library tree and relinks it automatically
 - Collapsible category sections, search, 4 sort modes, favorites, size slider
-- Assets tab is a stub - planned for 2.1
+- **Assets tab** - a second library for reusable images (icons, logos, textures):
+  multi-add from disk (png/jpg/gif/bmp/tif/tga/psd/ai/eps), the file itself is the
+  thumbnail, import drops into the active comp at the playhead and reuses footage
+  already in the project (one `Assets [DropComp]` bin, no duplicates)
 
 ## Development
 
 - `npm test` - unit tests (node >= 18, zero deps) for the pure panel modules
-- Panel JS: Chromium 99 (modern JS fine). `jsx/hostscript.jsx`: ExtendScript ES3 only.
-- Manual AE checklist: docs/superpowers/plans/2026-06-11-dropcomp-2.0.md Task 17
+- Panel JS: Chromium 99 (modern JS fine). `jsx/*.jsx`: ExtendScript ES3 only
+  (statically enforced by tests/jsx.es3.test.js)
+- Manual AE checklists: docs/superpowers/plans/2026-06-11-dropcomp-2.0.md Task 17,
+  docs/superpowers/plans/2026-06-11-assets-tab.md Task 9
 
 Full design: `docs/superpowers/specs/2026-06-11-dropcomp-2-refinement-design.md`
