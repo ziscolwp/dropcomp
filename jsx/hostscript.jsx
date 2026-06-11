@@ -270,3 +270,145 @@ function importComp(aepPath) {
         return 'Error: ' + e.toString();
     }
 }
+
+// ---------- thumbnails ----------
+function compInfo(comp) {
+    return {
+        compName: comp.name,
+        width: comp.width,
+        height: comp.height,
+        duration: comp.duration,
+        frameRate: comp.frameRate
+    };
+}
+
+function saveVerifiedThumb(comp, pngFile) {
+    var start = comp.workAreaStart;
+    var dur = comp.workAreaDuration;
+    var times = [start + dur / 2, start, start + dur * 0.25];
+    for (var i = 0; i < times.length; i++) {
+        try {
+            if (pngFile.exists) pngFile.remove();
+            comp.saveFrameToPng(times[i], pngFile);
+            if (pngFile.exists && pngFile.length > 1024) return true;
+        } catch (e) { }
+    }
+    return pngFile.exists && pngFile.length > 0;
+}
+
+// ---------- stash ----------
+function stashSelectedComp(libraryPath, categoryName) {
+    var originalProjectFile = app.project ? app.project.file : null;
+    var secretTempAEP = null;
+    var movedAway = false;
+    try {
+        if (!app.project) return 'Error: Please open a project first.';
+        if (!originalProjectFile) return 'Error: Save your project once before stashing.';
+
+        var compToSave = null;
+        var activeComp = app.project.activeItem;
+        if (activeComp && activeComp instanceof CompItem) {
+            var sel = activeComp.selectedLayers;
+            for (var i = 0; i < sel.length; i++) {
+                if (sel[i].source && sel[i].source instanceof CompItem) {
+                    if (compToSave) return 'Error: Please select only one precomp in the Timeline, or one composition in the Project Panel.';
+                    compToSave = sel[i].source;
+                }
+            }
+        }
+        if (!compToSave) {
+            var selected = app.project.selection;
+            if (selected.length !== 1 || !(selected[0] instanceof CompItem)) {
+                return 'Error: Please select exactly one composition in the Project Panel or one precomp layer in the Timeline.';
+            }
+            compToSave = selected[0];
+        }
+        var compToSaveID = compToSave.id;
+        var compToSaveName = compToSave.name;
+        var info = compInfo(compToSave);
+        var safeCompName = safeNameJsx(compToSaveName);
+
+        var categoryFolder = new Folder(libraryPath + '/' + categoryName);
+        if (!categoryFolder.exists) categoryFolder.create();
+        var timestamp = new Date().getTime();
+        var compFolderName = safeCompName + '_' + timestamp;
+        var compFolder = new Folder(categoryFolder.fsName + '/' + compFolderName);
+        if (!compFolder.create()) return 'Error: Could not create the item folder.';
+
+        var thumbFile = new File(compFolder.fsName + '/comp.png');
+        saveVerifiedThumb(compToSave, thumbFile);
+
+        writeJson(new File(compFolder.fsName + '/metadata.json'), {
+            displayName: compToSaveName,
+            mainCompId: compToSaveID,
+            mainCompName: compToSaveName,
+            width: info.width,
+            height: info.height,
+            duration: info.duration,
+            frameRate: info.frameRate,
+            addedAt: timestamp,
+            source: 'stash'
+        });
+
+        app.beginUndoGroup('DropComp Stash');
+        secretTempAEP = new File(Folder.temp.fsName + '/dropcomp_temp_' + timestamp + '.aep');
+        app.project.save(secretTempAEP);
+        movedAway = true;
+
+        var compInTemp = null;
+        for (var k = 1; k <= app.project.numItems; k++) {
+            if (app.project.item(k).id === compToSaveID) {
+                compInTemp = app.project.item(k);
+                break;
+            }
+        }
+        if (!compInTemp) throw new Error('Could not find the composition in the temp project.');
+        app.project.reduceProject([compInTemp]);
+
+        var footageSubFolder = new Folder(compFolder.fsName + '/(Footage)');
+        footageSubFolder.create();
+        for (var n = 1; n <= app.project.numItems; n++) {
+            var item = app.project.item(n);
+            if (item instanceof FootageItem && item.mainSource && item.mainSource.file) {
+                var sourceFile = item.mainSource.file;
+                if (sourceFile.fsName.indexOf('Adobe') === -1 && sourceFile.fsName.indexOf('Plug-ins') === -1) {
+                    var newFile = new File(footageSubFolder.fsName + '/' + sourceFile.name);
+                    if (!newFile.exists) sourceFile.copy(newFile);
+                    item.replace(newFile);
+                }
+            }
+        }
+        app.project.save(secretTempAEP);
+
+        var finalAEPFile = new File(compFolder.fsName + '/' + safeCompName + '.aep');
+        if (!secretTempAEP.copy(finalAEPFile)) {
+            throw new Error('Could not copy the temporary project to the library.');
+        }
+        app.endUndoGroup();
+
+        updateIndexAddComp(libraryPath, {
+            name: compToSaveName,
+            category: categoryName,
+            uniqueId: compFolderName,
+            aepPath: finalAEPFile.fsName,
+            thumbPath: thumbFile.exists ? thumbFile.fsName : null,
+            mainCompId: compToSaveID,
+            width: info.width,
+            height: info.height,
+            duration: info.duration,
+            frameRate: info.frameRate,
+            addedAt: timestamp
+        });
+
+        return "Success! '" + compToSaveName + "' was added to your library.";
+    } catch (e) {
+        return 'Error: ' + e.toString();
+    } finally {
+        if (movedAway && originalProjectFile && originalProjectFile.exists) {
+            app.open(originalProjectFile);
+        }
+        if (secretTempAEP && secretTempAEP.exists) {
+            secretTempAEP.remove();
+        }
+    }
+}
