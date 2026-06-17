@@ -213,3 +213,42 @@ function tlReset() {
     }
 }
 $.global.tlReset = tlReset;
+
+function tlSequence(numStr, stepFramesStr) {
+    var comp = tlActiveComp();
+    if (!comp) return jerr('Open a composition first.');
+    var sel = comp.selectedLayers;
+    if (!sel || sel.length === 0) return jerr('Select at least one layer.');
+    var num = parseInt(numStr, 10);
+    var step = parseInt(stepFramesStr, 10);
+    if (isNaN(num) || isNaN(step)) return jerr('Num and Step must be whole numbers.');
+    if (num < 1) num = 1;
+    var fd = comp.frameDuration;
+    try {
+        app.beginUndoGroup('DropComp Sequence');
+        if (sel.length >= 2) {
+            var ordered = sel.slice(0);
+            ordered.sort(function (a, b) { return a.index - b.index; });
+            var base = ordered[0].startTime;
+            for (var i = 0; i < ordered.length; i++) {
+                ordered[i].startTime = base + i * step * fd;
+            }
+            app.endUndoGroup();
+            return '{"ok":true,"count":' + ordered.length + '}';
+        }
+        var layer = sel[0];
+        var b0 = layer.startTime;
+        var made = 0;
+        for (var k = 1; k <= num; k++) {
+            var dup = layer.duplicate();
+            dup.startTime = b0 + k * step * fd;
+            made++;
+        }
+        app.endUndoGroup();
+        return '{"ok":true,"count":' + made + '}';
+    } catch (e) {
+        try { app.endUndoGroup(); } catch (e2) {}
+        return jerr(e.toString());
+    }
+}
+$.global.tlSequence = tlSequence;
