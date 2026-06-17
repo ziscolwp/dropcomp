@@ -76,7 +76,7 @@ var DCShell = (function () {
     if (els.tabTools) els.tabTools.classList.toggle('active', isTools);
     els.app.classList.toggle('assets-active', isAssets);
     els.app.classList.toggle('tools-active', isTools);
-    if (isTools) { DCTools.ensureMounted(); return; }
+    if (isTools) { if (typeof DCTools !== 'undefined') DCTools.ensureMounted(); return; }
     els.search.placeholder = isAssets ? 'Search assets...' : 'Search library...';
     activeModule().ensureLoaded();
   }

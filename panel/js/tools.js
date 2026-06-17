@@ -54,7 +54,8 @@ var DCTools = (function () {
       var step = DCToolsCore.clampInt(document.getElementById('tools-step').value, -100000, 100000, 5);
       run('sequence', 'tlSequence', [num, step]);
     } else if (tool === 'precomp') {
-      run('precomp', PRECOMP_FN[arg], []);
+      var fn = PRECOMP_FN[arg];
+      if (fn) run('precomp', fn, []);
     }
   }
 
