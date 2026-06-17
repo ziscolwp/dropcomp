@@ -17,6 +17,13 @@ test('anchorFraction falls back to center on bad input', () => {
   assert.deepEqual(C.anchorFraction('x'), [0.5, 0.5]);
 });
 
+test('anchorFraction floors non-integer numbers and handles null/undefined', () => {
+  assert.deepEqual(C.anchorFraction(4.9), [0.5, 0.5]);
+  assert.deepEqual(C.anchorFraction(2.2), [1, 0]);
+  assert.deepEqual(C.anchorFraction(null), [0.5, 0.5]);
+  assert.deepEqual(C.anchorFraction(undefined), [0.5, 0.5]);
+});
+
 test('clampInt parses, clamps to [min,max], and falls back on garbage', () => {
   assert.equal(C.clampInt('5', 1, 500, 1), 5);
   assert.equal(C.clampInt('abc', 1, 500, 1), 1);

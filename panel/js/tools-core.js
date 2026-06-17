@@ -5,6 +5,7 @@ var DCToolsCore = (function () {
   // fractions. Used at runtime by the panel and sent to the host as primitives.
   function anchorFraction(index) {
     var i = (typeof index === 'number') ? index : parseInt(index, 10);
+    i = Math.floor(i);
     if (isNaN(i) || i < 0 || i > 8) i = 4;
     return [(i % 3) * 0.5, Math.floor(i / 3) * 0.5];
   }
