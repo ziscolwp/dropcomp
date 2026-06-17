@@ -324,3 +324,47 @@ function tlIndependent() {
     }
 }
 $.global.tlIndependent = tlIndependent;
+
+function tlCopyTransform(fromLayer, toLayer) {
+    var f = fromLayer.property('ADBE Transform Group');
+    var t = toLayer.property('ADBE Transform Group');
+    t.property('ADBE Position').setValue(f.property('ADBE Position').value);
+    t.property('ADBE Scale').setValue(f.property('ADBE Scale').value);
+    t.property('ADBE Rotate Z').setValue(f.property('ADBE Rotate Z').value);
+}
+$.global.tlCopyTransform = tlCopyTransform;
+
+function tlDecompose() {
+    var comp = tlActiveComp();
+    if (!comp) return jerr('Open a composition first.');
+    var sel = comp.selectedLayers;
+    if (!sel || sel.length !== 1) return jerr('Select a single precomp layer.');
+    var layer = sel[0];
+    if (!(layer.source && layer.source instanceof CompItem)) return jerr('Selected layer is not a precomp.');
+    if (parseFloat(app.version) < 22) return jerr('Decompose needs After Effects 2022 or newer.');
+    var src = layer.source;
+    try {
+        app.beginUndoGroup('DropComp Decompose');
+        var nullLayer = comp.layers.addNull();
+        tlCopyTransform(layer, nullLayer);
+        nullLayer.startTime = layer.startTime;
+        var copies = [];
+        for (var i = src.numLayers; i >= 1; i--) {
+            src.layer(i).copyToComp(comp);
+            copies.push(comp.layer(1));
+        }
+        for (var j = 0; j < copies.length; j++) {
+            try {
+                copies[j].startTime = copies[j].startTime + layer.startTime;
+                copies[j].parent = nullLayer;
+            } catch (eP) {}
+        }
+        layer.remove();
+        app.endUndoGroup();
+        return '{"ok":true,"count":' + copies.length + '}';
+    } catch (e) {
+        try { app.endUndoGroup(); } catch (e2) {}
+        return jerr(e.toString());
+    }
+}
+$.global.tlDecompose = tlDecompose;
