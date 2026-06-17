@@ -45,3 +45,45 @@ function tlCreateLayer(kind) {
     }
 }
 $.global.tlCreateLayer = tlCreateLayer;
+
+function tlSetAnchor(fxStr, fyStr) {
+    var comp = tlActiveComp();
+    if (!comp) return jerr('Open a composition first.');
+    var sel = comp.selectedLayers;
+    if (!sel || sel.length === 0) return jerr('Select at least one layer.');
+    var fx = parseFloat(fxStr), fy = parseFloat(fyStr);
+    if (isNaN(fx) || isNaN(fy)) return jerr('Bad anchor position.');
+    try {
+        app.beginUndoGroup('DropComp Set Anchor');
+        var count = 0;
+        for (var i = 0; i < sel.length; i++) {
+            var layer = sel[i];
+            if (!(layer instanceof AVLayer)) continue;
+            try {
+                var rect = layer.sourceRectAtTime(comp.time, false);
+                var t = layer.property('ADBE Transform Group');
+                var anchorProp = t.property('ADBE Anchor Point');
+                var posProp = t.property('ADBE Position');
+                var scale = t.property('ADBE Scale').value;
+                var oldA = anchorProp.value;
+                var newAX = rect.left + rect.width * fx;
+                var newAY = rect.top + rect.height * fy;
+                var dx = (newAX - oldA[0]) * (scale[0] / 100);
+                var dy = (newAY - oldA[1]) * (scale[1] / 100);
+                if (oldA.length === 3) anchorProp.setValue([newAX, newAY, oldA[2]]);
+                else anchorProp.setValue([newAX, newAY]);
+                var pos = posProp.value;
+                if (pos.length === 3) posProp.setValue([pos[0] + dx, pos[1] + dy, pos[2]]);
+                else posProp.setValue([pos[0] + dx, pos[1] + dy]);
+                count++;
+            } catch (eL) {}
+        }
+        app.endUndoGroup();
+        if (count === 0) return jerr('Select a footage, shape, text, or solid layer.');
+        return '{"ok":true,"count":' + count + '}';
+    } catch (e) {
+        try { app.endUndoGroup(); } catch (e2) {}
+        return jerr(e.toString());
+    }
+}
+$.global.tlSetAnchor = tlSetAnchor;
