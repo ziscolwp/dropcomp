@@ -39,6 +39,7 @@
   <nav id="tabs">
     <button class="tab active" id="tab-library">Library</button>
     <button class="tab" id="tab-assets">Assets</button>
+    <button class="tab" id="tab-tools">Tools</button>
   </nav>
 
   <div id="toolbar">
@@ -83,6 +84,64 @@
   </div>
 
   <main id="library"></main>
+  <section id="tools">
+    <div class="tool-card">
+      <div class="tool-row">
+        <div>
+          <div class="tool-label">anchor</div>
+          <div class="anchor-grid">
+            <button class="anchor-cell" data-tool="anchor" data-arg="0"><span></span></button>
+            <button class="anchor-cell" data-tool="anchor" data-arg="1"><span></span></button>
+            <button class="anchor-cell" data-tool="anchor" data-arg="2"><span></span></button>
+            <button class="anchor-cell" data-tool="anchor" data-arg="3"><span></span></button>
+            <button class="anchor-cell" data-tool="anchor" data-arg="4"><span></span></button>
+            <button class="anchor-cell" data-tool="anchor" data-arg="5"><span></span></button>
+            <button class="anchor-cell" data-tool="anchor" data-arg="6"><span></span></button>
+            <button class="anchor-cell" data-tool="anchor" data-arg="7"><span></span></button>
+            <button class="anchor-cell" data-tool="anchor" data-arg="8"><span></span></button>
+          </div>
+        </div>
+        <div class="tool-grow">
+          <div class="tool-label">create</div>
+          <div class="tool-grid-2">
+            <button class="tool-btn" data-tool="create" data-arg="null">Null</button>
+            <button class="tool-btn" data-tool="create" data-arg="adjustment">Adjust</button>
+            <button class="tool-btn" data-tool="create" data-arg="solid">Solid</button>
+            <button class="tool-btn" data-tool="create" data-arg="camera">Camera</button>
+          </div>
+        </div>
+      </div>
+      <div class="tool-inset">
+        <div class="tool-row tool-seq">
+          <span class="tool-label">Num</span>
+          <input type="number" id="tools-num" class="tool-num" value="1" min="1">
+          <span class="tool-label">Step</span>
+          <input type="number" id="tools-step" class="tool-num" value="5">
+          <button class="tool-btn tool-grow" data-tool="sequence">Sequence</button>
+        </div>
+        <div class="tool-icons">
+          <button class="tool-icon" data-tool="align" data-arg="left" title="Align left">L</button>
+          <button class="tool-icon" data-tool="align" data-arg="center" title="Align center">C</button>
+          <button class="tool-icon" data-tool="align" data-arg="right" title="Align right">R</button>
+          <button class="tool-icon" data-tool="align" data-arg="top" title="Align top">T</button>
+          <button class="tool-icon" data-tool="align" data-arg="middle" title="Align middle">M</button>
+          <button class="tool-icon" data-tool="align" data-arg="bottom" title="Align bottom">B</button>
+          <button class="tool-icon" data-tool="distribute" data-arg="horizontal" title="Distribute horizontally">⇿</button>
+          <button class="tool-icon" data-tool="distribute" data-arg="vertical" title="Distribute vertically">⇳</button>
+          <button class="tool-icon" data-tool="reset" title="Recenter selected layers">⟳</button>
+        </div>
+      </div>
+    </div>
+    <div class="tool-group">
+      <div class="tool-label tool-group-label">pre-comp tools</div>
+      <div class="tool-grid-2">
+        <button class="tool-btn" data-tool="precomp" data-arg="precomp">PreComp</button>
+        <button class="tool-btn" data-tool="precomp" data-arg="decompose">Decompose</button>
+        <button class="tool-btn" data-tool="precomp" data-arg="multi">Multi PreComp</button>
+        <button class="tool-btn" data-tool="precomp" data-arg="independent">Independent</button>
+      </div>
+    </div>
+  </section>
 </div>
 
 <div id="category-modal" class="modal-overlay hidden">
@@ -159,6 +218,8 @@
 <script src="js/shell.js"></script>
 <script src="js/library.js"></script>
 <script src="js/assets.js"></script>
+<script src="js/tools-core.js"></script>
+<script src="js/tools.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

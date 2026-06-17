@@ -6,6 +6,7 @@ var DCShell = (function () {
   var libraryPath = null;
 
   function hasAssets() { return typeof DCAssets !== 'undefined'; }
+  function hasTools() { return typeof DCTools !== 'undefined'; }
 
   function init(elements) {
     els = elements;
@@ -66,12 +67,16 @@ var DCShell = (function () {
   }
 
   function setActiveTab(tab, skipPersist) {
-    prefs.activeTab = (tab === 'assets' && hasAssets()) ? 'assets' : 'library';
+    prefs.activeTab = DCState.resolveActiveTab(tab, hasAssets(), hasTools());
     if (!skipPersist) persistPrefs();
     var isAssets = prefs.activeTab === 'assets';
-    els.tabLibrary.classList.toggle('active', !isAssets);
+    var isTools = prefs.activeTab === 'tools';
+    els.tabLibrary.classList.toggle('active', prefs.activeTab === 'library');
     els.tabAssets.classList.toggle('active', isAssets);
+    if (els.tabTools) els.tabTools.classList.toggle('active', isTools);
     els.app.classList.toggle('assets-active', isAssets);
+    els.app.classList.toggle('tools-active', isTools);
+    if (isTools) { DCTools.ensureMounted(); return; }
     els.search.placeholder = isAssets ? 'Search assets...' : 'Search library...';
     activeModule().ensureLoaded();
   }
@@ -137,21 +142,24 @@ var DCShell = (function () {
     if (hasAssets()) DCAssets.clearPending();
   }
 
-  function onSearch() { activeModule().rerender(); }
-  function onSortChange() { prefs.sort = els.sortSelect.value; persistPrefs(); activeModule().rerender(); }
+  function onSearch() { if (prefs.activeTab === 'tools') return; activeModule().rerender(); }
+  function onSortChange() { if (prefs.activeTab === 'tools') return; prefs.sort = els.sortSelect.value; persistPrefs(); activeModule().rerender(); }
   function onFavoritesToggle() {
+    if (prefs.activeTab === 'tools') return;
     prefs.favoritesOnly = !prefs.favoritesOnly;
     els.favoritesBtn.classList.toggle('active', prefs.favoritesOnly);
     persistPrefs();
     activeModule().rerender();
   }
   function onDisplayChange() {
+    if (prefs.activeTab === 'tools') return;
     prefs.showNames = els.showNamesCb.checked;
     prefs.showMeta = els.showMetaCb.checked;
     persistPrefs();
     activeModule().rerender();
   }
   function onSlider() {
+    if (prefs.activeTab === 'tools') return;
     prefs.thumbMin = parseInt(els.thumbSlider.value, 10);
     applyGridSize();
     persistPrefs();

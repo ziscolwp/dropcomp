@@ -277,3 +277,31 @@ body {
   font-size: 10px; font-weight: 700; padding: 3px 9px; cursor: pointer; margin-left: 4px;
 }
 .update-chip:hover { background: var(--gold-hover); }
+
+/* ---- tools tab ---- */
+#tools { display: none; flex: 1; overflow-y: auto; padding: 12px 14px; flex-direction: column; gap: 12px; }
+#app.tools-active #toolbar, #app.tools-active #library { display: none; }
+#app.tools-active #tools { display: flex; }
+.tool-card { background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.tool-row { display: flex; gap: 14px; align-items: flex-start; }
+.tool-grow { flex: 1; }
+.tool-label { font-size: 11px; color: var(--text-dim); letter-spacing: .05em; margin-bottom: 6px; }
+.tool-group-label { margin-left: 2px; }
+.anchor-grid { display: grid; grid-template-columns: repeat(3, 26px); grid-template-rows: repeat(3, 26px); gap: 4px; }
+.anchor-cell { background: var(--bg-inset); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+.anchor-cell span { width: 4px; height: 4px; border-radius: 50%; background: var(--text-dim); }
+.anchor-cell:hover { background: var(--bg-hover); }
+.anchor-cell:hover span { background: var(--gold); }
+.tool-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tool-btn { background: var(--bg-inset); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; padding: 9px 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.tool-btn:hover { background: var(--bg-hover); }
+.tool-inset { background: var(--bg-inset); border: 1px solid var(--border); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.tool-seq { align-items: center; gap: 8px; }
+.tool-seq .tool-label { margin-bottom: 0; }
+.tool-num { width: 46px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; padding: 6px; text-align: center; }
+.tool-num:focus { outline: none; border-color: var(--gold); }
+.tool-icons { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.tool-icon { height: 30px; background: var(--bg-hover); border: 1px solid var(--border-strong); border-radius: 6px; color: var(--gold); font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.tool-icon:hover { background: var(--border-strong); }
+.tool-group { display: flex; flex-direction: column; }
+
