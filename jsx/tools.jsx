@@ -68,23 +68,47 @@ function tlCompPos(layer) {
     var x = p[0], y = p[1];
     var par = layer.parent;
     while (par) {
+        // A child's position is expressed in the parent's space, whose origin is
+        // the parent's ANCHOR (not [0,0]). So accumulate (position - anchor) per
+        // ancestor, not just position - otherwise an anchor-offset parent (e.g. a
+        // null whose anchor was moved) throws the comp-space bounds off.
         var pp = tlReadPos(par);
-        x += pp[0]; y += pp[1];
+        var pa = par.property('ADBE Transform Group').property('ADBE Anchor Point').value;
+        x += pp[0] - pa[0]; y += pp[1] - pa[1];
         par = par.parent;
     }
     return [x, y];
 }
 $.global.tlCompPos = tlCompPos;
 
+// True if any ancestor is a camera or light. A 2D layer parented to one becomes
+// 3D and follows the camera; its comp-space 2D bounds can't be derived by summing
+// positions (a camera's Position is its eye/world location), so tlLayerBounds
+// skips these layers rather than aligning them to a garbage location.
+function tlHasFixedAncestor(layer) {
+    var par = layer.parent;
+    while (par) {
+        if (par instanceof CameraLayer || par instanceof LightLayer) return true;
+        par = par.parent;
+    }
+    return false;
+}
+$.global.tlHasFixedAncestor = tlHasFixedAncestor;
+
 // True if any ancestor is rotated or not at 100% scale, making comp-space bounds
 // for a parented layer approximate (we still move it, but flag it to the user).
 function tlChainApprox(layer) {
     var par = layer.parent;
     while (par) {
-        var t = par.property('ADBE Transform Group');
-        var s = t.property('ADBE Scale').value;
-        if (s[0] !== 100 || s[1] !== 100) return true;
-        if (t.property('ADBE Rotate Z').value !== 0) return true;
+        try {
+            var t = par.property('ADBE Transform Group');
+            var sp = t.property('ADBE Scale');
+            if (sp) { var s = sp.value; if (s[0] !== 100 || s[1] !== 100) return true; }
+            var rp = t.property('ADBE Rotate Z');
+            if (rp && rp.value !== 0) return true;
+        } catch (e) {
+            return true; // unreadable parent transform - treat as approximate
+        }
         par = par.parent;
     }
     return false;
@@ -176,6 +200,7 @@ function tlLayerBounds(comp, layer) {
     var rect;
     try { rect = layer.sourceRectAtTime(comp.time, false); } catch (e) { return null; }
     if (rect.width === 0 && rect.height === 0) return null;
+    if (tlHasFixedAncestor(layer)) return null;
     var t = layer.property('ADBE Transform Group');
     var pos = tlCompPos(layer);
     var anc = t.property('ADBE Anchor Point').value;
@@ -273,8 +298,10 @@ function tlDistribute(axis) {
             if (horiz) tlShift(items[k].layer, d, 0);
             else tlShift(items[k].layer, 0, d);
         }
+        var approx = 0;
+        for (var m = 0; m < items.length; m++) { if (tlChainApprox(items[m].layer)) approx++; }
         app.endUndoGroup();
-        return '{"ok":true,"count":' + items.length + '}';
+        return '{"ok":true,"count":' + items.length + (approx ? ',"approx":' + approx : '') + '}';
     } catch (e) {
         try { app.endUndoGroup(); } catch (e2) {}
         return jerr(e.toString());
@@ -444,6 +471,12 @@ function tlCopyTransform(fromLayer, toLayer) {
     var p = tlReadPos(fromLayer);
     if (p.length === 3) tlWritePos(toLayer, p[0], p[1], p[2]);
     else tlWritePos(toLayer, p[0], p[1]);
+    // Copy the anchor too: the null pivots scale/rotation about its OWN anchor,
+    // and a precomp layer's anchor sits at the source-comp centre (not [0,0]).
+    // Without this, any rotated/scaled decompose lands the contents off-pivot.
+    var a = f.property('ADBE Anchor Point').value;
+    if (a.length === 3) t.property('ADBE Anchor Point').setValue([a[0], a[1], a[2]]);
+    else t.property('ADBE Anchor Point').setValue([a[0], a[1]]);
     t.property('ADBE Scale').setValue(f.property('ADBE Scale').value);
     t.property('ADBE Rotate Z').setValue(f.property('ADBE Rotate Z').value);
     if (fromLayer.threeDLayer) {
@@ -504,7 +537,11 @@ function tlDecompose() {
         app.beginUndoGroup('DropComp Decompose');
         var identity = tlIsIdentityTransform(layer);
         var warn = tlDecomposeLossy(layer);
-        var op = layer.property('ADBE Transform Group').property('ADBE Opacity').value;
+        var opProp = layer.property('ADBE Transform Group').property('ADBE Opacity');
+        // Only bake a static, non-full opacity onto the copies. Animated opacity
+        // can't be reproduced this way (it's reported via warn), so leave it off
+        // rather than freezing the current-frame value onto every copy.
+        var op = (opProp.numKeys === 0) ? opProp.value : 100;
         // Carrier null starts at IDENTITY so parenting doesn't shift the copies;
         // we apply the precomp's transform to it AFTER parenting so the children
         // follow it. (Transforming the null before parenting would be cancelled
@@ -513,6 +550,11 @@ function tlDecompose() {
         if (!identity) {
             carrier = comp.layers.addNull();
             carrier.startTime = layer.startTime;
+            // addNull() places the null at the comp centre. Zero it to TRUE
+            // identity before parenting so each copy keeps its precomp-space
+            // position; tlCopyTransform then applies the real transform (incl.
+            // anchor) and the copies follow it exactly, even under scale/rotation.
+            carrier.property('ADBE Transform Group').property('ADBE Position').setValue([0, 0]);
         }
         var copies = [];
         for (var i = src.numLayers; i >= 1; i--) {

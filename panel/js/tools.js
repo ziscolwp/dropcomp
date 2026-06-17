@@ -17,7 +17,7 @@ var DCTools = (function () {
     if (fn === 'tlCreateLayer') return 'Created ' + ((r && r.name) || 'layer') + '.';
     if (fn === 'tlSetAnchor') return 'Anchor set on ' + plural(n, 'layer') + '.';
     if (fn === 'tlAlign') return 'Aligned ' + plural(n, 'layer') + '.' + approx;
-    if (fn === 'tlDistribute') return 'Distributed ' + plural(n, 'layer') + '.';
+    if (fn === 'tlDistribute') return 'Distributed ' + plural(n, 'layer') + '.' + approx;
     if (fn === 'tlReset') return 'Recentered ' + plural(n, 'layer') + '.' + approx;
     if (fn === 'tlSequence') return 'Sequenced ' + plural(n, 'layer') + '.';
     if (fn === 'tlPreComp') return 'Precomposed ' + plural(n, 'layer') + ((r && r.name) ? ' → ' + r.name : '') + '.';
