@@ -70,3 +70,20 @@ test('migrateMetadataKey moves favorites/usage to the renamed id', () => {
   assert.equal(meta.old_1, undefined);
   assert.equal(meta.new_1.useCount, 3);
 });
+
+test('resolveActiveTab coerces unknown or unavailable tabs to library', () => {
+  assert.equal(DCState.resolveActiveTab('library', true, true), 'library');
+  assert.equal(DCState.resolveActiveTab('assets', true, true), 'assets');
+  assert.equal(DCState.resolveActiveTab('tools', true, true), 'tools');
+  assert.equal(DCState.resolveActiveTab('assets', false, true), 'library');
+  assert.equal(DCState.resolveActiveTab('tools', true, false), 'library');
+  assert.equal(DCState.resolveActiveTab('bogus', true, true), 'library');
+});
+
+test('loadPrefs preserves a saved tools tab', () => {
+  const s = mockStorage();
+  const p = DCState.defaultPrefs();
+  p.activeTab = 'tools';
+  DCState.savePrefs(s, p);
+  assert.equal(DCState.loadPrefs(s).activeTab, 'tools');
+});
