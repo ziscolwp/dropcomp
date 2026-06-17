@@ -252,3 +252,75 @@ function tlSequence(numStr, stepFramesStr) {
     }
 }
 $.global.tlSequence = tlSequence;
+
+function tlPreComp() {
+    var comp = tlActiveComp();
+    if (!comp) return jerr('Open a composition first.');
+    var sel = comp.selectedLayers;
+    if (!sel || sel.length === 0) return jerr('Select at least one layer.');
+    try {
+        app.beginUndoGroup('DropComp Pre-compose');
+        var idx = [];
+        for (var i = 0; i < sel.length; i++) idx.push(sel[i].index);
+        var name = sel[0].name + ' Comp';
+        var newComp = comp.layers.precompose(idx, name, true);
+        newComp.openInViewer();
+        app.endUndoGroup();
+        return '{"ok":true,"name":"' + jsonEscape(name) + '"}';
+    } catch (e) {
+        try { app.endUndoGroup(); } catch (e2) {}
+        return jerr(e.toString());
+    }
+}
+$.global.tlPreComp = tlPreComp;
+
+function tlMultiPreComp() {
+    var comp = tlActiveComp();
+    if (!comp) return jerr('Open a composition first.');
+    var sel = comp.selectedLayers;
+    if (!sel || sel.length === 0) return jerr('Select at least one layer.');
+    try {
+        app.beginUndoGroup('DropComp Multi Pre-compose');
+        var targets = [];
+        for (var i = 0; i < sel.length; i++) targets.push({ index: sel[i].index, name: sel[i].name });
+        var made = 0;
+        for (var j = 0; j < targets.length; j++) {
+            comp.layers.precompose([targets[j].index], targets[j].name + ' Comp', true);
+            made++;
+        }
+        app.endUndoGroup();
+        return '{"ok":true,"count":' + made + '}';
+    } catch (e) {
+        try { app.endUndoGroup(); } catch (e2) {}
+        return jerr(e.toString());
+    }
+}
+$.global.tlMultiPreComp = tlMultiPreComp;
+
+function tlIndependent() {
+    var comp = tlActiveComp();
+    if (!comp) return jerr('Open a composition first.');
+    var sel = comp.selectedLayers;
+    if (!sel || sel.length === 0) return jerr('Select at least one layer.');
+    try {
+        app.beginUndoGroup('DropComp Make Independent');
+        var count = 0;
+        for (var i = 0; i < sel.length; i++) {
+            var layer = sel[i];
+            if (layer.source && layer.source instanceof CompItem) {
+                try {
+                    var dup = layer.source.duplicate();
+                    layer.replaceSource(dup, false);
+                    count++;
+                } catch (eL) {}
+            }
+        }
+        app.endUndoGroup();
+        if (count === 0) return jerr('Select at least one precomp layer.');
+        return '{"ok":true,"count":' + count + '}';
+    } catch (e) {
+        try { app.endUndoGroup(); } catch (e2) {}
+        return jerr(e.toString());
+    }
+}
+$.global.tlIndependent = tlIndependent;
