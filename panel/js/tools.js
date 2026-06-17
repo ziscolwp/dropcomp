@@ -6,13 +6,26 @@ var DCTools = (function () {
     precomp: 'tlPreComp', multi: 'tlMultiPreComp',
     decompose: 'tlDecompose', independent: 'tlIndependent'
   };
-  var OK_MSG = {
-    tlSetAnchor: 'Anchor set.', tlCreateLayer: 'Layer created.',
-    tlAlign: 'Aligned.', tlDistribute: 'Distributed.', tlReset: 'Recentered.',
-    tlSequence: 'Sequenced.', tlPreComp: 'Precomposed.',
-    tlMultiPreComp: 'Precomposed each layer.', tlDecompose: 'Decomposed.',
-    tlIndependent: 'Made independent.'
-  };
+  function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
+
+  // Build a counted/named success message from the host's JSON result. The host
+  // returns { ok, count, name?, ignored?, approx?, warn? }; surface those so the
+  // user sees what actually happened instead of a flat "Done."
+  function okMessage(fn, r) {
+    var n = (r && typeof r.count === 'number') ? r.count : 0;
+    var approx = (r && r.approx) ? ' ' + r.approx + ' parented (bounds approximate).' : '';
+    if (fn === 'tlCreateLayer') return 'Created ' + ((r && r.name) || 'layer') + '.';
+    if (fn === 'tlSetAnchor') return 'Anchor set on ' + plural(n, 'layer') + '.';
+    if (fn === 'tlAlign') return 'Aligned ' + plural(n, 'layer') + '.' + approx;
+    if (fn === 'tlDistribute') return 'Distributed ' + plural(n, 'layer') + '.';
+    if (fn === 'tlReset') return 'Recentered ' + plural(n, 'layer') + '.' + approx;
+    if (fn === 'tlSequence') return 'Sequenced ' + plural(n, 'layer') + '.';
+    if (fn === 'tlPreComp') return 'Precomposed ' + plural(n, 'layer') + ((r && r.name) ? ' → ' + r.name : '') + '.';
+    if (fn === 'tlMultiPreComp') return 'Precomposed ' + plural(n, 'layer') + ' separately.';
+    if (fn === 'tlDecompose') return 'Decomposed into ' + plural(n, 'layer') + '.' + ((r && r.warn) ? ' Not preserved: ' + r.warn + '.' : '');
+    if (fn === 'tlIndependent') return 'Made ' + plural(n, 'layer') + ' unique.' + ((r && r.ignored) ? ' ' + r.ignored + ' ignored.' : '');
+    return 'Done.';
+  }
 
   function init() { /* nothing to pre-load; wiring is lazy in ensureMounted */ }
 
@@ -28,7 +41,7 @@ var DCTools = (function () {
     DCBridge.call(fn, args, function (result) {
       DCBridge.release();
       var r = DCBridge.parseJson(result);
-      if (r && r.ok) DCUI.toast(OK_MSG[fn] || 'Done.', false);
+      if (r && r.ok) DCUI.toast(okMessage(fn, r), false);
       else DCUI.toast((r && r.error) || result || 'Tool failed.', true);
     });
   }
