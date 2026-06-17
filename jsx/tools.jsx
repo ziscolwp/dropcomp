@@ -24,6 +24,7 @@ function tlCreateLayer(kind) {
         if (kind === 'null') {
             layer = comp.layers.addNull();
         } else if (kind === 'adjustment') {
+            // white solid matches AE's native adjustment layer; the color is invisible while adjustmentLayer is true
             layer = comp.layers.addSolid([1, 1, 1], 'Adjustment Layer', comp.width, comp.height, comp.pixelAspect);
             layer.adjustmentLayer = true;
         } else if (kind === 'solid') {
