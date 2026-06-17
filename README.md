@@ -36,6 +36,10 @@ sidecars (the top-level `Assets` folder name is reserved). Index cache:
   multi-add from disk (png/jpg/gif/bmp/tif/tga/psd/ai/eps), the file itself is the
   thumbnail, import drops into the active comp at the playhead and reuses footage
   already in the project (one `Assets [DropComp]` bin, no duplicates)
+- **Tools tab** - common AE layer utilities one click away: anchor-point 3×3 grid
+  (scale-compensated), Null/Adjustment/Solid/Camera creators, align & distribute,
+  Num/Step sequence-in-time, and pre-comp tools (PreComp, Decompose [AE 2022+],
+  Multi PreComp, Independent). Each action is a single undo step.
 
 ## Updates
 

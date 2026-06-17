@@ -6,6 +6,8 @@ var DCShell = (function () {
   var libraryPath = null;
 
   function hasAssets() { return typeof DCAssets !== 'undefined'; }
+  function hasTools() { return typeof DCTools !== 'undefined'; }
+  function hasScripts() { return typeof DCScripts !== 'undefined'; }
 
   function init(elements) {
     els = elements;
@@ -57,6 +59,7 @@ var DCShell = (function () {
         // boot / retry / folder change all re-read disk, never cached tab data
         DCLibrary.resetLoaded();
         if (hasAssets()) DCAssets.resetLoaded();
+        if (hasScripts()) DCScripts.resetLoaded();
         setActiveTab(prefs.activeTab, true);
       } else {
         els.driveMissingPath.textContent = libraryPath;
@@ -66,12 +69,20 @@ var DCShell = (function () {
   }
 
   function setActiveTab(tab, skipPersist) {
-    prefs.activeTab = (tab === 'assets' && hasAssets()) ? 'assets' : 'library';
+    prefs.activeTab = DCState.resolveActiveTab(tab, hasAssets(), hasTools(), hasScripts());
     if (!skipPersist) persistPrefs();
     var isAssets = prefs.activeTab === 'assets';
-    els.tabLibrary.classList.toggle('active', !isAssets);
+    var isTools = prefs.activeTab === 'tools';
+    var isScripts = prefs.activeTab === 'scripts';
+    els.tabLibrary.classList.toggle('active', prefs.activeTab === 'library');
     els.tabAssets.classList.toggle('active', isAssets);
+    if (els.tabTools) els.tabTools.classList.toggle('active', isTools);
+    if (els.tabScripts) els.tabScripts.classList.toggle('active', isScripts);
     els.app.classList.toggle('assets-active', isAssets);
+    els.app.classList.toggle('tools-active', isTools);
+    els.app.classList.toggle('scripts-active', isScripts);
+    if (isTools) { if (hasTools()) DCTools.ensureMounted(); return; }
+    if (isScripts) { if (hasScripts()) DCScripts.ensureMounted(); return; }
     els.search.placeholder = isAssets ? 'Search assets...' : 'Search library...';
     activeModule().ensureLoaded();
   }
@@ -105,6 +116,8 @@ var DCShell = (function () {
 
   function refreshActive() {
     DCUI.closeModal(els.settingsModal);
+    if (prefs.activeTab === 'scripts' && hasScripts()) { DCScripts.refresh(); return; }
+    if (prefs.activeTab === 'tools') return; // the Tools tab has nothing to reload
     activeModule().refresh();
   }
 
@@ -127,7 +140,8 @@ var DCShell = (function () {
   }
 
   function confirmDelete() {
-    if (DCUI.deleteOwner() === 'assets' && hasAssets()) DCAssets.confirmDelete();
+    if (DCUI.deleteOwner() === 'scripts' && hasScripts()) DCScripts.confirmDelete();
+    else if (DCUI.deleteOwner() === 'assets' && hasAssets()) DCAssets.confirmDelete();
     else DCLibrary.confirmDelete();
   }
 
@@ -135,23 +149,27 @@ var DCShell = (function () {
     DCUI.closeAllModals();
     DCLibrary.clearPending();
     if (hasAssets()) DCAssets.clearPending();
+    if (hasScripts()) { DCScripts.clearPending(); DCScripts.closeModal(); }
   }
 
-  function onSearch() { activeModule().rerender(); }
-  function onSortChange() { prefs.sort = els.sortSelect.value; persistPrefs(); activeModule().rerender(); }
+  function onSearch() { if (prefs.activeTab === 'tools') return; activeModule().rerender(); }
+  function onSortChange() { if (prefs.activeTab === 'tools') return; prefs.sort = els.sortSelect.value; persistPrefs(); activeModule().rerender(); }
   function onFavoritesToggle() {
+    if (prefs.activeTab === 'tools') return;
     prefs.favoritesOnly = !prefs.favoritesOnly;
     els.favoritesBtn.classList.toggle('active', prefs.favoritesOnly);
     persistPrefs();
     activeModule().rerender();
   }
   function onDisplayChange() {
+    if (prefs.activeTab === 'tools') return;
     prefs.showNames = els.showNamesCb.checked;
     prefs.showMeta = els.showMetaCb.checked;
     persistPrefs();
     activeModule().rerender();
   }
   function onSlider() {
+    if (prefs.activeTab === 'tools') return;
     prefs.thumbMin = parseInt(els.thumbSlider.value, 10);
     applyGridSize();
     persistPrefs();

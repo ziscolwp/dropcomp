@@ -92,6 +92,13 @@ var DCState = (function () {
       .map(function (cat) { return { category: cat, items: map[cat] }; });
   }
 
+  function resolveActiveTab(tab, hasAssets, hasTools, hasScripts) {
+    if (tab === 'assets' && hasAssets) return 'assets';
+    if (tab === 'tools' && hasTools) return 'tools';
+    if (tab === 'scripts' && hasScripts) return 'scripts';
+    return 'library';
+  }
+
   var PREFS_KEY = 'dropcomp_prefs';
   var USAGE_KEY = 'dropcomp_metadata';
   var ASSETS_USAGE_KEY = 'dropcomp_assets_metadata';
@@ -159,6 +166,7 @@ var DCState = (function () {
     saveUsageMeta: saveUsageMeta,
     cleanupStaleMetadata: cleanupStaleMetadata,
     migrateMetadataKey: migrateMetadataKey,
+    resolveActiveTab: resolveActiveTab,
     getUsage: getUsage,
     sortComps: sortComps,
     filterComps: filterComps,

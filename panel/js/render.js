@@ -1,17 +1,8 @@
 var DCRender = (function () {
   'use strict';
 
-  var ICONS = {
-    star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>',
-    starFilled: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>',
-    pencil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="m18.5 2.5 3 3L14 14l-4 1 1-4 7.5-7.5z"></path></svg>',
-    trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
-    download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
-    camera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>',
-    folder: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>',
-    photoOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="3" x2="21" y2="21"></line><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="m21 15-5-5L9 17"></path></svg>',
-    chevron: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>'
-  };
+  // Icons come from the shared DCIcons registry (one visual language).
+  var ICONS = DCIcons;
 
   function el(tag, className, text) {
     var node = document.createElement(tag);
@@ -24,8 +15,17 @@ var DCRender = (function () {
     var b = el('button', 'card-action' + (extraClass ? ' ' + extraClass : ''));
     b.dataset.action = action;
     b.title = title;
+    b.setAttribute('aria-label', title);
     b.innerHTML = svg;
     return b;
+  }
+
+  // On a broken thumbnail, swap in the photo-off glyph instead of vanishing.
+  function showThumbFallback(img) {
+    if (!img.parentNode) return;
+    var ph = el('div', 'thumb-placeholder');
+    ph.innerHTML = ICONS.photoOff;
+    img.parentNode.replaceChild(ph, img);
   }
 
   // encodeURI leaves # and ? alone, but either would truncate a file:// URL
@@ -47,7 +47,7 @@ var DCRender = (function () {
       img.loading = 'lazy';
       img.alt = '';
       img.src = thumbUrl(comp.thumbPath, bust);
-      img.onerror = function () { img.style.display = 'none'; };
+      img.onerror = function () { showThumbFallback(img); };
       thumbWrap.appendChild(img);
     } else {
       var ph = el('div', 'thumb-placeholder');
@@ -104,7 +104,7 @@ var DCRender = (function () {
       img.alt = '';
       // addedAt changes when the same filename is re-added, busting the stale cache
       img.src = thumbUrl(asset.filePath, asset.addedAt || null);
-      img.onerror = function () { img.style.display = 'none'; };
+      img.onerror = function () { showThumbFallback(img); };
       thumbWrap.appendChild(img);
     } else {
       var ph = el('div', 'thumb-placeholder');

@@ -14,6 +14,8 @@
     library: $('library'),
     tabLibrary: $('tab-library'),
     tabAssets: $('tab-assets'),
+    tabTools: $('tab-tools'),
+    tabScripts: $('tab-scripts'),
     search: $('search-input'),
     sortSelect: $('sort-select'),
     favoritesBtn: $('favorites-btn'),
@@ -44,6 +46,8 @@
   DCShell.init(els);
   DCLibrary.init();
   if (typeof DCAssets !== 'undefined') DCAssets.init();
+  if (typeof DCTools !== 'undefined') DCTools.init();
+  if (typeof DCScripts !== 'undefined') DCScripts.init();
 
   $('welcome-browse-btn').addEventListener('click', DCShell.selectLibraryFolder);
   $('retry-library-btn').addEventListener('click', DCShell.verifyAndLoad);
@@ -51,6 +55,8 @@
 
   els.tabLibrary.addEventListener('click', function () { DCShell.setActiveTab('library'); });
   els.tabAssets.addEventListener('click', function () { DCShell.setActiveTab('assets'); });
+  els.tabTools.addEventListener('click', function () { DCShell.setActiveTab('tools'); });
+  els.tabScripts.addEventListener('click', function () { DCShell.setActiveTab('scripts'); });
 
   els.search.addEventListener('input', DCShell.onSearch);
   els.sortSelect.addEventListener('change', DCShell.onSortChange);
