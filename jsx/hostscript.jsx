@@ -5,8 +5,8 @@
 // $.fileName is NOT set when CEP evaluates this file, so the panel must call
 // loadHostModules(extensionRoot) once at boot before any relink-dependent call.
 var DC_MODULES_LOADED = false;
-var DC_MODULE_FILES = ['relink.jsx', 'assets.jsx', 'tools.jsx'];
-var DC_MODULE_MARKERS = ['collectMissingFootage', 'getAssets', 'tlCreateLayer'];
+var DC_MODULE_FILES = ['relink.jsx', 'assets.jsx', 'tools.jsx', 'scripts.jsx'];
+var DC_MODULE_MARKERS = ['collectMissingFootage', 'getAssets', 'tlCreateLayer', 'scRunFile'];
 
 function loadHostModules(extPath) {
     try {

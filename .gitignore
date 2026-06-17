@@ -6,3 +6,8 @@ dist/
 
 # AE live-verification scratch (DoScript probes/results)
 .ae-scratch/
+
+# Browser mock harness for panel UI verification (not shipped)
+panel/_harness.html
+panel/.claude/launch.json
+.claude/launch.json

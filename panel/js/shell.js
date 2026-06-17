@@ -7,6 +7,7 @@ var DCShell = (function () {
 
   function hasAssets() { return typeof DCAssets !== 'undefined'; }
   function hasTools() { return typeof DCTools !== 'undefined'; }
+  function hasScripts() { return typeof DCScripts !== 'undefined'; }
 
   function init(elements) {
     els = elements;
@@ -58,6 +59,7 @@ var DCShell = (function () {
         // boot / retry / folder change all re-read disk, never cached tab data
         DCLibrary.resetLoaded();
         if (hasAssets()) DCAssets.resetLoaded();
+        if (hasScripts()) DCScripts.resetLoaded();
         setActiveTab(prefs.activeTab, true);
       } else {
         els.driveMissingPath.textContent = libraryPath;
@@ -67,16 +69,20 @@ var DCShell = (function () {
   }
 
   function setActiveTab(tab, skipPersist) {
-    prefs.activeTab = DCState.resolveActiveTab(tab, hasAssets(), hasTools());
+    prefs.activeTab = DCState.resolveActiveTab(tab, hasAssets(), hasTools(), hasScripts());
     if (!skipPersist) persistPrefs();
     var isAssets = prefs.activeTab === 'assets';
     var isTools = prefs.activeTab === 'tools';
+    var isScripts = prefs.activeTab === 'scripts';
     els.tabLibrary.classList.toggle('active', prefs.activeTab === 'library');
     els.tabAssets.classList.toggle('active', isAssets);
     if (els.tabTools) els.tabTools.classList.toggle('active', isTools);
+    if (els.tabScripts) els.tabScripts.classList.toggle('active', isScripts);
     els.app.classList.toggle('assets-active', isAssets);
     els.app.classList.toggle('tools-active', isTools);
-    if (isTools) { if (typeof DCTools !== 'undefined') DCTools.ensureMounted(); return; }
+    els.app.classList.toggle('scripts-active', isScripts);
+    if (isTools) { if (hasTools()) DCTools.ensureMounted(); return; }
+    if (isScripts) { if (hasScripts()) DCScripts.ensureMounted(); return; }
     els.search.placeholder = isAssets ? 'Search assets...' : 'Search library...';
     activeModule().ensureLoaded();
   }
@@ -132,7 +138,8 @@ var DCShell = (function () {
   }
 
   function confirmDelete() {
-    if (DCUI.deleteOwner() === 'assets' && hasAssets()) DCAssets.confirmDelete();
+    if (DCUI.deleteOwner() === 'scripts' && hasScripts()) DCScripts.confirmDelete();
+    else if (DCUI.deleteOwner() === 'assets' && hasAssets()) DCAssets.confirmDelete();
     else DCLibrary.confirmDelete();
   }
 
@@ -140,6 +147,7 @@ var DCShell = (function () {
     DCUI.closeAllModals();
     DCLibrary.clearPending();
     if (hasAssets()) DCAssets.clearPending();
+    if (hasScripts()) { DCScripts.clearPending(); DCScripts.closeModal(); }
   }
 
   function onSearch() { if (prefs.activeTab === 'tools') return; activeModule().rerender(); }

@@ -92,9 +92,10 @@ var DCState = (function () {
       .map(function (cat) { return { category: cat, items: map[cat] }; });
   }
 
-  function resolveActiveTab(tab, hasAssets, hasTools) {
+  function resolveActiveTab(tab, hasAssets, hasTools, hasScripts) {
     if (tab === 'assets' && hasAssets) return 'assets';
     if (tab === 'tools' && hasTools) return 'tools';
+    if (tab === 'scripts' && hasScripts) return 'scripts';
     return 'library';
   }
 
