@@ -116,6 +116,8 @@ var DCShell = (function () {
 
   function refreshActive() {
     DCUI.closeModal(els.settingsModal);
+    if (prefs.activeTab === 'scripts' && hasScripts()) { DCScripts.refresh(); return; }
+    if (prefs.activeTab === 'tools') return; // the Tools tab has nothing to reload
     activeModule().refresh();
   }
 

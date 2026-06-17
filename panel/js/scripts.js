@@ -9,6 +9,7 @@ var DCScripts = (function () {
 
   var mounted = false;
   var loaded = false;
+  var loadFailed = false; // registry exists but couldn't be read - block saves so we never clobber it
   var scripts = [];
   var usageMeta = {};
   var view = { search: '', sort: 'recent', favoritesOnly: false };
@@ -74,23 +75,53 @@ var DCScripts = (function () {
   }
 
   function load() {
+    loadFailed = false;
     if (!libPath()) { loaded = true; render(); return; }
     DCBridge.call('scLoadRegistry', [libPath()], function (result) {
-      scripts = DCScriptsCore.parseRegistry(result).scripts;
       loaded = true;
+      var parsed = DCBridge.parseJson(result);
+      // A jerr ({ok:false}) means the file exists but couldn't be read. Do NOT
+      // coerce that to an empty list - a later save would overwrite a registry
+      // that is actually intact on disk. Block saves until a clean (re)load.
+      if (!parsed || parsed.ok === false) {
+        loadFailed = true;
+        DCUI.toast((parsed && parsed.error) || 'Could not read the scripts registry.', true);
+        render();
+        return;
+      }
+      scripts = DCScriptsCore.parseRegistry(result).scripts;
       render();
     });
   }
 
-  function persist(cb) {
+  // Assumes the bridge lock is already held; releases it in the callback.
+  function persistLocked(cb) {
     DCBridge.call('scSaveRegistry', [libPath(), DCScriptsCore.serializeRegistry(scripts)], function (result) {
+      DCBridge.release();
       var r = DCBridge.parseJson(result);
       if (!(r && r.ok)) DCUI.toast((r && r.error) || 'Could not save the scripts registry.', true);
       if (cb) cb();
     });
   }
 
+  // Acquire the single-op lock before mutating, so a save/delete can't clobber
+  // the registry mid-run and the in-memory list never diverges from disk on a
+  // busy bounce. Returns false (and toasts) when blocked or when load failed.
+  function beginWrite() {
+    if (loadFailed) {
+      DCUI.toast('Scripts registry could not be read; saving is paused. Tap Retry first.', true);
+      return false;
+    }
+    if (!DCBridge.acquire('saving scripts')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return false; }
+    return true;
+  }
+
   function render() {
+    if (loadFailed) {
+      els.list.innerHTML = '';
+      els.list.appendChild(loadErrorState());
+      return;
+    }
     var filtered = DCScriptsCore.filterScripts(scripts, {
       search: view.search, favoritesOnly: view.favoritesOnly, usageMeta: usageMeta
     });
@@ -118,6 +149,17 @@ var DCScripts = (function () {
       cta.addEventListener('click', newSnippet);
       wrap.appendChild(cta);
     }
+    return wrap;
+  }
+
+  function loadErrorState() {
+    var wrap = el('div', 'scripts-empty');
+    wrap.innerHTML = ICON.file;
+    wrap.appendChild(el('div', 'scripts-empty-title', 'Couldn’t read your scripts'));
+    wrap.appendChild(el('div', 'scripts-empty-sub', 'The registry exists but could not be read. Your scripts are safe on disk — saving is paused until it loads. Tap Retry.'));
+    var retry = el('button', 'btn-dark', 'Retry');
+    retry.addEventListener('click', function () { loaded = false; load(); });
+    wrap.appendChild(retry);
     return wrap;
   }
 
@@ -251,9 +293,10 @@ var DCScripts = (function () {
     };
     var v = DCScriptsCore.validateEntry(input);
     if (!v.valid) { DCUI.toast(v.error, true); return; }
+    if (!beginWrite()) return;
     var entry = DCScriptsCore.makeEntry(input, Date.now());
     scripts = DCScriptsCore.upsert(scripts, entry);
-    persist(function () { closeModal(); render(); DCUI.toast('Saved "' + entry.name + '".', false); });
+    persistLocked(function () { closeModal(); render(); DCUI.toast('Saved "' + entry.name + '".', false); });
   }
 
   function reveal(s) {
@@ -268,10 +311,11 @@ var DCScripts = (function () {
 
   function confirmDelete() {
     if (!pendingDelete) return;
+    if (!beginWrite()) return;
     scripts = DCScriptsCore.removeById(scripts, pendingDelete.uniqueId);
     var name = pendingDelete.name;
     pendingDelete = null;
-    persist(function () { DCUI.closeAllModals(); render(); DCUI.toast('Removed "' + name + '".', false); });
+    persistLocked(function () { DCUI.closeAllModals(); render(); DCUI.toast('Removed "' + name + '".', false); });
   }
 
   function clearPending() { pendingDelete = null; }
