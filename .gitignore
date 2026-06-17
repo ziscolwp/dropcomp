@@ -3,3 +3,6 @@ node_modules/
 *.zip
 .superpowers/
 dist/
+
+# AE live-verification scratch (DoScript probes/results)
+.ae-scratch/
