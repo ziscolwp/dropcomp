@@ -31,7 +31,7 @@
     <span class="app-version" id="app-version">2.1</span>
     <button id="update-chip" class="update-chip hidden" title="A newer version is available - click to download">Update</button>
     <div class="spacer"></div>
-    <button id="settings-btn" class="icon-btn" title="Settings">
+    <button id="settings-btn" class="icon-btn" title="Settings" aria-label="Settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
     </button>
   </header>
@@ -52,14 +52,14 @@
         <option value="name">Name</option>
         <option value="dateAdded">Date added</option>
       </select>
-      <button id="favorites-btn" class="icon-btn" title="Favorites only">
+      <button id="favorites-btn" class="icon-btn" title="Favorites only" aria-label="Favorites only">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
       </button>
-      <button id="relink-btn" class="icon-btn" title="Find &amp; relink missing footage in the open project">
+      <button id="relink-btn" class="icon-btn" title="Find &amp; relink missing footage in the open project" aria-label="Find and relink missing footage">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
       </button>
       <div id="display-menu-wrap">
-        <button id="display-btn" class="icon-btn" title="Display options">
+        <button id="display-btn" class="icon-btn" title="Display options" aria-label="Display options">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
         </button>
         <div id="display-menu" class="hidden">
@@ -73,7 +73,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         <span>Add Selected Comp</span>
       </button>
-      <button id="add-aep-btn" class="btn-dark icon-btn" title="Add .aep from disk">
+      <button id="add-aep-btn" class="btn-dark icon-btn" title="Add .aep from disk" aria-label="Add .aep from disk">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><polyline points="9 15 12 12 15 15"></polyline></svg>
       </button>
       <button id="add-assets-btn" class="btn-gold grow">
@@ -90,56 +90,59 @@
       <div class="tool-row">
         <div>
           <div class="tool-label">anchor</div>
-          <div class="anchor-grid">
-            <button class="anchor-cell" data-tool="anchor" data-arg="0"><span></span></button>
-            <button class="anchor-cell" data-tool="anchor" data-arg="1"><span></span></button>
-            <button class="anchor-cell" data-tool="anchor" data-arg="2"><span></span></button>
-            <button class="anchor-cell" data-tool="anchor" data-arg="3"><span></span></button>
-            <button class="anchor-cell" data-tool="anchor" data-arg="4"><span></span></button>
-            <button class="anchor-cell" data-tool="anchor" data-arg="5"><span></span></button>
-            <button class="anchor-cell" data-tool="anchor" data-arg="6"><span></span></button>
-            <button class="anchor-cell" data-tool="anchor" data-arg="7"><span></span></button>
-            <button class="anchor-cell" data-tool="anchor" data-arg="8"><span></span></button>
+          <div class="anchor-grid" role="group" aria-label="Set anchor point">
+            <button class="anchor-cell" data-tool="anchor" data-arg="0" tabindex="0" title="Anchor top-left" aria-label="Anchor top-left"><span></span></button>
+            <button class="anchor-cell" data-tool="anchor" data-arg="1" tabindex="-1" title="Anchor top-center" aria-label="Anchor top-center"><span></span></button>
+            <button class="anchor-cell" data-tool="anchor" data-arg="2" tabindex="-1" title="Anchor top-right" aria-label="Anchor top-right"><span></span></button>
+            <button class="anchor-cell" data-tool="anchor" data-arg="3" tabindex="-1" title="Anchor middle-left" aria-label="Anchor middle-left"><span></span></button>
+            <button class="anchor-cell" data-tool="anchor" data-arg="4" tabindex="-1" title="Anchor center" aria-label="Anchor center"><span></span></button>
+            <button class="anchor-cell" data-tool="anchor" data-arg="5" tabindex="-1" title="Anchor middle-right" aria-label="Anchor middle-right"><span></span></button>
+            <button class="anchor-cell" data-tool="anchor" data-arg="6" tabindex="-1" title="Anchor bottom-left" aria-label="Anchor bottom-left"><span></span></button>
+            <button class="anchor-cell" data-tool="anchor" data-arg="7" tabindex="-1" title="Anchor bottom-center" aria-label="Anchor bottom-center"><span></span></button>
+            <button class="anchor-cell" data-tool="anchor" data-arg="8" tabindex="-1" title="Anchor bottom-right" aria-label="Anchor bottom-right"><span></span></button>
           </div>
         </div>
         <div class="tool-grow">
           <div class="tool-label">create</div>
           <div class="tool-grid-2">
-            <button class="tool-btn" data-tool="create" data-arg="null">Null</button>
-            <button class="tool-btn" data-tool="create" data-arg="adjustment">Adjust</button>
-            <button class="tool-btn" data-tool="create" data-arg="solid">Solid</button>
-            <button class="tool-btn" data-tool="create" data-arg="camera">Camera</button>
+            <button class="tool-btn" data-tool="create" data-arg="null" title="Add a null object"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"></rect><line x1="4" y1="4" x2="20" y2="20"></line></svg><span>Null</span></button>
+            <button class="tool-btn" data-tool="create" data-arg="adjustment" title="Add an adjustment layer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"></path></svg><span>Adjust</span></button>
+            <button class="tool-btn" data-tool="create" data-arg="solid" title="Add a solid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor"></rect></svg><span>Solid</span></button>
+            <button class="tool-btn" data-tool="create" data-arg="camera" title="Add a camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg><span>Camera</span></button>
           </div>
         </div>
       </div>
       <div class="tool-inset">
         <div class="tool-row tool-seq">
-          <span class="tool-label">Num</span>
-          <input type="number" id="tools-num" class="tool-num" value="1" min="1">
+          <span class="tool-label">Count</span>
+          <input type="number" id="tools-num" class="tool-num" value="1" min="1" aria-label="Count">
           <span class="tool-label">Step</span>
-          <input type="number" id="tools-step" class="tool-num" value="5">
+          <input type="number" id="tools-step" class="tool-num" value="5" aria-label="Step in frames">
           <button class="tool-btn tool-grow" data-tool="sequence">Sequence</button>
         </div>
+        <div class="tool-hint">Step is in frames. Many layers: stagger them. One layer: duplicate ×Count.</div>
         <div class="tool-icons">
-          <button class="tool-icon" data-tool="align" data-arg="left" title="Align left">L</button>
-          <button class="tool-icon" data-tool="align" data-arg="center" title="Align center">C</button>
-          <button class="tool-icon" data-tool="align" data-arg="right" title="Align right">R</button>
-          <button class="tool-icon" data-tool="align" data-arg="top" title="Align top">T</button>
-          <button class="tool-icon" data-tool="align" data-arg="middle" title="Align middle">M</button>
-          <button class="tool-icon" data-tool="align" data-arg="bottom" title="Align bottom">B</button>
-          <button class="tool-icon" data-tool="distribute" data-arg="horizontal" title="Distribute horizontally">⇿</button>
-          <button class="tool-icon" data-tool="distribute" data-arg="vertical" title="Distribute vertically">⇳</button>
-          <button class="tool-icon" data-tool="reset" title="Recenter selected layers">⟳</button>
+          <button class="tool-icon" data-tool="align" data-arg="left" title="Align left edges" aria-label="Align left edges"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="3" x2="4" y2="21"></line><rect x="7" y="6" width="12" height="4"></rect><rect x="7" y="14" width="7" height="4"></rect></svg></button>
+          <button class="tool-icon" data-tool="align" data-arg="center" title="Align horizontal centers" aria-label="Align horizontal centers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"></line><rect x="6" y="6" width="12" height="4"></rect><rect x="8" y="14" width="8" height="4"></rect></svg></button>
+          <button class="tool-icon" data-tool="align" data-arg="right" title="Align right edges" aria-label="Align right edges"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="20" y1="3" x2="20" y2="21"></line><rect x="5" y="6" width="12" height="4"></rect><rect x="10" y="14" width="7" height="4"></rect></svg></button>
+          <button class="tool-icon" data-tool="align" data-arg="top" title="Align top edges" aria-label="Align top edges"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="4" x2="21" y2="4"></line><rect x="6" y="7" width="4" height="12"></rect><rect x="14" y="7" width="4" height="7"></rect></svg></button>
+          <button class="tool-icon" data-tool="align" data-arg="middle" title="Align vertical centers" aria-label="Align vertical centers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><rect x="6" y="6" width="4" height="12"></rect><rect x="14" y="8" width="4" height="8"></rect></svg></button>
+          <button class="tool-icon" data-tool="align" data-arg="bottom" title="Align bottom edges" aria-label="Align bottom edges"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="20" x2="21" y2="20"></line><rect x="6" y="5" width="4" height="12"></rect><rect x="14" y="10" width="4" height="7"></rect></svg></button>
+          <span class="tool-divider" aria-hidden="true"></span>
+          <button class="tool-icon" data-tool="distribute" data-arg="horizontal" title="Distribute horizontally (3+ layers)" aria-label="Distribute horizontally"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="9" width="4" height="6"></rect><rect x="10" y="9" width="4" height="6"></rect><rect x="18" y="9" width="4" height="6"></rect></svg></button>
+          <button class="tool-icon" data-tool="distribute" data-arg="vertical" title="Distribute vertically (3+ layers)" aria-label="Distribute vertically"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2" width="6" height="4"></rect><rect x="9" y="10" width="6" height="4"></rect><rect x="9" y="18" width="6" height="4"></rect></svg></button>
+          <span class="tool-divider" aria-hidden="true"></span>
+          <button class="tool-icon" data-tool="reset" title="Recenter in the comp" aria-label="Recenter selected layers in the comp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="12" y1="7" x2="12" y2="17"></line><line x1="7" y1="12" x2="17" y2="12"></line></svg></button>
         </div>
       </div>
     </div>
     <div class="tool-group">
       <div class="tool-label tool-group-label">pre-comp tools</div>
       <div class="tool-grid-2">
-        <button class="tool-btn" data-tool="precomp" data-arg="precomp">PreComp</button>
-        <button class="tool-btn" data-tool="precomp" data-arg="decompose">Decompose</button>
-        <button class="tool-btn" data-tool="precomp" data-arg="multi">Multi PreComp</button>
-        <button class="tool-btn" data-tool="precomp" data-arg="independent" title="Duplicates the source comp so this layer can be edited without affecting other instances.">Make Unique</button>
+        <button class="tool-btn" data-tool="precomp" data-arg="precomp" title="Pre-compose selected layers into one comp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><rect x="7" y="7" width="4" height="4"></rect><rect x="13" y="13" width="4" height="4"></rect></svg><span>PreComp</span></button>
+        <button class="tool-btn" data-tool="precomp" data-arg="decompose" title="Un-precompose: inline the contents (AE 2022+)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"></path></svg><span>Decompose</span></button>
+        <button class="tool-btn" data-tool="precomp" data-arg="multi" title="Pre-compose each selected layer into its own comp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="8" height="12" rx="1"></rect><rect x="13" y="6" width="8" height="12" rx="1"></rect></svg><span>Multi PreComp</span></button>
+        <button class="tool-btn" data-tool="precomp" data-arg="independent" title="Duplicates the source comp so this layer can be edited without affecting other instances."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>Make Unique</span></button>
       </div>
     </div>
   </section>
@@ -270,6 +273,7 @@
 <script src="js/validate.js"></script>
 <script src="js/state.js"></script>
 <script src="js/bridge.js"></script>
+<script src="js/icons.js"></script>
 <script src="js/render.js"></script>
 <script src="js/update.js"></script>
 <script src="js/ui.js"></script>

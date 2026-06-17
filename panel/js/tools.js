@@ -34,16 +34,49 @@ var DCTools = (function () {
     mounted = true;
     var root = document.getElementById('tools');
     root.addEventListener('click', onClick);
+    root.addEventListener('keydown', onAnchorKeydown);
+  }
+
+  function setBusy(on) {
+    var root = document.getElementById('tools');
+    if (root) root.classList.toggle('tool-busy', on);
   }
 
   function run(label, fn, args) {
     if (!DCBridge.acquire(label)) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return; }
+    setBusy(true);
     DCBridge.call(fn, args, function (result) {
       DCBridge.release();
+      setBusy(false);
       var r = DCBridge.parseJson(result);
       if (r && r.ok) DCUI.toast(okMessage(fn, r), false);
       else DCUI.toast((r && r.error) || result || 'Tool failed.', true);
     });
+  }
+
+  // Mark the chosen anchor cell active (the spec's .anchor-cell.on state).
+  function setAnchorActive(btn) {
+    var cells = document.querySelectorAll('#tools .anchor-cell');
+    for (var i = 0; i < cells.length; i++) cells[i].classList.remove('on');
+    btn.classList.add('on');
+  }
+
+  // Roving-tabindex arrow-key navigation across the 3x3 anchor grid.
+  function onAnchorKeydown(e) {
+    var cell = e.target.closest ? e.target.closest('.anchor-cell') : null;
+    if (!cell) return;
+    var idx = parseInt(cell.dataset.arg, 10);
+    var col = idx % 3, row = Math.floor(idx / 3), moved = false;
+    if (e.key === 'ArrowRight' && col < 2) { idx++; moved = true; }
+    else if (e.key === 'ArrowLeft' && col > 0) { idx--; moved = true; }
+    else if (e.key === 'ArrowDown' && row < 2) { idx += 3; moved = true; }
+    else if (e.key === 'ArrowUp' && row > 0) { idx -= 3; moved = true; }
+    if (!moved) return;
+    e.preventDefault();
+    var cells = document.querySelectorAll('#tools .anchor-cell');
+    for (var i = 0; i < cells.length; i++) cells[i].tabIndex = -1;
+    cells[idx].tabIndex = 0;
+    cells[idx].focus();
   }
 
   function onClick(e) {
@@ -52,6 +85,7 @@ var DCTools = (function () {
     var tool = btn.dataset.tool;
     var arg = btn.dataset.arg;
     if (tool === 'anchor') {
+      setAnchorActive(btn);
       var f = DCToolsCore.anchorFraction(parseInt(arg, 10));
       run('anchor', 'tlSetAnchor', [f[0], f[1]]);
     } else if (tool === 'create') {
