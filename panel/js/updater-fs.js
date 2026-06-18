@@ -63,13 +63,66 @@ var DCUpdaterFS = (function () {
     };
   }
 
+  async function fetchLatestRelease(apiUrl, isAllowedUrl, _https) {
+    const https = _https || require('https');
+    if (isAllowedUrl && !isAllowedUrl(apiUrl)) throw new Error('Refused a non-GitHub API URL.');
+    return await new Promise(function (resolve, reject) {
+      const req = https.get(apiUrl, { headers: { 'User-Agent': 'DropComp-Updater', 'Accept': 'application/vnd.github+json' } }, function (res) {
+        if (res.statusCode !== 200) { res.resume(); reject(new Error('GitHub API returned HTTP ' + res.statusCode + '.')); return; }
+        let body = '';
+        res.setEncoding('utf8');
+        res.on('data', function (c) { body += c; });
+        res.on('end', function () { try { resolve(JSON.parse(body)); } catch (e) { reject(new Error('Could not parse the GitHub response.')); } });
+      });
+      req.on('error', reject);
+      req.setTimeout(15000, function () { req.destroy(new Error('GitHub request timed out.')); });
+    });
+  }
+
+  async function download(url, destPath, onProgress, isAllowedUrl, _https) {
+    const https = _https || require('https');
+    const fs = require('fs');
+    const path = require('path');
+    const URL = require('url').URL;
+    mkdirpSync(path.dirname(destPath), fs);
+    const progress = onProgress || function () {};
+    return await new Promise(function (resolve, reject) {
+      let redirects = 0;
+      function get(u) {
+        if (isAllowedUrl && !isAllowedUrl(u)) { reject(new Error('Refused a non-GitHub download URL.')); return; }
+        const req = https.get(u, { headers: { 'User-Agent': 'DropComp-Updater' } }, function (res) {
+          const sc = res.statusCode;
+          if (sc >= 300 && sc < 400 && res.headers.location) {
+            res.resume();
+            if (++redirects > 5) { reject(new Error('Too many redirects.')); return; }
+            get(new URL(res.headers.location, u).toString());
+            return;
+          }
+          if (sc !== 200) { res.resume(); reject(new Error('Download failed (HTTP ' + sc + ').')); return; }
+          const total = parseInt(res.headers['content-length'] || '0', 10);
+          let got = 0;
+          const out = fs.createWriteStream(destPath);
+          res.on('data', function (c) { got += c.length; if (total) progress(Math.round(got / total * 100)); });
+          res.pipe(out);
+          out.on('finish', function () { out.close(function () { resolve(destPath); }); });
+          out.on('error', reject);
+        });
+        req.on('error', reject);
+        req.setTimeout(30000, function () { req.destroy(new Error('Download timed out.')); });
+      }
+      get(url);
+    });
+  }
+
   return {
     DIRS: DIRS,
     mkdirpSync: mkdirpSync,
     rmrf: rmrf,
     copyDirRecursive: copyDirRecursive,
     moveDir: moveDir,
-    paths: paths
+    paths: paths,
+    fetchLatestRelease: fetchLatestRelease,
+    download: download
   };
 }());
 if (typeof module !== 'undefined' && module.exports) { module.exports = DCUpdaterFS; }
