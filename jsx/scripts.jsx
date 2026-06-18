@@ -119,3 +119,62 @@ function scRevealFile(path) {
     } catch (e) { return scErr(e); }
 }
 $.global.scRevealFile = scRevealFile;
+
+// Shared temp-file writer for evalFile-based runs. Returns the File or null.
+function scWriteTemp(src) {
+    SC_TMP_SEQ = SC_TMP_SEQ + 1;
+    var tmp = new File(Folder.temp.fsName + '/dropcomp_run_' + (new Date().getTime()) + '_' + SC_TMP_SEQ + '.jsx');
+    if (!writeTextFile(tmp, src)) return null;
+    return tmp;
+}
+$.global.scWriteTemp = scWriteTemp;
+
+// Minimal guard: params must be a non-empty JSON object string from the panel.
+function scValidParamsJson(s) {
+    if (s === null || s === undefined) return false;
+    s = String(s);
+    return s.length > 0 && s.charAt(0) === '{';
+}
+$.global.scValidParamsJson = scValidParamsJson;
+
+// Run an external file with DropComp-provided params. Sets $.global.DC_PARAMS, then
+// evalFiles the real file (never modified). valuesJson is JSON from the panel - a subset
+// of ES3 literal syntax - so inlining it after '=' is safe (cannot break out).
+function scRunFileWithParams(path, valuesJson) {
+    var tmp = null;
+    try {
+        var f = new File(path);
+        if (!f.exists) return jerr('Script file not found:\n' + path);
+        if (!scValidParamsJson(valuesJson)) return jerr('Bad parameters.');
+        var src = '$.global.DC_PARAMS = ' + valuesJson + ';\n' +
+                  '$.evalFile(new File("' + jsonEscape(f.fsName) + '"));\n';
+        tmp = scWriteTemp(src);
+        if (!tmp) return jerr('Could not write a temporary script file.');
+        $.evalFile(tmp);
+        try { tmp.remove(); } catch (eR) {}
+        return '{"ok":true}';
+    } catch (e) {
+        if (tmp && tmp.exists) { try { tmp.remove(); } catch (e2) {} }
+        return scErr(e);
+    }
+}
+$.global.scRunFileWithParams = scRunFileWithParams;
+
+// Run a snippet with params: prepend the DC_PARAMS assignment to the temp file body.
+function scRunSnippetWithParams(body, valuesJson) {
+    var tmp = null;
+    try {
+        if (body === null || body === undefined || String(body) === '') return jerr('Snippet is empty.');
+        if (!scValidParamsJson(valuesJson)) return jerr('Bad parameters.');
+        var src = '$.global.DC_PARAMS = ' + valuesJson + ';\n' + String(body);
+        tmp = scWriteTemp(src);
+        if (!tmp) return jerr('Could not write a temporary script file.');
+        $.evalFile(tmp);
+        try { tmp.remove(); } catch (eR) {}
+        return '{"ok":true}';
+    } catch (e) {
+        if (tmp && tmp.exists) { try { tmp.remove(); } catch (e2) {} }
+        return scErr(e);
+    }
+}
+$.global.scRunSnippetWithParams = scRunSnippetWithParams;
