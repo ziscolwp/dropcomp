@@ -80,6 +80,11 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         <span>Add Assets</span>
       </button>
+      <div id="view-switch" class="seg" role="group" aria-label="View">
+        <button class="seg-btn active" data-view="comfortable" data-tip="Comfortable grid" aria-label="Comfortable grid" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg></button>
+        <button class="seg-btn" data-view="compact" data-tip="Dense grid" aria-label="Dense grid" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="3" y="3" width="4" height="4"></rect><rect x="10" y="3" width="4" height="4"></rect><rect x="17" y="3" width="4" height="4"></rect><rect x="3" y="10" width="4" height="4"></rect><rect x="10" y="10" width="4" height="4"></rect><rect x="17" y="10" width="4" height="4"></rect><rect x="3" y="17" width="4" height="4"></rect><rect x="10" y="17" width="4" height="4"></rect><rect x="17" y="17" width="4" height="4"></rect></svg></button>
+        <button class="seg-btn" data-view="list" data-tip="List view" aria-label="List view" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
+      </div>
       <input type="range" id="thumb-slider" min="90" max="240" step="10" data-tip="Thumbnail size" aria-label="Thumbnail size">
     </div>
   </div>
