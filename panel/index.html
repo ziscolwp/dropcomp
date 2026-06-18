@@ -287,6 +287,26 @@
   </div>
 </div>
 
+<div id="update-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3 id="update-modal-title">Update available</h3>
+    <div id="update-notes" class="update-notes"></div>
+    <div id="update-progress" class="update-progress hidden">
+      <div class="update-progress-label" id="update-progress-label">Starting…</div>
+      <div class="update-progress-track"><div class="update-progress-bar" id="update-progress-bar"></div></div>
+    </div>
+    <p id="update-error" class="update-error hidden"></p>
+    <div class="modal-buttons" id="update-actions">
+      <button class="btn-dark" id="update-later-btn">Later</button>
+      <button class="btn-dark" id="update-github-btn">View on GitHub</button>
+      <button class="btn-gold" id="update-now-btn">Update now</button>
+    </div>
+    <div class="modal-buttons hidden" id="update-done-actions">
+      <button class="btn-gold" id="update-done-btn">Got it</button>
+    </div>
+  </div>
+</div>
+
 <div id="loading-spinner" class="hidden"></div>
 <div id="toast"></div>
 
@@ -298,6 +318,8 @@
 <script src="js/render.js"></script>
 <script src="js/tooltip.js"></script>
 <script src="js/update.js"></script>
+<script src="js/updater-fs.js"></script>
+<script src="js/updater.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/shell.js"></script>
 <script src="js/library.js"></script>

@@ -61,7 +61,23 @@ on them so the panel labels them honestly.
 
 The panel checks GitHub's latest release (at most every 12 h, silent offline)
 and shows a gold "Update x.y.z" chip in the header when a newer version exists.
-Clicking it opens the download page; installing is the same one-click installer.
+
+Click the chip → **What's new** → **Update now**, and the panel updates itself:
+it downloads the release from GitHub, verifies it (size + SHA-256 + unzip
+check), backs up your current install to `~/Documents/DropComp/backup-<version>.zip`
+(Windows: `%USERPROFILE%\Documents\DropComp\`), swaps in the new files, and asks
+you to restart After Effects. Your library folder, favorites, and settings are
+never touched. If anything fails, your current version is left intact and the
+chip still offers a manual download.
+
+- **macOS:** the swap happens immediately — restart AE to finish.
+- **Windows:** files in use can't be replaced while AE runs, so the update is
+  staged and applied automatically the moment you quit AE; reopen AE to finish.
+
+**Rollout:** one-click self-update works from the first release that contains it
+onward. If you're on an older build, install the next release once with the
+manual installer (`install.command` / `install.bat`); every update after that is
+one-click.
 
 ## Releasing a new version
 
