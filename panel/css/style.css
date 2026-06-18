@@ -369,3 +369,16 @@ body {
 #script-body-input:focus { border-color: var(--gold); }
 #script-path-display { word-break: break-all; margin: 0; }
 
+/* ---- tooltip ---- */
+#dc-tooltip {
+  position: fixed; left: 0; top: 0; z-index: 4000; pointer-events: none;
+  max-width: 240px; padding: 6px 8px; font-size: 12px; line-height: 1.35;
+  color: var(--text); background: var(--bg-raised);
+  border: 1px solid var(--border-strong); border-radius: var(--radius);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+  opacity: 0; visibility: hidden; transition: opacity 0.12s ease;
+  white-space: pre-wrap; word-break: break-word;
+}
+#dc-tooltip.show { opacity: 1; visibility: visible; }
+#dc-tooltip .dc-tip-title { font-weight: 600; margin-bottom: 2px; }
+

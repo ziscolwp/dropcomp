@@ -49,8 +49,88 @@ var DCTooltip = (function () {
     return { title: String(entry.name || ''), body: lines.join('\n') };
   }
 
+  var el = null;      // floating tip element
+  var timer = null;
+  var current = null; // element currently driving the tip
+
+  function ensureEl() {
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'dc-tooltip';
+    el.setAttribute('role', 'tooltip');
+    el.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function setContent(node, title, body) {
+    node.textContent = '';
+    if (title) {
+      var t = document.createElement('div');
+      t.className = 'dc-tip-title';
+      t.textContent = title;
+      node.appendChild(t);
+    }
+    var lines = String(body == null ? '' : body).split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      var ln = document.createElement('div');
+      ln.textContent = lines[i];
+      node.appendChild(ln);
+    }
+  }
+
+  function owner(e) {
+    return (e.target && e.target.closest) ? e.target.closest('[data-tip], [data-tip-title]') : null;
+  }
+
+  function show(target) {
+    var title = target.getAttribute('data-tip-title') || '';
+    var body = target.getAttribute('data-tip') || '';
+    if (!title && !String(body).trim()) return;
+    var node = ensureEl();
+    setContent(node, title, body);
+    var size = { w: node.offsetWidth, h: node.offsetHeight }; // measured while hidden
+    var rect = target.getBoundingClientRect();
+    var pos = clampPosition(rect, size, { w: window.innerWidth, h: window.innerHeight }, MARGIN);
+    node.style.left = Math.round(pos.x) + 'px';
+    node.style.top = Math.round(pos.y) + 'px';
+    node.setAttribute('data-placement', pos.placement);
+    node.classList.add('show');
+    node.setAttribute('aria-hidden', 'false');
+    current = target;
+  }
+
+  function hide() {
+    if (timer) { clearTimeout(timer); timer = null; }
+    current = null;
+    if (!el) return;
+    el.classList.remove('show');
+    el.setAttribute('aria-hidden', 'true');
+  }
+
+  function scheduleShow(target, immediate) {
+    if (timer) clearTimeout(timer);
+    if (immediate) { show(target); return; }
+    timer = setTimeout(function () { show(target); }, SHOW_DELAY);
+  }
+
+  function onOver(e) { var t = owner(e); if (t && t !== current) scheduleShow(t, false); }
+  function onOut(e) { if (owner(e)) hide(); }
+  function onFocus(e) { var t = owner(e); if (t) scheduleShow(t, true); }
+
+  function init() {
+    document.addEventListener('pointerover', onOver, true);
+    document.addEventListener('pointerout', onOut, true);
+    document.addEventListener('pointerdown', hide, true);
+    document.addEventListener('focusin', onFocus, true);
+    document.addEventListener('focusout', hide, true);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') hide(); }, true);
+    window.addEventListener('scroll', hide, true);
+    window.addEventListener('resize', hide, true);
+  }
+
   return {
-    init: function () {}, // replaced by the controller in Task 2
+    init: init,
     clampPosition: clampPosition,
     buildScriptTip: buildScriptTip
   };
