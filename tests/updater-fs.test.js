@@ -180,3 +180,48 @@ test('assertStagedTree throws when a code dir is missing', () => {
   assert.throws(() => FS.assertStagedTree(root), /jsx/);
   FS.rmrf(root);
 });
+
+function makeLive(root) {
+  const live = path.join(root, 'DropComp');
+  FS.DIRS.forEach((d) => { FS.mkdirpSync(path.join(live, d)); fs.writeFileSync(path.join(live, d, 'v.txt'), 'OLD-' + d); });
+  return live;
+}
+function makeStaged(root) {
+  const staged = path.join(root, 'staged', 'DropComp-9.9.9');
+  FS.DIRS.forEach((d) => { FS.mkdirpSync(path.join(staged, d)); fs.writeFileSync(path.join(staged, d, 'v.txt'), 'NEW-' + d); });
+  return staged;
+}
+
+test('backup zips the live dir once and skips if it already exists', async () => {
+  const root = tmp();
+  const live = makeLive(root);
+  const zip = path.join(root, 'backup-2.4.0.zip');
+  await FS.backup(live, zip);
+  assert.ok(fs.existsSync(zip) && fs.statSync(zip).size > 0);
+  const mtime = fs.statSync(zip).mtimeMs;
+  await FS.backup(live, zip); // second call is a no-op
+  assert.equal(fs.statSync(zip).mtimeMs, mtime);
+  FS.rmrf(root);
+});
+
+test('applyMacSwap replaces all three dirs with the staged content', async () => {
+  const root = tmp();
+  const live = makeLive(root);
+  const staged = makeStaged(root);
+  await FS.applyMacSwap(live, staged);
+  FS.DIRS.forEach((d) => assert.equal(fs.readFileSync(path.join(live, d, 'v.txt'), 'utf8'), 'NEW-' + d));
+  FS.DIRS.forEach((d) => assert.equal(fs.existsSync(path.join(live, d + '.dcold')), false, '.dcold cleaned'));
+  FS.rmrf(root);
+});
+
+test('applyMacSwap rolls every dir back when a later move fails', async () => {
+  const root = tmp();
+  const live = makeLive(root);
+  const staged = makeStaged(root);
+  FS.rmrf(path.join(staged, 'jsx')); // 3rd move will fail (source gone)
+  await assert.rejects(FS.applyMacSwap(live, staged));
+  // all three original dirs restored, no .dcold left behind
+  FS.DIRS.forEach((d) => assert.equal(fs.readFileSync(path.join(live, d, 'v.txt'), 'utf8'), 'OLD-' + d, d + ' restored'));
+  FS.DIRS.forEach((d) => assert.equal(fs.existsSync(path.join(live, d + '.dcold')), false));
+  FS.rmrf(root);
+});

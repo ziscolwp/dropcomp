@@ -157,6 +157,48 @@ var DCUpdaterFS = (function () {
     }
   }
 
+  async function backup(liveDir, backupZip, platform, _cp, _fs) {
+    const fs = _fs || require('fs');
+    const cp = _cp || require('child_process');
+    const path = require('path');
+    if (fs.existsSync(backupZip)) return;
+    mkdirpSync(path.dirname(backupZip), fs);
+    const plat = platform || process.platform;
+    if (plat === 'win32') {
+      cp.execFileSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
+        "Compress-Archive -Path '" + liveDir.replace(/'/g, "''") + "' -DestinationPath '" + backupZip.replace(/'/g, "''") + "' -Force"]);
+    } else {
+      cp.execFileSync('/usr/bin/ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', liveDir, backupZip]);
+    }
+  }
+
+  async function applyMacSwap(liveDir, stagedRoot, _fs) {
+    const fs = _fs || require('fs');
+    const path = require('path');
+    const steps = DIRS.map(function (d) {
+      return { d: d, live: path.join(liveDir, d), old: path.join(liveDir, d + '.dcold'), staged: path.join(stagedRoot, d), movedAside: false, movedIn: false };
+    });
+    let i = 0;
+    try {
+      for (; i < steps.length; i++) {
+        const s = steps[i];
+        if (fs.existsSync(s.old)) rmrf(s.old, fs);
+        if (fs.existsSync(s.live)) { fs.renameSync(s.live, s.old); s.movedAside = true; }
+        await moveDir(s.staged, s.live, fs);
+        s.movedIn = true;
+      }
+      for (let k = 0; k < steps.length; k++) if (fs.existsSync(steps[k].old)) rmrf(steps[k].old, fs);
+    } catch (e) {
+      for (let j = i; j >= 0; j--) {
+        const s = steps[j];
+        if (!s) continue;
+        try { if (s.movedIn && fs.existsSync(s.live)) { rmrf(s.live, fs); s.movedIn = false; } } catch (e2) {}
+        try { if (s.movedAside && fs.existsSync(s.old)) { fs.renameSync(s.old, s.live); s.movedAside = false; } } catch (e3) {}
+      }
+      throw e;
+    }
+  }
+
   return {
     DIRS: DIRS,
     mkdirpSync: mkdirpSync,
@@ -169,7 +211,9 @@ var DCUpdaterFS = (function () {
     fileSize: fileSize,
     sha256File: sha256File,
     extract: extract,
-    assertStagedTree: assertStagedTree
+    assertStagedTree: assertStagedTree,
+    backup: backup,
+    applyMacSwap: applyMacSwap
   };
 }());
 if (typeof module !== 'undefined' && module.exports) { module.exports = DCUpdaterFS; }
