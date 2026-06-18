@@ -108,3 +108,34 @@ test('download refuses a non-allowed redirect target', async () => {
     /non-GitHub/);
   FS.rmrf(root);
 });
+
+test('download rejects when the response stream errors mid-transfer', async () => {
+  const root = tmp();
+  const dest = path.join(root, 'out.zip');
+  // Build a fake https that returns a 200 response, delivers one chunk, then
+  // emits 'error' on the response stream before completion.
+  const fakeHttpsMidError = {
+    get(_url, _opts, cb) {
+      const res = new EventEmitter();
+      res.statusCode = 200;
+      res.headers = { 'content-length': '10' };
+      res.setEncoding = () => {};
+      res.resume = () => {};
+      // pipe: write one chunk then emit res 'error' via setImmediate so the
+      // write stream exists before the error fires.
+      res.pipe = (out) => { out.write(Buffer.from('abc')); };
+      const req = new EventEmitter();
+      req.setTimeout = () => {};
+      req.destroy = () => {};
+      setImmediate(() => {
+        cb(res);
+        setImmediate(() => res.emit('error', new Error('ECONNRESET mid-transfer')));
+      });
+      return req;
+    }
+  };
+  await assert.rejects(
+    FS.download('https://github.com/dl', dest, null, () => true, fakeHttpsMidError),
+    /ECONNRESET/);
+  FS.rmrf(root);
+});

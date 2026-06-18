@@ -72,6 +72,7 @@ var DCUpdaterFS = (function () {
         let body = '';
         res.setEncoding('utf8');
         res.on('data', function (c) { body += c; });
+        res.on('error', reject);
         res.on('end', function () { try { resolve(JSON.parse(body)); } catch (e) { reject(new Error('Could not parse the GitHub response.')); } });
       });
       req.on('error', reject);
@@ -90,6 +91,8 @@ var DCUpdaterFS = (function () {
       let redirects = 0;
       function get(u) {
         if (isAllowedUrl && !isAllowedUrl(u)) { reject(new Error('Refused a non-GitHub download URL.')); return; }
+        let out = null;
+        function destroyOut() { if (out) { try { out.destroy(); } catch (_) {} } }
         const req = https.get(u, { headers: { 'User-Agent': 'DropComp-Updater' } }, function (res) {
           const sc = res.statusCode;
           if (sc >= 300 && sc < 400 && res.headers.location) {
@@ -101,13 +104,14 @@ var DCUpdaterFS = (function () {
           if (sc !== 200) { res.resume(); reject(new Error('Download failed (HTTP ' + sc + ').')); return; }
           const total = parseInt(res.headers['content-length'] || '0', 10);
           let got = 0;
-          const out = fs.createWriteStream(destPath);
+          out = fs.createWriteStream(destPath);
           res.on('data', function (c) { got += c.length; if (total) progress(Math.round(got / total * 100)); });
+          res.on('error', function (e) { destroyOut(); reject(e); });
           res.pipe(out);
           out.on('finish', function () { out.close(function () { resolve(destPath); }); });
           out.on('error', reject);
         });
-        req.on('error', reject);
+        req.on('error', function (e) { destroyOut(); reject(e); });
         req.setTimeout(30000, function () { req.destroy(new Error('Download timed out.')); });
       }
       get(url);
