@@ -369,3 +369,47 @@ body {
 #script-body-input:focus { border-color: var(--gold); }
 #script-path-display { word-break: break-all; margin: 0; }
 
+/* ---- tooltip ---- */
+#dc-tooltip {
+  position: fixed; left: 0; top: 0; z-index: 4000; pointer-events: none;
+  max-width: 240px; padding: 6px 8px; font-size: 12px; line-height: 1.35;
+  color: var(--text); background: var(--bg-raised);
+  border: 1px solid var(--border-strong); border-radius: var(--radius);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+  opacity: 0; visibility: hidden; transition: opacity 0.12s ease;
+  white-space: pre-wrap; word-break: break-word;
+}
+#dc-tooltip.show { opacity: 1; visibility: visible; }
+#dc-tooltip .dc-tip-title { font-weight: 600; margin-bottom: 2px; }
+
+/* ---- script run-form (inline under a row) ---- */
+.script-row { flex-wrap: wrap; }
+.script-form { flex: 1 0 100%; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+.script-field { display: flex; align-items: center; gap: 8px; }
+.script-field-label { font-size: 11px; color: var(--text-mid); flex: 0 0 96px; }
+.script-control { flex: 1; min-width: 0; background: var(--bg-inset); border: 1px solid var(--border-strong); color: var(--text); border-radius: var(--radius); font-size: 12px; padding: 6px 8px; }
+.script-control[type="range"] { padding: 0; }
+.script-control[type="checkbox"] { flex: 0 0 auto; width: 16px; height: 16px; }
+.script-control:focus { border-color: var(--gold); }
+.script-form-btns { display: flex; gap: 8px; justify-content: flex-end; }
+.script-form-btns button { padding: 6px 14px; }
+.script-row.has-form .script-run { box-shadow: 0 0 0 2px var(--gold-bg); }
+
+/* ---- editor inputs builder ---- */
+.label-aside { color: var(--text-dim); font-weight: 400; }
+.btn-sm { font-size: 11px; padding: 5px 9px; margin-top: 6px; }
+#script-inputs-list { display: flex; flex-direction: column; gap: 6px; }
+.builder-row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; background: var(--bg-inset); border: 1px solid var(--border); border-radius: 6px; padding: 6px; }
+.builder-row input, .builder-row select { background: var(--bg); border: 1px solid var(--border-strong); color: var(--text); border-radius: 5px; font-size: 11px; padding: 5px 6px; }
+.builder-label { flex: 1 1 70px; min-width: 0; }
+.builder-key { flex: 1 1 60px; min-width: 0; }
+.builder-type { flex: 0 0 auto; }
+.builder-default { flex: 1 1 60px; min-width: 0; }
+.b-num { display: none; gap: 4px; }
+.b-num input { width: 48px; }
+.builder-row[data-type="number"] .b-num, .builder-row[data-type="slider"] .b-num { display: flex; }
+.b-opts { display: none; flex: 1 1 100%; }
+.builder-row[data-type="select"] .b-opts { display: block; }
+.checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-mid); margin-bottom: 12px; text-align: left; }
+.checkbox-row input { width: 16px; height: 16px; }
+

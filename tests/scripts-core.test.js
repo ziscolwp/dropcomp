@@ -116,3 +116,59 @@ test('groupByCategory and categories sort alphabetically with a default bucket',
   assert.deepEqual(groups.map(g => g.category), ['Alpha', 'Uncategorized', 'Zebra']);
   assert.deepEqual(C.categories(scripts), ['Alpha', 'Uncategorized', 'Zebra']);
 });
+
+test('validateParams accepts a well-formed list and rejects bad keys/types', () => {
+  assert.equal(C.validateParams(null).valid, true);
+  assert.equal(C.validateParams([]).valid, true);
+  assert.equal(C.validateParams([{ key: 'spacing', type: 'slider', min: 0, max: 100 }]).valid, true);
+  assert.equal(C.validateParams([{ key: '1bad', type: 'text' }]).valid, false);      // key must start with letter/_
+  assert.equal(C.validateParams([{ key: 'a', type: 'text' }, { key: 'a', type: 'text' }]).valid, false); // dup
+  assert.equal(C.validateParams([{ key: 'x', type: 'nope' }]).valid, false);          // unknown type
+  assert.equal(C.validateParams([{ key: 'x', type: 'slider', min: 5, max: 5 }]).valid, false); // min<max
+  assert.equal(C.validateParams([{ key: 'x', type: 'select', options: [] }]).valid, false);    // needs options
+});
+
+test('coerceValue converts raw input strings to typed values', () => {
+  assert.equal(C.coerceValue({ type: 'text' }, 'hi'), 'hi');
+  assert.equal(C.coerceValue({ type: 'number' }, '4.5'), 4.5);
+  assert.equal(C.coerceValue({ type: 'slider', min: 0, max: 10 }, '99'), 10); // clamped
+  assert.equal(C.coerceValue({ type: 'checkbox' }, 'true'), true);
+  assert.equal(C.coerceValue({ type: 'checkbox' }, false), false);
+  assert.equal(C.coerceValue({ type: 'select', options: ['a', 'b'] }, 'b'), 'b');
+  assert.equal(C.coerceValue({ type: 'select', options: ['a', 'b'] }, 'zzz'), 'a'); // falls back to first
+});
+
+test('buildValuesJson coerces by param and uses defaults for missing keys', () => {
+  const params = [
+    { key: 'n', type: 'number', default: 1 },
+    { key: 'flag', type: 'checkbox', default: false },
+    { key: 'mode', type: 'select', options: ['add', 'sub'], default: 'add' }
+  ];
+  const json = C.buildValuesJson(params, { n: '7', flag: true });
+  assert.equal(json, '{"n":7,"flag":true,"mode":"add"}');
+});
+
+test('normalizeParams fills labels and coerces defaults to the right type', () => {
+  const out = C.normalizeParams([
+    { key: 'n', type: 'number', default: '3' },
+    { key: 'flag', type: 'checkbox', default: 'true' },
+    { key: 'pick', type: 'select', options: ['a', 'b'], default: 'zzz' }
+  ]);
+  assert.equal(out[0].label, 'n');
+  assert.equal(out[0].default, 3);
+  assert.equal(out[1].default, true);
+  assert.equal(out[2].default, 'a');
+});
+
+test('makeEntry carries normalized params and opensWindow', () => {
+  const e = C.makeEntry({ name: 'X', source: 'snippet', body: 'a', opensWindow: true,
+    params: [{ key: 'n', type: 'number', default: '2' }] }, 5);
+  assert.equal(e.opensWindow, true);
+  assert.equal(e.params.length, 1);
+  assert.equal(e.params[0].default, 2);
+});
+
+test('validateEntry rejects an entry whose params are invalid', () => {
+  const r = C.validateEntry({ name: 'X', source: 'snippet', body: 'a', params: [{ key: '1', type: 'text' }] });
+  assert.equal(r.valid, false);
+});

@@ -48,6 +48,7 @@
   if (typeof DCAssets !== 'undefined') DCAssets.init();
   if (typeof DCTools !== 'undefined') DCTools.init();
   if (typeof DCScripts !== 'undefined') DCScripts.init();
+  if (typeof DCTooltip !== 'undefined') DCTooltip.init();
 
   $('welcome-browse-btn').addEventListener('click', DCShell.selectLibraryFolder);
   $('retry-library-btn').addEventListener('click', DCShell.verifyAndLoad);

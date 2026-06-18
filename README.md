@@ -41,6 +41,22 @@ sidecars (the top-level `Assets` folder name is reserved). Index cache:
   Num/Step sequence-in-time, and pre-comp tools (PreComp, Decompose [AE 2022+],
   Multi PreComp, Independent). Each action is a single undo step.
 
+## Scripts
+
+### Make a script DropComp-driven (in-panel form)
+
+Instead of opening its own floating window, a script can read its inputs from a
+form DropComp renders inside the panel. In the script's editor, add Inputs (a key,
+type, and default for each), then in the script read them from `DC_PARAMS`:
+
+    var P = $.global.DC_PARAMS || {};   // P.spacing, P.mode, ...
+    var spacing = (P.spacing != null) ? P.spacing : 10;
+
+`DC_PARAMS` is set only when DropComp runs the script with a form, so the `|| {}`
+guard keeps the script working if you run it the old way too. Third-party panels
+you can't edit still run as a floating window — tick "opens its own floating window"
+on them so the panel labels them honestly.
+
 ## Updates
 
 The panel checks GitHub's latest release (at most every 12 h, silent offline)

@@ -1,5 +1,6 @@
 // DropComp Scripts tab controller. Registers, organises and one-click-runs the
 // user's custom .jsx files and pasted snippets so they can stay undocked.
+// TODO: split by concern — the editor-modal wiring (openEditor/saveEntry/fillCategoryList) could move to a scripts-editor.js module.
 var DCScripts = (function () {
   'use strict';
 
@@ -31,7 +32,7 @@ var DCScripts = (function () {
   function iconBtn(action, title, svg, extraClass) {
     var b = el('button', 'script-action' + (extraClass ? ' ' + extraClass : ''));
     b.dataset.action = action;
-    b.title = title;
+    b.setAttribute('data-tip', title);
     b.setAttribute('aria-label', title);
     b.innerHTML = svg;
     return b;
@@ -57,6 +58,11 @@ var DCScripts = (function () {
     els.bodyInput = document.getElementById('script-body-input');
     els.pathGroup = document.getElementById('script-path-group');
     els.pathDisplay = document.getElementById('script-path-display');
+    els.inputsList = document.getElementById('script-inputs-list');
+    els.opensWindow = document.getElementById('script-opens-window');
+    document.getElementById('script-add-input').addEventListener('click', function () {
+      DCScriptsForm.addBuilderRow(els.inputsList);
+    });
 
     els.search.addEventListener('input', function () { view.search = els.search.value; render(); });
     els.sort.addEventListener('change', function () { view.sort = els.sort.value; render(); });
@@ -175,12 +181,15 @@ var DCScripts = (function () {
 
   function buildRow(s) {
     var usage = DCScriptsCore.getUsage(usageMeta, s.uniqueId);
-    var row = el('div', 'script-row' + (usage.isFavorite ? ' has-fav' : ''));
+    var row = el('div', 'script-row' + (usage.isFavorite ? ' has-fav' : '') + (s.params && s.params.length ? ' has-form' : ''));
     row.dataset.id = s.uniqueId;
+    var tip = DCTooltip.buildScriptTip(s, usage);
+    row.setAttribute('data-tip-title', tip.title);
+    row.setAttribute('data-tip', tip.body);
 
     var run = el('button', 'script-run');
     run.dataset.action = 'run';
-    run.title = 'Run "' + s.name + '"';
+    run.setAttribute('data-tip', 'Run "' + s.name + '"');
     run.setAttribute('aria-label', 'Run ' + s.name);
     run.innerHTML = ICON.play;
     row.appendChild(run);
@@ -189,7 +198,7 @@ var DCScripts = (function () {
     var nameRow = el('div', 'script-name-row');
     var typeIcon = el('span', 'script-type', undefined);
     typeIcon.innerHTML = s.source === 'file' ? ICON.file : ICON.snippet;
-    typeIcon.title = s.source === 'file' ? 'External file' : 'Snippet';
+    typeIcon.setAttribute('data-tip', s.source === 'file' ? 'External file' : 'Snippet');
     nameRow.appendChild(typeIcon);
     nameRow.appendChild(el('span', 'script-name', s.name));
     main.appendChild(nameRow);
@@ -229,15 +238,51 @@ var DCScripts = (function () {
     else if (action === 'favorite') toggleFav(s);
   }
 
+  function okMsg(s) {
+    return s.opensWindow ? ('Opened "' + s.name + '" in a floating AE window.') : ('Ran "' + s.name + '".');
+  }
+
   function runScript(s) {
+    var row = els.list.querySelector('.script-row[data-id="' + s.uniqueId + '"]');
+    if (s.params && s.params.length && row) { toggleRunForm(row, s); return; }
     if (!DCBridge.acquire('runScript')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return; }
     var fn = s.source === 'file' ? 'scRunFile' : 'scRunSnippet';
     var arg = s.source === 'file' ? s.path : s.body;
     DCBridge.call(fn, [arg], function (result) {
       DCBridge.release();
       var r = DCBridge.parseJson(result);
-      if (r && r.ok) { bumpUsage(s.uniqueId); DCUI.toast('Ran "' + s.name + '".', false); render(); }
+      if (r && r.ok) { bumpUsage(s.uniqueId); DCUI.toast(okMsg(s), false); render(); }
       else DCUI.toast((r && r.error) || result || 'Script failed.', true);
+    });
+  }
+
+  function toggleRunForm(row, s) {
+    var existing = row.querySelector('.script-form');
+    var open = els.list.querySelector('.script-form');
+    if (open) open.parentNode.removeChild(open);
+    if (existing) return; // re-click on the same row collapses it
+    var form = DCScriptsForm.renderRunForm(s,
+      function (valuesJson) { runWithParams(s, valuesJson); },
+      function () { var f = row.querySelector('.script-form'); if (f) f.parentNode.removeChild(f); });
+    row.appendChild(form);
+    var first = form.querySelector('input, select, textarea');
+    if (first) first.focus();
+  }
+
+  function runWithParams(s, valuesJson) {
+    if (!DCBridge.acquire('runScript')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return; }
+    var fn = s.source === 'file' ? 'scRunFileWithParams' : 'scRunSnippetWithParams';
+    var arg = s.source === 'file' ? s.path : s.body;
+    DCBridge.call(fn, [arg, valuesJson], function (result) {
+      DCBridge.release();
+      var r = DCBridge.parseJson(result);
+      if (r && r.ok) {
+        bumpUsage(s.uniqueId);
+        DCUI.toast(okMsg(s), false);
+        var openForm = els.list.querySelector('.script-form');
+        if (openForm) openForm.parentNode.removeChild(openForm);
+        render();
+      } else DCUI.toast((r && r.error) || result || 'Script failed.', true);
     });
   }
 
@@ -267,6 +312,8 @@ var DCScripts = (function () {
     els.pathGroup.style.display = isFile ? 'block' : 'none';
     if (isFile) els.pathDisplay.textContent = entry.path || '';
     else els.bodyInput.value = entry.body || '';
+    DCScriptsForm.renderBuilder(els.inputsList, entry.params || []);
+    els.opensWindow.checked = !!entry.opensWindow;
     els.modal.classList.remove('hidden');
     els.nameInput.focus();
   }
@@ -289,7 +336,9 @@ var DCScripts = (function () {
       source: editing.source,
       path: editing.path,
       body: editing.source === 'snippet' ? els.bodyInput.value : null,
-      addedAt: editing.addedAt
+      addedAt: editing.addedAt,
+      params: DCScriptsForm.readBuilder(els.inputsList),
+      opensWindow: els.opensWindow.checked
     };
     var v = DCScriptsCore.validateEntry(input);
     if (!v.valid) { DCUI.toast(v.error, true); return; }
