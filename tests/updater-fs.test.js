@@ -225,3 +225,29 @@ test('applyMacSwap rolls every dir back when a later move fails', async () => {
   FS.DIRS.forEach((d) => assert.equal(fs.existsSync(path.join(live, d + '.dcold')), false));
   FS.rmrf(root);
 });
+
+test('applyMacSwap recovers when a cross-volume (EXDEV) move-in fails mid-copy', async () => {
+  const root = tmp();
+  const live = makeLive(root);     // OLD-<d> in CSXS/panel/jsx (v.txt)
+  const staged = makeStaged(root); // NEW-<d>
+  FS.DIRS.forEach((d) => fs.writeFileSync(path.join(staged, d, 'extra.txt'), 'NEW2-' + d)); // 2nd file so copy makes >1 write
+  const realFs = require('node:fs');
+  let writes = 0;
+  const wrapFs = Object.assign({}, realFs, {
+    renameSync(src, dest) {
+      // force the move-IN (src under staged) down moveDir's EXDEV copy fallback;
+      // allow move-aside (live -> .dcold) and the rollback restore (.dcold -> live)
+      if (String(src).indexOf(staged) === 0) { const e = new Error('EXDEV'); e.code = 'EXDEV'; throw e; }
+      return realFs.renameSync(src, dest);
+    },
+    writeFileSync(p, data) {
+      writes++;
+      if (writes === 2) throw new Error('disk full mid-copy'); // fail partway through copyDirRecursive
+      return realFs.writeFileSync(p, data);
+    }
+  });
+  await assert.rejects(FS.applyMacSwap(live, staged, wrapFs));
+  FS.DIRS.forEach((d) => assert.equal(fs.readFileSync(path.join(live, d, 'v.txt'), 'utf8'), 'OLD-' + d, d + ' restored to OLD'));
+  FS.DIRS.forEach((d) => assert.equal(fs.existsSync(path.join(live, d + '.dcold')), false, 'no .dcold for ' + d));
+  FS.rmrf(root);
+});

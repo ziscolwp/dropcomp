@@ -189,11 +189,26 @@ var DCUpdaterFS = (function () {
       }
       for (let k = 0; k < steps.length; k++) if (fs.existsSync(steps[k].old)) rmrf(steps[k].old, fs);
     } catch (e) {
+      const rollbackErrors = [];
       for (let j = i; j >= 0; j--) {
         const s = steps[j];
         if (!s) continue;
-        try { if (s.movedIn && fs.existsSync(s.live)) { rmrf(s.live, fs); s.movedIn = false; } } catch (e2) {}
-        try { if (s.movedAside && fs.existsSync(s.old)) { fs.renameSync(s.old, s.live); s.movedAside = false; } } catch (e3) {}
+        // remove whatever is now at live (a partial copy, the full new content, or nothing)
+        if (s.movedAside || s.movedIn) {
+          try { if (fs.existsSync(s.live)) rmrf(s.live, fs); }
+          catch (e2) { rollbackErrors.push(s.d + ': ' + e2.message); }
+        }
+        // restore the original we moved aside
+        if (s.movedAside) {
+          try { fs.renameSync(s.old, s.live); }
+          catch (e3) { rollbackErrors.push(s.d + ' restore: ' + e3.message); }
+        }
+      }
+      if (rollbackErrors.length) {
+        const err = new Error('Update failed (' + e.message + ') and automatic rollback was incomplete: ' + rollbackErrors.join('; '));
+        err.rollbackFailed = true;
+        err.userMessage = 'The update failed and the previous version could not be fully restored automatically. Please reinstall DropComp or restore from the backup in your Documents/DropComp folder.';
+        throw err;
       }
       throw e;
     }
