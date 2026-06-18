@@ -16,3 +16,23 @@ test('panel supported-formats copy mentions svg', () => {
   assert.match(panelSrc, /No supported image files selected[^']*svg/,
     'panel unsupported-files toast does not mention svg');
 });
+
+function importAssetBody() {
+  return jsxSrc.slice(
+    jsxSrc.indexOf('function importAsset'),
+    jsxSrc.indexOf('// ---- exports')
+  );
+}
+
+test('importAsset keeps svg layers crisp via continuous rasterization', () => {
+  const body = importAssetBody();
+  assert.match(body, /collapseTransformation\s*=\s*true/, 'continuous rasterization not set');
+  // must be svg-scoped, not applied to every asset
+  assert.match(body, /'svg'[\s\S]{0,120}collapseTransformation\s*=\s*true/,
+    'collapseTransformation must be guarded by an svg check');
+});
+
+test('importAsset returns an svg-specific hint when import fails', () => {
+  assert.match(importAssetBody(), /may not support SVG/,
+    'no svg-specific error hint in the catch path');
+});

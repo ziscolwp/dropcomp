@@ -255,6 +255,10 @@ function importAsset(filePath) {
                 for (var k = 1; k <= activeComp.numLayers; k++) {
                     if (activeComp.layer(k) !== newLayer) activeComp.layer(k).selected = false;
                 }
+                // SVG is vector: keep it crisp when scaled past 100%
+                if (assetExt(assetName) === 'svg') {
+                    try { newLayer.collapseTransformation = true; } catch (eRast) { }
+                }
                 addedToTimeline = true;
             } catch (eL) {
                 addedToTimeline = false;
@@ -267,6 +271,9 @@ function importAsset(filePath) {
     } catch (e) {
         try { app.endUndoGroup(); } catch (e2) { }
         try { if (suppressing) app.endSuppressDialogs(false); } catch (e3) { }
+        if (assetExt(filePath) === 'svg') {
+            return 'Error: SVG import failed - this After Effects version may not support SVG. Update to a newer After Effects. (' + e.toString() + ')';
+        }
         return 'Error: ' + e.toString();
     }
 }
