@@ -114,13 +114,25 @@
       </div>
       <div class="tool-inset">
         <div class="tool-row tool-seq">
-          <span class="tool-label">Count</span>
-          <input type="number" id="tools-num" class="tool-num" value="1" min="1" aria-label="Count">
-          <span class="tool-label">Step</span>
-          <input type="number" id="tools-step" class="tool-num" value="5" aria-label="Step in frames">
-          <button class="tool-btn tool-grow" data-tool="sequence">Sequence</button>
+          <div class="seq-field">
+            <span class="tool-label">Count</span>
+            <div class="stepper">
+              <button class="stepper-btn" type="button" data-step="-1" tabindex="-1" aria-label="Decrease count">&#8722;</button>
+              <input type="number" id="tools-num" class="tool-num" value="1" min="1" aria-label="Count">
+              <button class="stepper-btn" type="button" data-step="1" tabindex="-1" aria-label="Increase count">&#43;</button>
+            </div>
+          </div>
+          <div class="seq-field">
+            <span class="tool-label">Step</span>
+            <div class="stepper">
+              <button class="stepper-btn" type="button" data-step="-1" tabindex="-1" aria-label="Decrease step">&#8722;</button>
+              <input type="number" id="tools-step" class="tool-num" value="5" aria-label="Step in frames">
+              <button class="stepper-btn" type="button" data-step="1" tabindex="-1" aria-label="Increase step">&#43;</button>
+            </div>
+          </div>
+          <button class="tool-btn tool-seq-go" data-tool="sequence" data-tip="Stagger selected layers, duplicate one layer down the timeline, or cascade selected keyframes. Press again to keep pushing.">Sequence</button>
         </div>
-        <div class="tool-hint">Step is in frames. Many layers: stagger them. One layer: duplicate ×Count.</div>
+        <div class="tool-hint">Step in frames. Layers stagger, one layer duplicates, selected keyframes cascade &mdash; press again to push further.</div>
         <div class="tool-icons">
           <button class="tool-icon" data-tool="align" data-arg="left" data-tip="Align left edges" aria-label="Align left edges"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="3" x2="4" y2="21"></line><rect x="7" y="6" width="12" height="4"></rect><rect x="7" y="14" width="7" height="4"></rect></svg></button>
           <button class="tool-icon" data-tool="align" data-arg="center" data-tip="Align horizontal centers" aria-label="Align horizontal centers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"></line><rect x="6" y="6" width="12" height="4"></rect><rect x="8" y="14" width="8" height="4"></rect></svg></button>

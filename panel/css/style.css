@@ -305,12 +305,27 @@ body {
 .tool-btn:hover { background: var(--bg-hover); border-color: var(--border-strong); }
 .tool-btn svg { width: 15px; height: 15px; color: var(--text-mid); flex: 0 0 auto; }
 .tool-btn:hover svg { color: var(--gold); }
-.tool-inset { background: var(--bg-inset); border: 1px solid var(--border); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-.tool-seq { align-items: center; gap: 8px; }
-.tool-seq .tool-label { margin-bottom: 0; }
+/* lighter icon line weight - 2px reads heavy at these sizes (overrides the inline stroke-width attribute) */
+#tools svg { stroke-width: 1.5; }
+.tool-inset { background: var(--bg-inset); border: 1px solid var(--border); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+.tool-seq { align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.seq-field { display: flex; flex-direction: column; gap: 5px; }
+.seq-field .tool-label { margin-bottom: 0; }
 .tool-hint { font-size: 10px; color: var(--text-dim); line-height: 1.4; }
 .tool-num { width: 46px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; padding: 6px; text-align: center; }
 .tool-num:focus { border-color: var(--gold); }
+/* segmented stepper: [-] value [+]; native number spinners removed */
+.tool-num::-webkit-inner-spin-button, .tool-num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.stepper { display: inline-flex; align-items: stretch; height: 30px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.stepper:focus-within { border-color: var(--gold); }
+.stepper .tool-num { width: 34px; border: none; border-radius: 0; background: transparent; padding: 0 2px; }
+.stepper .tool-num:focus { border-color: transparent; }
+.stepper-btn { width: 22px; padding: 0; border: none; background: transparent; color: var(--text-mid); font-size: 14px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-user-select: none; user-select: none; }
+.stepper-btn:hover { background: var(--bg-hover); color: var(--gold); }
+.stepper-btn:active { background: var(--gold-bg); }
+/* Sequence is the primary action of this group */
+.tool-seq-go { flex: 1; min-width: 92px; height: 30px; padding: 0 12px; background: var(--gold); color: var(--on-gold); border: 1px solid transparent; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.tool-seq-go:hover { background: var(--gold-hover); }
 /* de-golded: neutral icon buttons; gold reserved for hover/active/CTA */
 .tool-icons { display: flex; align-items: center; gap: 5px; }
 .tool-icon { flex: 1; height: 30px; background: var(--bg-inset); border: 1px solid var(--border); border-radius: 6px; color: var(--text-mid); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
