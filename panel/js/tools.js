@@ -19,7 +19,15 @@ var DCTools = (function () {
     if (fn === 'tlAlign') return 'Aligned ' + plural(n, 'layer') + '.' + approx;
     if (fn === 'tlDistribute') return 'Distributed ' + plural(n, 'layer') + '.' + approx;
     if (fn === 'tlReset') return 'Recentered ' + plural(n, 'layer') + '.' + approx;
-    if (fn === 'tlSequence') return 'Sequenced ' + plural(n, 'layer') + '.';
+    if (fn === 'tlSequence') {
+      if (r && r.mode === 'keys') {
+        return r.unit === 'key'
+          ? 'Sequenced ' + plural(n, 'keyframe') + '.'
+          : 'Staggered keyframes on ' + plural(n, 'layer') + '.';
+      }
+      if (r && r.mode === 'duplicate') return 'Added ' + plural(n, 'duplicate') + '.';
+      return 'Staggered ' + plural(n, 'layer') + '.';
+    }
     if (fn === 'tlPreComp') return 'Precomposed ' + plural(n, 'layer') + ((r && r.name) ? ' → ' + r.name : '') + '.';
     if (fn === 'tlMultiPreComp') return 'Precomposed ' + plural(n, 'layer') + ' separately.';
     if (fn === 'tlDecompose') return 'Decomposed into ' + plural(n, 'layer') + '.' + ((r && r.warn) ? ' Not preserved: ' + r.warn + '.' : '');
@@ -79,7 +87,22 @@ var DCTools = (function () {
     cells[idx].focus();
   }
 
+  // Custom +/- steppers on the Count/Step fields (native spinners are hidden).
+  function adjustStepper(btn) {
+    var input = btn.parentNode ? btn.parentNode.querySelector('input') : null;
+    if (!input) return;
+    var delta = parseInt(btn.getAttribute('data-step'), 10) || 0;
+    var min = input.hasAttribute('min') ? parseInt(input.getAttribute('min'), 10) : -100000;
+    var max = input.hasAttribute('max') ? parseInt(input.getAttribute('max'), 10) : 100000;
+    var next = DCToolsCore.clampInt(input.value, -100000, 100000, 0) + delta;
+    if (next < min) next = min;
+    if (next > max) next = max;
+    input.value = next;
+  }
+
   function onClick(e) {
+    var stepBtn = e.target.closest ? e.target.closest('.stepper-btn') : null;
+    if (stepBtn) { adjustStepper(stepBtn); return; }
     var btn = e.target.closest('[data-tool]');
     if (!btn) return;
     var tool = btn.dataset.tool;
