@@ -24,7 +24,9 @@ var DCScriptsCore = (function () {
       path: isFile ? (input.path || null) : null,
       body: isFile ? null : String(input.body || ''),
       addedAt: input.addedAt || now,
-      tags: input.tags || []
+      tags: input.tags || [],
+      params: input.params ? normalizeParams(input.params) : [],
+      opensWindow: !!input.opensWindow
     };
   }
 
@@ -37,6 +39,8 @@ var DCScriptsCore = (function () {
     } else if (!String(input.body || '').trim()) {
       return { valid: false, error: 'The snippet is empty.' };
     }
+    var pv = validateParams(input.params);
+    if (!pv.valid) return pv;
     return { valid: true };
   }
 
@@ -111,6 +115,89 @@ var DCScriptsCore = (function () {
     return arr;
   }
 
+  var PARAM_TYPES = ['text', 'number', 'slider', 'checkbox', 'select'];
+  var PARAM_KEY_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+
+  function validateParams(params) {
+    if (params == null) return { valid: true };
+    var seen = {};
+    for (var i = 0; i < params.length; i++) {
+      var p = params[i] || {};
+      var label = p.label || p.key || '';
+      if (!p.key || !PARAM_KEY_RE.test(p.key)) {
+        return { valid: false, error: 'Input "' + (p.key || '') + '": key must start with a letter or _ and use only letters, numbers, or _.' };
+      }
+      if (seen[p.key]) return { valid: false, error: 'Duplicate input key "' + p.key + '".' };
+      seen[p.key] = true;
+      if (PARAM_TYPES.indexOf(p.type) === -1) {
+        return { valid: false, error: 'Input "' + label + '": choose a type.' };
+      }
+      if (p.type === 'slider') {
+        if (typeof p.min !== 'number' || typeof p.max !== 'number') return { valid: false, error: 'Input "' + label + '": slider needs numeric min and max.' };
+        if (p.min >= p.max) return { valid: false, error: 'Input "' + label + '": min must be less than max.' };
+        if (p.step != null && !(p.step > 0)) return { valid: false, error: 'Input "' + label + '": step must be greater than 0.' };
+      }
+      if (p.type === 'select' && (!p.options || p.options.length === 0)) {
+        return { valid: false, error: 'Input "' + label + '": add at least one option.' };
+      }
+    }
+    return { valid: true };
+  }
+
+  function coerceValue(param, raw) {
+    var t = param.type;
+    if (t === 'checkbox') return (raw === true || raw === 'true' || raw === 'on' || raw === 1 || raw === '1');
+    if (t === 'number' || t === 'slider') {
+      var n = parseFloat(raw);
+      if (isNaN(n)) n = (typeof param.default === 'number') ? param.default : 0;
+      if (typeof param.min === 'number' && n < param.min) n = param.min;
+      if (typeof param.max === 'number' && n > param.max) n = param.max;
+      return n;
+    }
+    if (t === 'select') {
+      var v = String(raw);
+      if (param.options && param.options.indexOf(v) === -1) return param.options[0];
+      return v;
+    }
+    return String(raw == null ? '' : raw);
+  }
+
+  function buildValuesJson(params, rawValues) {
+    var out = {};
+    params = params || [];
+    for (var i = 0; i < params.length; i++) {
+      var p = params[i];
+      var raw = (rawValues && (p.key in rawValues)) ? rawValues[p.key] : p['default'];
+      out[p.key] = coerceValue(p, raw);
+    }
+    return JSON.stringify(out);
+  }
+
+  function normalizeParams(params) {
+    var out = [];
+    params = params || [];
+    for (var i = 0; i < params.length; i++) {
+      var p = params[i] || {};
+      var np = { key: p.key, label: p.label || p.key, type: p.type };
+      if (p.type === 'number' || p.type === 'slider') {
+        if (p.min != null) np.min = (typeof p.min === 'number') ? p.min : parseFloat(p.min);
+        if (p.max != null) np.max = (typeof p.max === 'number') ? p.max : parseFloat(p.max);
+        if (p.step != null) np.step = (typeof p.step === 'number') ? p.step : parseFloat(p.step);
+        var dn = parseFloat(p['default']);
+        np['default'] = isNaN(dn) ? 0 : dn;
+      } else if (p.type === 'checkbox') {
+        np['default'] = (p['default'] === true || p['default'] === 'true' || p['default'] === 1 || p['default'] === '1');
+      } else if (p.type === 'select') {
+        np.options = p.options || [];
+        np['default'] = (np.options.indexOf(p['default']) !== -1) ? p['default'] : (np.options[0] || '');
+      } else {
+        np['default'] = String(p['default'] == null ? '' : p['default']);
+      }
+      out.push(np);
+    }
+    return out;
+  }
+
   function groupByCategory(scripts) {
     var map = {};
     for (var i = 0; i < scripts.length; i++) {
@@ -145,7 +232,11 @@ var DCScriptsCore = (function () {
     filterScripts: filterScripts,
     sortScripts: sortScripts,
     groupByCategory: groupByCategory,
-    categories: categories
+    categories: categories,
+    validateParams: validateParams,
+    normalizeParams: normalizeParams,
+    coerceValue: coerceValue,
+    buildValuesJson: buildValuesJson
   };
 }());
 if (typeof module !== 'undefined' && module.exports) { module.exports = DCScriptsCore; }
