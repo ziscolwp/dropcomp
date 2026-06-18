@@ -15,7 +15,8 @@ function mockStorage(initial) {
 test('defaultPrefs shape', () => {
   assert.deepEqual(DCState.defaultPrefs(), {
     thumbMin: 130, sort: 'recent', showNames: true, showMeta: true,
-    favoritesOnly: false, collapsed: [], activeTab: 'library', collapsedAssets: []
+    favoritesOnly: false, collapsed: [], activeTab: 'library', collapsedAssets: [],
+    viewMode: 'comfortable', viewModeAssets: 'comfortable'
   });
 });
 
@@ -27,6 +28,7 @@ test('loadPrefs migrates legacy compact density once, removing old keys', () => 
   const s = mockStorage({ dropcomp_view: 'list', dropcomp_density: 'compact' });
   const prefs = DCState.loadPrefs(s);
   assert.equal(prefs.thumbMin, 100);
+  assert.equal(prefs.viewMode, 'list');
   assert.equal(s.getItem('dropcomp_view'), null);
   assert.equal(s.getItem('dropcomp_density'), null);
 });
@@ -86,4 +88,29 @@ test('loadPrefs preserves a saved tools tab', () => {
   p.activeTab = 'tools';
   DCState.savePrefs(s, p);
   assert.equal(DCState.loadPrefs(s).activeTab, 'tools');
+});
+
+test('normalizeViewMode passes known modes and clamps the rest', () => {
+  ['comfortable', 'compact', 'list'].forEach(m =>
+    assert.equal(DCState.normalizeViewMode(m), m));
+  [undefined, null, '', 'grid', 'LIST', 0].forEach(bad =>
+    assert.equal(DCState.normalizeViewMode(bad), 'comfortable'));
+});
+
+test('viewClass maps modes to CSS classes and clamps junk', () => {
+  assert.equal(DCState.viewClass('comfortable'), 'view-comfortable');
+  assert.equal(DCState.viewClass('compact'), 'view-compact');
+  assert.equal(DCState.viewClass('list'), 'view-list');
+  assert.equal(DCState.viewClass('bogus'), 'view-comfortable');
+});
+
+test('per-tab view modes round-trip independently', () => {
+  const s = mockStorage();
+  const p = DCState.defaultPrefs();
+  p.viewMode = 'list';
+  p.viewModeAssets = 'compact';
+  DCState.savePrefs(s, p);
+  const loaded = DCState.loadPrefs(s);
+  assert.equal(loaded.viewMode, 'list');
+  assert.equal(loaded.viewModeAssets, 'compact');
 });
