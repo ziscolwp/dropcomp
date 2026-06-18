@@ -198,6 +198,15 @@
       <label>File</label>
       <p id="script-path-display" class="mono"></p>
     </div>
+    <div class="form-group" id="script-inputs-group">
+      <label>Inputs <span class="label-aside">optional — renders a form in the panel instead of a window</span></label>
+      <div id="script-inputs-list"></div>
+      <button type="button" id="script-add-input" class="btn-dark btn-sm" data-tip="Add an input control">+ Add input</button>
+    </div>
+    <label class="checkbox-row" id="script-window-row">
+      <input type="checkbox" id="script-opens-window">
+      <span>This script opens its own floating window</span>
+    </label>
     <div class="modal-buttons">
       <button id="script-cancel-btn" class="btn-dark">Cancel</button>
       <button id="script-save-btn" class="btn-gold">Save</button>
@@ -284,6 +293,7 @@
 <script src="js/tools-core.js"></script>
 <script src="js/tools.js"></script>
 <script src="js/scripts-core.js"></script>
+<script src="js/scripts-form.js"></script>
 <script src="js/scripts.js"></script>
 <script src="js/main.js"></script>
 </body>
