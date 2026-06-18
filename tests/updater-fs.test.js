@@ -251,3 +251,58 @@ test('applyMacSwap recovers when a cross-volume (EXDEV) move-in fails mid-copy',
   FS.DIRS.forEach((d) => assert.equal(fs.existsSync(path.join(live, d + '.dcold')), false, 'no .dcold for ' + d));
   FS.rmrf(root);
 });
+
+test('buildWindowsApplyScript embeds escaped paths, waits for AE, swaps, and writes status', () => {
+  const s = FS.buildWindowsApplyScript({
+    liveDir: "C:\\Users\\O'Neil\\ext\\DropComp", stagedRoot: 'C:\\stage\\DropComp-9.9.9',
+    backupZip: 'C:\\b.zip', statusFile: 'C:\\s.json', version: '2.5.0'
+  });
+  assert.match(s, /O''Neil/, "single quotes doubled for PowerShell");
+  assert.match(s, /AfterFX/, 'waits for After Effects to close');
+  assert.match(s, /Move-Item/);
+  assert.match(s, /\.dcold/);
+  assert.match(s, /catch/, 'has a rollback catch');
+  assert.match(s, /"ok"/);
+  assert.match(s, /"fail"/);
+  FS.DIRS.forEach((d) => assert.ok(s.includes('"' + d + '"'), d + ' referenced'));
+});
+
+test('spawnWindowsHelper writes the script + pending status and spawns detached', async () => {
+  const root = tmp();
+  const p = FS.paths(path.join(root, 'DropComp'), 'win32', root, '2.4.0');
+  FS.mkdirpSync(p.liveDir);
+  let spawned = null;
+  const fakeCp = { spawn: (cmd, args, opts) => { spawned = { cmd, args, opts }; return { unref: () => {} }; } };
+  await FS.spawnWindowsHelper(p, 'C:\\stage\\DropComp-9.9.9', '2.5.0', { cp: fakeCp });
+  assert.equal(spawned.cmd, 'powershell.exe');
+  assert.ok(spawned.args.includes('-File'));
+  assert.equal(spawned.opts.detached, true);
+  assert.ok(fs.existsSync(path.join(p.workDir, 'apply.ps1')));
+  assert.equal(FS.readStatus(p.statusFile).state, 'pending');
+  FS.rmrf(root);
+});
+
+test('cleanupStale recovers an interrupted swap and clears leftovers', async () => {
+  const root = tmp();
+  const p = FS.paths(path.join(root, 'DropComp'), 'darwin', root, '2.4.0');
+  FS.mkdirpSync(p.liveDir);
+  // CSXS swapped but .dcold not cleaned; panel interrupted (live missing, .dcold present)
+  FS.mkdirpSync(path.join(p.liveDir, 'CSXS')); FS.mkdirpSync(path.join(p.liveDir, 'CSXS.dcold'));
+  FS.mkdirpSync(path.join(p.liveDir, 'panel.dcold')); fs.writeFileSync(path.join(p.liveDir, 'panel.dcold', 'v.txt'), 'OLD');
+  FS.mkdirpSync(p.stagingDir);
+  await FS.cleanupStale(p);
+  assert.equal(fs.existsSync(path.join(p.liveDir, 'CSXS.dcold')), false, 'leftover .dcold removed');
+  assert.equal(fs.readFileSync(path.join(p.liveDir, 'panel', 'v.txt'), 'utf8'), 'OLD', 'interrupted dir restored');
+  assert.equal(fs.existsSync(p.stagingDir), false, 'staging cleared');
+  FS.rmrf(root);
+});
+
+test('cleanupStale leaves things alone while a Windows apply is pending', async () => {
+  const root = tmp();
+  const p = FS.paths(path.join(root, 'DropComp'), 'win32', root, '2.4.0');
+  FS.mkdirpSync(p.liveDir); FS.mkdirpSync(path.join(p.liveDir, 'CSXS.dcold'));
+  await FS.writeStatus(p.statusFile, { state: 'pending', version: '2.5.0' });
+  await FS.cleanupStale(p);
+  assert.ok(fs.existsSync(path.join(p.liveDir, 'CSXS.dcold')), 'pending apply not disturbed');
+  FS.rmrf(root);
+});

@@ -214,6 +214,91 @@ var DCUpdaterFS = (function () {
     }
   }
 
+  function psQuote(s) { return "'" + String(s).replace(/'/g, "''") + "'"; }
+
+  function buildWindowsApplyScript(o) {
+    return [
+      '$ErrorActionPreference = "Stop"',
+      '$live = ' + psQuote(o.liveDir),
+      '$staged = ' + psQuote(o.stagedRoot),
+      '$backup = ' + psQuote(o.backupZip),
+      '$statusFile = ' + psQuote(o.statusFile),
+      '$version = ' + psQuote(o.version),
+      '$dirs = @("CSXS","panel","jsx")',
+      'function Write-Status($state, $msg) {',
+      '  $o = @{ state = $state; version = $version; message = $msg } | ConvertTo-Json -Compress',
+      '  Set-Content -LiteralPath $statusFile -Value $o -Encoding UTF8',
+      '}',
+      '$deadline = (Get-Date).AddMinutes(60)',
+      'while (Get-Process -Name AfterFX,AfterFXLib,CEPHtmlEngine -ErrorAction SilentlyContinue) {',
+      '  if ((Get-Date) -gt $deadline) { Write-Status "fail" "Timed out waiting for After Effects to close."; exit 1 }',
+      '  Start-Sleep -Seconds 2',
+      '}',
+      'Start-Sleep -Seconds 3',
+      'try {',
+      '  foreach ($d in $dirs) {',
+      '    $liveD = Join-Path $live $d; $oldD = Join-Path $live ($d + ".dcold"); $newD = Join-Path $staged $d',
+      '    if (Test-Path -LiteralPath $oldD) { Remove-Item -LiteralPath $oldD -Recurse -Force }',
+      '    if (Test-Path -LiteralPath $liveD) { Rename-Item -LiteralPath $liveD -NewName ($d + ".dcold") }',
+      '    Move-Item -LiteralPath $newD -Destination $liveD',
+      '  }',
+      '  foreach ($d in $dirs) { $oldD = Join-Path $live ($d + ".dcold"); if (Test-Path -LiteralPath $oldD) { Remove-Item -LiteralPath $oldD -Recurse -Force } }',
+      '  if (Test-Path -LiteralPath $staged) { Remove-Item -LiteralPath $staged -Recurse -Force }',
+      '  Write-Status "ok" "Updated to $version."',
+      '} catch {',
+      '  foreach ($d in $dirs) {',
+      '    $liveD = Join-Path $live $d; $oldD = Join-Path $live ($d + ".dcold")',
+      '    if (Test-Path -LiteralPath $oldD) {',
+      '      if (Test-Path -LiteralPath $liveD) { Remove-Item -LiteralPath $liveD -Recurse -Force }',
+      '      Rename-Item -LiteralPath $oldD -NewName $d',
+      '    }',
+      '  }',
+      '  Write-Status "fail" $_.Exception.Message',
+      '  exit 1',
+      '}'
+    ].join('\r\n');
+  }
+
+  function writeStatus(statusFile, obj, _fs) {
+    const fs = _fs || require('fs');
+    const path = require('path');
+    mkdirpSync(path.dirname(statusFile), fs);
+    fs.writeFileSync(statusFile, JSON.stringify(obj), 'utf8');
+    return Promise.resolve();
+  }
+
+  function readStatus(statusFile, _fs) {
+    const fs = _fs || require('fs');
+    try { return JSON.parse(fs.readFileSync(statusFile, 'utf8')); } catch (e) { return null; }
+  }
+
+  async function spawnWindowsHelper(p, stagedRoot, version, _deps) {
+    const deps = _deps || {};
+    const fs = deps.fs || require('fs');
+    const cp = deps.cp || require('child_process');
+    const path = require('path');
+    mkdirpSync(p.workDir, fs);
+    const scriptPath = path.join(p.workDir, 'apply.ps1');
+    fs.writeFileSync(scriptPath, buildWindowsApplyScript({ liveDir: p.liveDir, stagedRoot: stagedRoot, backupZip: p.backupZip, statusFile: p.statusFile, version: version }), 'utf8');
+    await writeStatus(p.statusFile, { state: 'pending', version: version }, fs);
+    const child = cp.spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', scriptPath], { detached: true, stdio: 'ignore', windowsHide: true });
+    child.unref();
+  }
+
+  async function cleanupStale(p, _fs) {
+    const fs = _fs || require('fs');
+    const path = require('path');
+    const status = readStatus(p.statusFile, fs);
+    if (status && status.state === 'pending') return;
+    for (let i = 0; i < DIRS.length; i++) {
+      const live = path.join(p.liveDir, DIRS[i]);
+      const old = path.join(p.liveDir, DIRS[i] + '.dcold');
+      if (!fs.existsSync(live) && fs.existsSync(old)) { try { fs.renameSync(old, live); } catch (e) {} }
+      else if (fs.existsSync(live) && fs.existsSync(old)) { rmrf(old, fs); }
+    }
+    if (fs.existsSync(p.stagingDir)) rmrf(p.stagingDir, fs);
+  }
+
   return {
     DIRS: DIRS,
     mkdirpSync: mkdirpSync,
@@ -228,7 +313,12 @@ var DCUpdaterFS = (function () {
     extract: extract,
     assertStagedTree: assertStagedTree,
     backup: backup,
-    applyMacSwap: applyMacSwap
+    applyMacSwap: applyMacSwap,
+    buildWindowsApplyScript: buildWindowsApplyScript,
+    spawnWindowsHelper: spawnWindowsHelper,
+    writeStatus: writeStatus,
+    readStatus: readStatus,
+    cleanupStale: cleanupStale
   };
 }());
 if (typeof module !== 'undefined' && module.exports) { module.exports = DCUpdaterFS; }
