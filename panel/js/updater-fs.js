@@ -118,6 +118,45 @@ var DCUpdaterFS = (function () {
     });
   }
 
+  async function fileSize(p, _fs) { const fs = _fs || require('fs'); return fs.statSync(p).size; }
+
+  async function sha256File(p, _fs) {
+    const fs = _fs || require('fs');
+    const crypto = require('crypto');
+    return crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
+  }
+
+  async function extract(zipPath, stagingDir, platform, _cp, _fs) {
+    const fs = _fs || require('fs');
+    const path = require('path');
+    const cp = _cp || require('child_process');
+    const plat = platform || process.platform;
+    if (fs.existsSync(stagingDir)) rmrf(stagingDir, fs);
+    mkdirpSync(stagingDir, fs);
+    if (plat === 'win32') {
+      cp.execFileSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
+        "Expand-Archive -LiteralPath '" + zipPath.replace(/'/g, "''") + "' -DestinationPath '" + stagingDir.replace(/'/g, "''") + "' -Force"]);
+    } else {
+      cp.execFileSync('/usr/bin/ditto', ['-x', '-k', zipPath, stagingDir]);
+    }
+    const names = fs.readdirSync(stagingDir);
+    if (names.indexOf('CSXS') !== -1) return stagingDir;
+    for (let i = 0; i < names.length; i++) {
+      const cand = path.join(stagingDir, names[i]);
+      if (fs.statSync(cand).isDirectory() && fs.existsSync(path.join(cand, 'CSXS'))) return cand;
+    }
+    throw new Error('Downloaded package layout was not recognized.');
+  }
+
+  function assertStagedTree(stagedRoot, _fs) {
+    const fs = _fs || require('fs');
+    const path = require('path');
+    for (let i = 0; i < DIRS.length; i++) {
+      const p = path.join(stagedRoot, DIRS[i]);
+      if (!fs.existsSync(p) || !fs.statSync(p).isDirectory()) throw new Error('Downloaded package is missing the "' + DIRS[i] + '" folder.');
+    }
+  }
+
   return {
     DIRS: DIRS,
     mkdirpSync: mkdirpSync,
@@ -126,7 +165,11 @@ var DCUpdaterFS = (function () {
     moveDir: moveDir,
     paths: paths,
     fetchLatestRelease: fetchLatestRelease,
-    download: download
+    download: download,
+    fileSize: fileSize,
+    sha256File: sha256File,
+    extract: extract,
+    assertStagedTree: assertStagedTree
   };
 }());
 if (typeof module !== 'undefined' && module.exports) { module.exports = DCUpdaterFS; }

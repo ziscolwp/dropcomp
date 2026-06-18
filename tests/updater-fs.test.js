@@ -139,3 +139,44 @@ test('download rejects when the response stream errors mid-transfer', async () =
     /ECONNRESET/);
   FS.rmrf(root);
 });
+
+const cp = require('node:child_process');
+const crypto = require('node:crypto');
+
+function makeReleaseZip(root) {
+  // build a DropComp-9.9.9/{CSXS,panel,jsx} tree and zip it like a real release
+  const tree = path.join(root, 'DropComp-9.9.9');
+  FS.DIRS.forEach((d) => { FS.mkdirpSync(path.join(tree, d)); });
+  fs.writeFileSync(path.join(tree, 'CSXS', 'manifest.xml'), '<x/>');
+  fs.writeFileSync(path.join(tree, 'panel', 'main.js'), 'new');
+  fs.writeFileSync(path.join(tree, 'jsx', 'host.jsx'), 'new');
+  const zip = path.join(root, 'rel.zip');
+  cp.execFileSync('/usr/bin/ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', tree, zip]);
+  return zip;
+}
+
+test('sha256File + fileSize match crypto/stat on a real file', async () => {
+  const root = tmp();
+  const f = path.join(root, 'a.bin');
+  fs.writeFileSync(f, 'payload');
+  assert.equal(await FS.fileSize(f), 7);
+  assert.equal(await FS.sha256File(f), crypto.createHash('sha256').update('payload').digest('hex'));
+  FS.rmrf(root);
+});
+
+test('extract unpacks the zip and finds the inner DropComp root', async () => {
+  const root = tmp();
+  const zip = makeReleaseZip(root);
+  const staged = await FS.extract(zip, path.join(root, 'staging'));
+  assert.ok(fs.existsSync(path.join(staged, 'CSXS', 'manifest.xml')));
+  assert.equal(fs.readFileSync(path.join(staged, 'panel', 'main.js'), 'utf8'), 'new');
+  FS.rmrf(root);
+});
+
+test('assertStagedTree throws when a code dir is missing', () => {
+  const root = tmp();
+  FS.mkdirpSync(path.join(root, 'CSXS'));
+  FS.mkdirpSync(path.join(root, 'panel'));
+  assert.throws(() => FS.assertStagedTree(root), /jsx/);
+  FS.rmrf(root);
+});
