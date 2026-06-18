@@ -1,5 +1,6 @@
 // DropComp Scripts tab controller. Registers, organises and one-click-runs the
 // user's custom .jsx files and pasted snippets so they can stay undocked.
+// TODO: split by concern — the editor-modal wiring (openEditor/saveEntry/fillCategoryList) could move to a scripts-editor.js module.
 var DCScripts = (function () {
   'use strict';
 
