@@ -31,6 +31,7 @@ var DCShell = (function () {
     els.showMetaCb.checked = prefs.showMeta;
     els.favoritesBtn.classList.toggle('active', prefs.favoritesOnly);
     applyGridSize();
+    applyView();
   }
 
   function applyGridSize() {
@@ -39,6 +40,34 @@ var DCShell = (function () {
     ['grid--s', 'grid--m', 'grid--l'].forEach(function (c) {
       els.library.classList.toggle(c, c === cls);
     });
+  }
+
+  function viewKey() { return prefs.activeTab === 'assets' ? 'viewModeAssets' : 'viewMode'; }
+  function currentViewMode() { return DCState.normalizeViewMode(prefs[viewKey()]); }
+
+  function applyView() {
+    var mode = currentViewMode();
+    var cls = DCState.viewClass(mode);
+    ['view-comfortable', 'view-compact', 'view-list'].forEach(function (c) {
+      els.library.classList.toggle(c, c === cls);
+    });
+    els.thumbSlider.classList.toggle('hidden', mode !== 'comfortable');
+    if (els.viewSwitch) {
+      var btns = els.viewSwitch.querySelectorAll('[data-view]');
+      for (var i = 0; i < btns.length; i++) {
+        var on = btns[i].getAttribute('data-view') === mode;
+        btns[i].classList.toggle('active', on);
+        btns[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+      }
+    }
+  }
+
+  function onViewChange(mode) {
+    if (prefs.activeTab !== 'library' && prefs.activeTab !== 'assets') return;
+    prefs[viewKey()] = DCState.normalizeViewMode(mode);
+    persistPrefs();
+    applyView();
+    activeModule().rerender();
   }
 
   function boot() {
@@ -84,6 +113,7 @@ var DCShell = (function () {
     if (isTools) { if (hasTools()) DCTools.ensureMounted(); return; }
     if (isScripts) { if (hasScripts()) DCScripts.ensureMounted(); return; }
     els.search.placeholder = isAssets ? 'Search assets...' : 'Search library...';
+    applyView();
     activeModule().ensureLoaded();
   }
 
@@ -190,7 +220,7 @@ var DCShell = (function () {
     confirmCategoryModal: confirmCategoryModal, confirmRename: confirmRename, confirmDelete: confirmDelete,
     closeAllModals: closeAllModals,
     onSearch: onSearch, onSortChange: onSortChange, onFavoritesToggle: onFavoritesToggle,
-    onDisplayChange: onDisplayChange, onSlider: onSlider,
+    onDisplayChange: onDisplayChange, onSlider: onSlider, onViewChange: onViewChange,
     onCardAction: onCardAction, onCardDblClick: onCardDblClick, toggleSection: toggleSection
   };
 }());

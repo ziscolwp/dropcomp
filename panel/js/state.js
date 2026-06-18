@@ -49,6 +49,16 @@ var DCState = (function () {
     return 'grid--l';
   }
 
+  var VIEW_MODES = ['comfortable', 'compact', 'list'];
+
+  function normalizeViewMode(v) {
+    return VIEW_MODES.indexOf(v) !== -1 ? v : 'comfortable';
+  }
+
+  function viewClass(v) {
+    return 'view-' + normalizeViewMode(v);
+  }
+
   function getUsage(usageMeta, uniqueId) {
     return (usageMeta && usageMeta[uniqueId]) || { lastUsed: 0, useCount: 0, isFavorite: false };
   }
@@ -105,7 +115,8 @@ var DCState = (function () {
 
   function defaultPrefs() {
     return { thumbMin: 130, sort: 'recent', showNames: true, showMeta: true,
-      favoritesOnly: false, collapsed: [], activeTab: 'library', collapsedAssets: [] };
+      favoritesOnly: false, collapsed: [], activeTab: 'library', collapsedAssets: [],
+      viewMode: 'comfortable', viewModeAssets: 'comfortable' };
   }
 
   function loadPrefs(storage) {
@@ -120,6 +131,7 @@ var DCState = (function () {
         return prefs;
       }
       if (storage.getItem('dropcomp_density') === 'compact') prefs.thumbMin = 100;
+      if (storage.getItem('dropcomp_view') === 'list') prefs.viewMode = 'list';
       storage.removeItem('dropcomp_view');
       storage.removeItem('dropcomp_density');
     } catch (e) { return defaultPrefs(); }
@@ -179,7 +191,10 @@ var DCState = (function () {
     formatAssetMetaLine: formatAssetMetaLine,
     ASSETS_USAGE_KEY: ASSETS_USAGE_KEY,
     addedAt: addedAt,
-    gridSizeClass: gridSizeClass
+    gridSizeClass: gridSizeClass,
+    normalizeViewMode: normalizeViewMode,
+    viewClass: viewClass,
+    VIEW_MODES: VIEW_MODES
   };
 }());
 if (typeof module !== 'undefined' && module.exports) { module.exports = DCState; }

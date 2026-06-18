@@ -140,7 +140,51 @@ var DCRender = (function () {
     return card;
   }
 
-  function buildSection(group, prefs, usageMeta, busts, kind) {
+  function buildRow(item, usage, prefs, kind, bust) {
+    var isAsset = kind === 'asset';
+    var card = el('article', 'card card--row' + (usage.isFavorite ? ' has-fav' : ''));
+    card.dataset.uniqueId = item.uniqueId;
+    card.dataset.category = item.category;
+    card.title = item.name + '\nDouble-click to import';
+
+    var thumbWrap = el('div', 'card-thumb');
+    var renderable = isAsset ? RENDERABLE_EXTS[item.ext] : item.thumbPath;
+    if (renderable) {
+      var img = document.createElement('img');
+      img.loading = 'lazy';
+      img.alt = '';
+      img.src = thumbUrl(isAsset ? item.filePath : item.thumbPath,
+        isAsset ? (item.addedAt || null) : bust);
+      img.onerror = function () { showThumbFallback(img); };
+      thumbWrap.appendChild(img);
+    } else {
+      var ph = el('div', 'thumb-placeholder');
+      if (isAsset) ph.appendChild(el('span', 'ext-badge', String(item.ext || '?').toUpperCase()));
+      else ph.innerHTML = ICONS.photoOff;
+      thumbWrap.appendChild(ph);
+    }
+    card.appendChild(thumbWrap);
+
+    var main = el('div', 'row-main');
+    main.appendChild(el('div', 'card-name', item.name));
+    var meta = isAsset ? DCState.formatAssetMetaLine(item) : DCState.formatMetaLine(item);
+    if (meta) main.appendChild(el('div', 'card-meta', meta));
+    card.appendChild(main);
+
+    var actions = el('div', 'row-actions');
+    actions.appendChild(iconBtn('import', 'Import', ICONS.download));
+    actions.appendChild(iconBtn('favorite', 'Favorite',
+      usage.isFavorite ? ICONS.starFilled : ICONS.star,
+      usage.isFavorite ? 'fav-on' : ''));
+    actions.appendChild(iconBtn('rename', 'Rename', ICONS.pencil));
+    if (!isAsset) actions.appendChild(iconBtn('setThumb', 'Set thumbnail from current frame', ICONS.camera));
+    actions.appendChild(iconBtn('reveal', 'Reveal in Finder', ICONS.folder));
+    actions.appendChild(iconBtn('delete', 'Delete', ICONS.trash));
+    card.appendChild(actions);
+    return card;
+  }
+
+  function buildSection(group, prefs, usageMeta, busts, kind, viewMode) {
     var collapsedList = kind === 'asset' ? prefs.collapsedAssets : prefs.collapsed;
     var collapsed = collapsedList.indexOf(group.category) !== -1;
     var section = el('section', 'category' + (collapsed ? ' collapsed' : ''));
@@ -153,14 +197,19 @@ var DCRender = (function () {
     header.appendChild(el('span', 'category-count', String(group.items.length)));
     section.appendChild(header);
 
-    var grid = el('div', 'grid');
+    var isList = viewMode === 'list';
+    var container = el('div', isList ? 'list' : 'grid');
     group.items.forEach(function (item) {
       var usage = DCState.getUsage(usageMeta, item.uniqueId);
-      grid.appendChild(kind === 'asset'
-        ? buildAssetCard(item, usage, prefs)
-        : buildCard(item, usage, prefs, busts[item.uniqueId]));
+      if (isList) {
+        container.appendChild(buildRow(item, usage, prefs, kind, busts[item.uniqueId]));
+      } else {
+        container.appendChild(kind === 'asset'
+          ? buildAssetCard(item, usage, prefs)
+          : buildCard(item, usage, prefs, busts[item.uniqueId]));
+      }
     });
-    section.appendChild(grid);
+    section.appendChild(container);
     return section;
   }
 
@@ -170,8 +219,10 @@ var DCRender = (function () {
       container.appendChild(el('div', 'placeholder', emptyMessage));
       return;
     }
+    var viewMode = DCState.normalizeViewMode(
+      kind === 'asset' ? prefs.viewModeAssets : prefs.viewMode);
     groups.forEach(function (g) {
-      container.appendChild(buildSection(g, prefs, usageMeta, busts, kind));
+      container.appendChild(buildSection(g, prefs, usageMeta, busts, kind, viewMode));
     });
   }
 

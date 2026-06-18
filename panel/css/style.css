@@ -144,7 +144,7 @@ body {
 .category.collapsed .chev { transform: rotate(-90deg); }
 .category-name { font-size: 12px; color: var(--text); font-weight: 600; }
 .category-count { font-size: 11px; color: var(--gold); background: var(--gold-bg); border-radius: 8px; padding: 0 7px; }
-.category.collapsed .grid { display: none; }
+.category.collapsed .grid, .category.collapsed .list { display: none; }
 
 .grid {
   display: grid; gap: 8px;
@@ -428,7 +428,6 @@ body {
 .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-mid); margin-bottom: 12px; text-align: left; }
 .checkbox-row input { width: 16px; height: 16px; }
 
-
 /* ---- self-updater modal ---- */
 .update-notes {
   max-height: 180px; overflow-y: auto; font-size: 12px; line-height: 1.5;
@@ -444,3 +443,36 @@ body {
   font-size: 12px; color: var(--danger); background: var(--bg-inset);
   border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; margin: 0 0 14px;
 }
+
+/* ---- view switch (segmented) ---- */
+.seg { display: inline-flex; flex: 0 0 auto; background: var(--bg-raised); border-radius: var(--radius); overflow: hidden; }
+.seg-btn { width: 28px; height: 30px; padding: 0; border: none; background: transparent; color: var(--text-mid); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.seg-btn + .seg-btn { border-left: 1px solid var(--border); }
+.seg-btn svg { width: 14px; height: 14px; }
+.seg-btn:hover { background: var(--bg-hover); color: var(--text); }
+.seg-btn.active { background: var(--gold-bg); color: var(--gold); }
+
+/* ---- dense grid (contact sheet) ---- */
+#library.view-compact .grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 5px; }
+#library.view-compact .card-info { display: none; }
+#library.view-compact .card-actions { display: none; }
+#library.view-compact .import-bar { left: 3px; right: 3px; bottom: 3px; padding: 2px 0; font-size: 10px; }
+#library.view-compact .import-bar svg { width: 9px; height: 9px; }
+#library.view-compact .generate-chip { font-size: 9px; padding: 0 6px; }
+#library.view-compact .thumb-placeholder svg { width: 12px; height: 12px; }
+#library.view-compact .ext-badge { font-size: 9px; padding: 1px 5px; }
+
+/* ---- list view ---- */
+#library.view-list .list { display: flex; flex-direction: column; gap: 4px; }
+#library.view-list .card--row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; }
+#library.view-list .card--row .card-thumb { flex: 0 0 auto; width: 52px; aspect-ratio: 16 / 9; border-radius: 4px; }
+#library.view-list .card--row .card-thumb img { object-fit: cover; padding: 0; }
+#library.view-list .card--row .row-main { flex: 1; min-width: 0; }
+#library.view-list .card--row .card-name { font-size: 12px; }
+#library.view-list .card--row .card-meta { font-size: 11px; margin-top: 1px; }
+#library.view-list .row-actions { display: flex; gap: 2px; flex: 0 0 auto; }
+#library.view-list .row-actions .card-action { position: static; opacity: 1; width: 26px; height: 26px; background: transparent; color: var(--text-mid); border-radius: 6px; }
+#library.view-list .row-actions .card-action svg { width: 14px; height: 14px; }
+#library.view-list .row-actions .card-action:hover { background: var(--bg-hover); color: var(--text); }
+#library.view-list .row-actions .card-action[data-action="delete"]:hover { background: var(--danger); color: #fff; }
+#library.view-list .row-actions .card-action.fav-on { color: var(--gold); }
