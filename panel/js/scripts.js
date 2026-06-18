@@ -31,7 +31,7 @@ var DCScripts = (function () {
   function iconBtn(action, title, svg, extraClass) {
     var b = el('button', 'script-action' + (extraClass ? ' ' + extraClass : ''));
     b.dataset.action = action;
-    b.title = title;
+    b.setAttribute('data-tip', title);
     b.setAttribute('aria-label', title);
     b.innerHTML = svg;
     return b;
@@ -177,10 +177,13 @@ var DCScripts = (function () {
     var usage = DCScriptsCore.getUsage(usageMeta, s.uniqueId);
     var row = el('div', 'script-row' + (usage.isFavorite ? ' has-fav' : ''));
     row.dataset.id = s.uniqueId;
+    var tip = DCTooltip.buildScriptTip(s, usage);
+    row.setAttribute('data-tip-title', tip.title);
+    row.setAttribute('data-tip', tip.body);
 
     var run = el('button', 'script-run');
     run.dataset.action = 'run';
-    run.title = 'Run "' + s.name + '"';
+    run.setAttribute('data-tip', 'Run "' + s.name + '"');
     run.setAttribute('aria-label', 'Run ' + s.name);
     run.innerHTML = ICON.play;
     row.appendChild(run);
@@ -189,7 +192,7 @@ var DCScripts = (function () {
     var nameRow = el('div', 'script-name-row');
     var typeIcon = el('span', 'script-type', undefined);
     typeIcon.innerHTML = s.source === 'file' ? ICON.file : ICON.snippet;
-    typeIcon.title = s.source === 'file' ? 'External file' : 'Snippet';
+    typeIcon.setAttribute('data-tip', s.source === 'file' ? 'External file' : 'Snippet');
     nameRow.appendChild(typeIcon);
     nameRow.appendChild(el('span', 'script-name', s.name));
     main.appendChild(nameRow);
