@@ -73,7 +73,7 @@ var DCAssets = (function () {
       return { category: g.category, items: DCState.sortComps(g.items, prefs.sort, usageMeta) };
     });
     var msg = allAssets.length === 0
-      ? 'No assets yet. Click Add Assets to add images.'
+      ? 'No assets yet. Click Add Assets to add images or vectors.'
       : 'No assets match.';
     DCRender.render(els().library, groups, prefs, usageMeta, {}, msg, 'asset');
   }
@@ -122,7 +122,7 @@ var DCAssets = (function () {
       var r = DCBridge.parseJson(result);
       if (r && r.ok) {
         if (r.added === 0) {
-          DCUI.toast('No supported image files selected (png, jpg, gif, bmp, tif, tga, psd, ai, eps).', true, 6000);
+          DCUI.toast('No supported image files selected (png, jpg, gif, bmp, tif, tga, psd, ai, eps, svg).', true, 6000);
           return;
         }
         var msg = r.added + ' asset' + (r.added === 1 ? '' : 's') + ' added.';
