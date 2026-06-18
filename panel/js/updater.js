@@ -91,6 +91,98 @@ var DCUpdater = (function () {
     return { mode: 'mac-applied', version: version };
   }
 
+  let _cfg = null;   // { csInterface, storage, nodeAvailable }
+  let _paths = null; // resolved DCUpdaterFS.paths or null
+  let _latest = null;
+  let _release = null;
+  let _running = false;
+
+  function $(id) { return document.getElementById(id); }
+
+  function init(cfg) {
+    _cfg = cfg;
+    if (!cfg.nodeAvailable) return;
+    try {
+      const SystemPath = window.SystemPath;
+      const extDir = cfg.csInterface.getSystemPath(SystemPath.EXTENSION);
+      _paths = DCUpdaterFS.paths(extDir, process.platform, require('os').homedir(), DCUpdate.VERSION);
+      $('update-github-btn').addEventListener('click', function () { cfg.csInterface.openURLInDefaultBrowser(DCUpdate.RELEASES_PAGE); });
+      $('update-later-btn').addEventListener('click', close);
+      $('update-done-btn').addEventListener('click', close);
+      $('update-now-btn').addEventListener('click', start);
+    } catch (e) { _paths = null; _cfg.nodeAvailable = false; }
+  }
+
+  function setLatest(tag) { _latest = tag; }
+  function close() { if (!_running) $('update-modal').classList.add('hidden'); }
+
+  function open() {
+    resetModal();
+    $('update-modal-title').textContent = 'Update available — ' + String(_latest || '').replace(/^v/, '');
+    $('update-modal').classList.remove('hidden');
+    DCUpdaterFS.fetchLatestRelease(API_URL, isAllowedUrl).then(function (rel) {
+      _release = rel;
+      $('update-notes').textContent = (rel && rel.body) ? rel.body : 'A newer version of DropComp is available.';
+    }).catch(function () { $('update-notes').textContent = 'A newer version of DropComp is available.'; });
+  }
+
+  function resetModal() {
+    $('update-progress').classList.add('hidden');
+    $('update-error').classList.add('hidden');
+    $('update-actions').classList.remove('hidden');
+    $('update-done-actions').classList.add('hidden');
+    $('update-progress-bar').style.width = '0';
+  }
+
+  const LABELS = { fetch: 'Checking…', download: 'Downloading…', verify: 'Verifying…', extract: 'Unpacking…', backup: 'Backing up your current version…', apply: 'Installing…', staged: 'Almost done…', done: 'Done.' };
+
+  function onProgress(phase, pct) {
+    $('update-progress-label').textContent = LABELS[phase] || phase;
+    if (phase === 'download' && typeof pct === 'number') $('update-progress-bar').style.width = pct + '%';
+    else if (phase !== 'fetch') $('update-progress-bar').style.width = '100%';
+  }
+
+  function start() {
+    if (_running || !_paths) return;
+    _running = true;
+    $('update-actions').classList.add('hidden');
+    $('update-error').classList.add('hidden');
+    $('update-progress').classList.remove('hidden');
+    runUpdate({ fs: DCUpdaterFS, paths: _paths, platform: process.platform, localVersion: DCUpdate.VERSION, release: _release, onProgress: onProgress })
+      .then(function (r) {
+        _running = false;
+        $('update-progress').classList.add('hidden');
+        $('update-modal-title').textContent = r.mode === 'win-pending' ? 'Update ready' : 'Update complete';
+        $('update-notes').textContent = r.mode === 'win-pending'
+          ? 'Quit and reopen After Effects to finish installing — it applies automatically the moment AE closes. Your work and library are safe.'
+          : 'Restart After Effects to finish — you\'ll be on ' + r.version + '. Your work and library are safe.';
+        $('update-done-actions').classList.remove('hidden');
+      })
+      .catch(function (err) {
+        _running = false;
+        $('update-progress').classList.add('hidden');
+        $('update-actions').classList.remove('hidden');
+        const e = $('update-error');
+        e.textContent = (err && err.userMessage ? err.userMessage : 'The update couldn\'t be completed.') + ' Your current version is safe and unchanged. Use "View on GitHub" to download it manually.';
+        e.classList.remove('hidden');
+      });
+  }
+
+  function onBoot() {
+    if (!_cfg || !_cfg.nodeAvailable || !_paths) return;
+    try {
+      const st = DCUpdaterFS.readStatus(_paths.statusFile);
+      if (st && st.state === 'ok') {
+        if (window.DCUI) DCUI.toast('Updated to ' + st.version + '.');
+        DCUpdaterFS.writeStatus(_paths.statusFile, { state: 'idle' });
+      } else if (st && st.state === 'fail') {
+        if (window.DCUI) DCUI.toast('Update didn\'t finish — you\'re still on ' + DCUpdate.VERSION + '. Nothing was changed.', true, 6000);
+        DCUpdaterFS.writeStatus(_paths.statusFile, { state: 'idle' });
+      }
+      DCUpdaterFS.cleanupStale(_paths);
+    } catch (e) {}
+  }
+
   return {
     API_URL: API_URL,
     parseDigest: parseDigest,
@@ -99,7 +191,11 @@ var DCUpdater = (function () {
     pickZipAsset: pickZipAsset,
     verifyDecision: verifyDecision,
     hasNode: hasNode,
-    runUpdate: runUpdate
+    runUpdate: runUpdate,
+    init: init,
+    setLatest: setLatest,
+    open: open,
+    onBoot: onBoot
   };
 }());
 if (typeof module !== 'undefined' && module.exports) { module.exports = DCUpdater; }

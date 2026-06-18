@@ -127,16 +127,22 @@
   $('app-version').textContent = DCUpdate.VERSION.replace(/\.\d+$/, '');
   $('settings-version').textContent = 'DropComp ' + DCUpdate.VERSION;
 
-  // free update notice: GitHub latest-release check, throttled, silent on failure
+  // one-click self-updater; falls back to opening the releases page when Node
+  // is unavailable (older runtime / manifest didn't take) so the chip never breaks
   var updateChip = $('update-chip');
+  var nodeAvailable = DCUpdater.hasNode(typeof require !== 'undefined' ? require : undefined);
+  DCUpdater.init({ csInterface: csInterface, storage: window.localStorage, nodeAvailable: nodeAvailable });
   updateChip.addEventListener('click', function () {
-    csInterface.openURLInDefaultBrowser(DCUpdate.RELEASES_PAGE);
+    if (nodeAvailable) DCUpdater.open();
+    else csInterface.openURLInDefaultBrowser(DCUpdate.RELEASES_PAGE);
   });
   DCUpdate.check(window.localStorage, Date.now(), function (latest) {
     if (!latest) return;
     updateChip.textContent = 'Update ' + String(latest).replace(/^v/, '');
     updateChip.classList.remove('hidden');
+    DCUpdater.setLatest(latest);
   });
+  DCUpdater.onBoot();
 
   // host modules must load before any relink/assets-dependent call
   DCBridge.call('loadHostModules', [csInterface.getSystemPath(SystemPath.EXTENSION)], function (r) {
