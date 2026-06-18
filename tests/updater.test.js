@@ -90,3 +90,14 @@ test('runUpdate stops when the latest is not newer', async () => {
   const m = mockFs({ fetchLatestRelease: async () => ({ tag_name: 'v2.4.0', assets: [] }) });
   await assert.rejects(DCUpdater.runUpdate(baseCtx(m, 'darwin')), /No newer/);
 });
+
+const fs = require('node:fs');
+const path = require('node:path');
+
+test('manifest enables Node (mixed-context) and keeps the version pinned', () => {
+  const manifest = fs.readFileSync(path.join(__dirname, '..', 'CSXS', 'manifest.xml'), 'utf8');
+  assert.match(manifest, /--enable-nodejs/, 'nodejs not enabled');
+  assert.match(manifest, /--mixed-context/, 'mixed-context not set');
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+  assert.match(manifest, new RegExp('ExtensionBundleVersion="' + pkg.version.replace(/\./g, '\\.') + '"'), 'version must stay pinned');
+});

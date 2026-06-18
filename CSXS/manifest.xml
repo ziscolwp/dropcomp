@@ -20,7 +20,10 @@
         <Resources>
           <MainPath>./panel/index.html</MainPath>
           <ScriptPath>./jsx/hostscript.jsx</ScriptPath>
-          <CEFCommandLine />
+          <CEFCommandLine>
+            <Parameter>--enable-nodejs</Parameter>
+            <Parameter>--mixed-context</Parameter>
+          </CEFCommandLine>
         </Resources>
         <Lifecycle>
           <AutoVisible>true</AutoVisible>
