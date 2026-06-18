@@ -115,7 +115,13 @@ var DCTooltip = (function () {
   }
 
   function onOver(e) { var t = owner(e); if (t && t !== current) scheduleShow(t, false); }
-  function onOut(e) { if (owner(e)) hide(); }
+  function onOut(e) {
+    var t = owner(e);
+    if (!t) return;
+    // pointerout also fires when moving parent -> child; only hide when the
+    // pointer has actually left the owning [data-tip] element.
+    if (!e.relatedTarget || !t.contains(e.relatedTarget)) hide();
+  }
   function onFocus(e) { var t = owner(e); if (t) scheduleShow(t, true); }
 
   function init() {
