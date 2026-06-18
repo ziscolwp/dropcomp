@@ -27,6 +27,7 @@
     addAepBtn: $('add-aep-btn'),
     addAssetsBtn: $('add-assets-btn'),
     thumbSlider: $('thumb-slider'),
+    viewSwitch: $('view-switch'),
     settingsBtn: $('settings-btn'),
     categoryModal: $('category-modal'),
     categoryModalTitle: $('category-modal-title'),
@@ -66,6 +67,10 @@
   els.showNamesCb.addEventListener('change', DCShell.onDisplayChange);
   els.showMetaCb.addEventListener('change', DCShell.onDisplayChange);
   els.thumbSlider.addEventListener('input', DCShell.onSlider);
+  els.viewSwitch.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-view]');
+    if (btn) DCShell.onViewChange(btn.dataset.view);
+  });
   els.addCompBtn.addEventListener('click', DCLibrary.stashFlow);
   els.addAepBtn.addEventListener('click', DCLibrary.addAepFlow);
   if (els.addAssetsBtn && typeof DCAssets !== 'undefined') {
