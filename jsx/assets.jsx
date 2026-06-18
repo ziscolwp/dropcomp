@@ -4,7 +4,7 @@
 // $.global explicitly or it is undefined at call time.
 // Uses hostscript globals: readJson, writeJson, jerr, jsonEscape.
 
-var DC_ASSET_EXTS = { png: 1, jpg: 1, jpeg: 1, gif: 1, bmp: 1, tif: 1, tiff: 1, tga: 1, psd: 1, ai: 1, eps: 1 };
+var DC_ASSET_EXTS = { png: 1, jpg: 1, jpeg: 1, gif: 1, bmp: 1, tif: 1, tiff: 1, tga: 1, psd: 1, ai: 1, eps: 1, svg: 1 };
 
 function assetExt(fileName) {
     var m = /\.([a-z0-9]+)$/i.exec(String(fileName));
@@ -77,7 +77,7 @@ function getAssets(libraryPath) {
 }
 
 function pickAssetFiles() {
-    var files = File.openDialog('Select image files', undefined, true);
+    var files = File.openDialog('Select image or vector files', undefined, true);
     if (!files) return '{"ok":false,"cancelled":true}';
     if (!(files instanceof Array)) files = [files];
     var out = [];
@@ -255,6 +255,10 @@ function importAsset(filePath) {
                 for (var k = 1; k <= activeComp.numLayers; k++) {
                     if (activeComp.layer(k) !== newLayer) activeComp.layer(k).selected = false;
                 }
+                // SVG is vector: keep it crisp when scaled past 100%
+                if (assetExt(assetName) === 'svg') {
+                    try { newLayer.collapseTransformation = true; } catch (eRast) { }
+                }
                 addedToTimeline = true;
             } catch (eL) {
                 addedToTimeline = false;
@@ -267,6 +271,9 @@ function importAsset(filePath) {
     } catch (e) {
         try { app.endUndoGroup(); } catch (e2) { }
         try { if (suppressing) app.endSuppressDialogs(false); } catch (e3) { }
+        if (assetExt(filePath) === 'svg') {
+            return 'Error: SVG import failed - this After Effects version may not support SVG. Update to a newer After Effects. (' + e.toString() + ')';
+        }
         return 'Error: ' + e.toString();
     }
 }
