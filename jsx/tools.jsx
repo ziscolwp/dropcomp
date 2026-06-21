@@ -44,18 +44,40 @@ function tlReadPos(layer) {
 }
 $.global.tlReadPos = tlReadPos;
 
+function tlCurrentTime(layer) {
+    try {
+        if (layer && layer.containingComp && typeof layer.containingComp.time !== 'undefined') return layer.containingComp.time;
+    } catch (e) {}
+    try {
+        var c = app.project ? app.project.activeItem : null;
+        if (c && typeof c.time !== 'undefined') return c.time;
+    } catch (e2) {}
+    return 0;
+}
+$.global.tlCurrentTime = tlCurrentTime;
+
+function tlSetPropertyValue(prop, value, time) {
+    if (prop.numKeys && prop.numKeys > 0) prop.setValueAtTime(time, value);
+    else prop.setValue(value);
+}
+$.global.tlSetPropertyValue = tlSetPropertyValue;
+
 // Write Position tolerating Separate Dimensions. z is optional (kept for 3D).
 function tlWritePos(layer, x, y, z) {
     var p = layer.property('ADBE Transform Group').property('ADBE Position');
+    var time = tlCurrentTime(layer);
     if (p.dimensionsSeparated) {
-        p.getSeparationFollower(0).setValue(x);
-        p.getSeparationFollower(1).setValue(y);
-        if (layer.threeDLayer) p.getSeparationFollower(2).setValue(z);
+        tlSetPropertyValue(p.getSeparationFollower(0), x, time);
+        tlSetPropertyValue(p.getSeparationFollower(1), y, time);
+        if (layer.threeDLayer) {
+            var zp = p.getSeparationFollower(2);
+            tlSetPropertyValue(zp, (z === undefined || z === null) ? zp.value : z, time);
+        }
         return;
     }
     var cur = p.value;
-    if (cur.length === 3) p.setValue([x, y, (z === undefined || z === null) ? cur[2] : z]);
-    else p.setValue([x, y]);
+    if (cur.length === 3) tlSetPropertyValue(p, [x, y, (z === undefined || z === null) ? cur[2] : z], time);
+    else tlSetPropertyValue(p, [x, y], time);
 }
 $.global.tlWritePos = tlWritePos;
 
@@ -170,8 +192,9 @@ function tlSetAnchor(fxStr, fyStr) {
                 var newAY = rect.top + rect.height * fy;
                 var dx = (newAX - oldA[0]) * (scale[0] / 100);
                 var dy = (newAY - oldA[1]) * (scale[1] / 100);
-                if (oldA.length === 3) anchorProp.setValue([newAX, newAY, oldA[2]]);
-                else anchorProp.setValue([newAX, newAY]);
+                var time = tlCurrentTime(layer);
+                if (oldA.length === 3) tlSetPropertyValue(anchorProp, [newAX, newAY, oldA[2]], time);
+                else tlSetPropertyValue(anchorProp, [newAX, newAY], time);
                 var pos = tlReadPos(layer);
                 if (pos.length === 3) tlWritePos(layer, pos[0] + dx, pos[1] + dy, pos[2]);
                 else tlWritePos(layer, pos[0] + dx, pos[1] + dy);
