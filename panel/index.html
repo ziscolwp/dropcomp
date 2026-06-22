@@ -120,11 +120,11 @@
       <div class="tool-inset">
         <div class="tool-row tool-seq">
           <div class="seq-field">
-            <span class="tool-label">Count</span>
+            <span class="tool-label">Amount</span>
             <div class="stepper">
-              <button class="stepper-btn" type="button" data-step="-1" tabindex="-1" aria-label="Decrease count">&#8722;</button>
-              <input type="number" id="tools-num" class="tool-num" value="1" min="1" aria-label="Count">
-              <button class="stepper-btn" type="button" data-step="1" tabindex="-1" aria-label="Increase count">&#43;</button>
+              <button class="stepper-btn" type="button" data-step="-1" tabindex="-1" aria-label="Decrease amount">&#8722;</button>
+              <input type="number" id="tools-num" class="tool-num" value="1" min="1" aria-label="Amount">
+              <button class="stepper-btn" type="button" data-step="1" tabindex="-1" aria-label="Increase amount">&#43;</button>
             </div>
           </div>
           <div class="seq-field">
@@ -135,9 +135,14 @@
               <button class="stepper-btn" type="button" data-step="1" tabindex="-1" aria-label="Increase step">&#43;</button>
             </div>
           </div>
-          <button class="tool-btn tool-seq-go" data-tool="sequence" data-tip="Stagger selected layers, duplicate one layer down the timeline, or cascade selected keyframes. Press again to keep pushing.">Sequence</button>
         </div>
-        <div class="tool-hint">Step in frames. Layers stagger, one layer duplicates, selected keyframes cascade &mdash; press again to push further.</div>
+        <div class="time-mode-icons">
+          <button class="tool-icon" data-tool="adjust-time" data-arg="align" data-tip="Align selected keyframes or layers to the playhead" aria-label="Align selected keyframes or layers to the playhead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="7" y1="3" x2="7" y2="21"></line><circle cx="12" cy="7" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="12" cy="17" r="2"></circle><path d="M14 7h4M14 12h4M14 17h4"></path></svg></button>
+          <button class="tool-icon" data-tool="adjust-time" data-arg="sequence" data-tip="Sequence selected keyframes or layers forward by Step frames" aria-label="Sequence selected keyframes or layers forward by Step frames"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="5" height="3"></rect><rect x="9.5" y="10.5" width="5" height="3"></rect><rect x="15" y="16" width="5" height="3"></rect><path d="M6.5 9v2.5h3M12 14.5V17h3"></path></svg></button>
+          <button class="tool-icon" data-tool="adjust-time" data-arg="reverse" data-tip="Sequence selected keyframes or layers backward by Step frames" aria-label="Sequence selected keyframes or layers backward by Step frames"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="15" y="5" width="5" height="3"></rect><rect x="9.5" y="10.5" width="5" height="3"></rect><rect x="4" y="16" width="5" height="3"></rect><path d="M17.5 9v2.5h-3M12 14.5V17H9"></path></svg></button>
+          <button class="tool-icon" data-tool="adjust-time" data-arg="random" data-tip="Randomly distribute selected keyframes or layers using Amount and Step frames" aria-label="Randomly distribute selected keyframes or layers using Amount and Step frames"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h4l8 10h4"></path><path d="M4 17h4l8-10h4"></path><path d="M18 5l2 2-2 2"></path><path d="M18 15l2 2-2 2"></path></svg></button>
+        </div>
+        <div class="tool-hint">Step is frames. Keyframes are adjusted before layers.</div>
         <div class="tool-icons">
           <button class="tool-icon" data-tool="align" data-arg="left" data-tip="Align left edges" aria-label="Align left edges"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="3" x2="4" y2="21"></line><rect x="7" y="6" width="12" height="4"></rect><rect x="7" y="14" width="7" height="4"></rect></svg></button>
           <button class="tool-icon" data-tool="align" data-arg="center" data-tip="Align horizontal centers" aria-label="Align horizontal centers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"></line><rect x="6" y="6" width="12" height="4"></rect><rect x="8" y="14" width="8" height="4"></rect></svg></button>
