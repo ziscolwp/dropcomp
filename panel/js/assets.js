@@ -98,6 +98,95 @@ var DCAssets = (function () {
     return cats;
   }
 
+  function normalizeFileUri(value) {
+    var s = String(value || '').replace(/^\s+|\s+$/g, '');
+    if (!/^file:\/\//i.test(s)) return '';
+    var path = s.replace(/^file:\/\//i, '');
+    if (path.indexOf('localhost/') === 0) path = path.slice('localhost/'.length);
+    if (path.charAt(0) !== '/') path = '/' + path;
+    try { path = decodeURIComponent(path); } catch (e) { }
+    if (/^\/[A-Za-z]:\//.test(path)) path = path.slice(1);
+    return path;
+  }
+
+  function normalizeDroppedPath(value) {
+    if (!value) return '';
+    var s = String(value).replace(/^\s+|\s+$/g, '');
+    if (/^file:\/\//i.test(s)) return normalizeFileUri(s);
+    return s;
+  }
+
+  function pathFromDroppedFile(file) {
+    if (!file) return '';
+    return normalizeDroppedPath(file.path || file.fsName || file.fullPath || '');
+  }
+
+  function addPath(paths, seen, path) {
+    if (!path || seen[path]) return;
+    seen[path] = true;
+    paths.push(path);
+  }
+
+  function collectUriListPaths(dataTransfer, paths, seen) {
+    if (!dataTransfer || typeof dataTransfer.getData !== 'function') return;
+    var list = dataTransfer.getData('text/uri-list') || '';
+    if (!list) return;
+    var lines = String(list).split(/\r?\n/);
+    for (var i = 0; i < lines.length; i++) {
+      if (!lines[i] || lines[i].charAt(0) === '#') continue;
+      addPath(paths, seen, normalizeFileUri(lines[i]));
+    }
+  }
+
+  function collectDroppedPaths(dataTransfer) {
+    var paths = [];
+    var seen = {};
+    if (!dataTransfer) return paths;
+    var files = dataTransfer.files || [];
+    for (var i = 0; i < files.length; i++) {
+      addPath(paths, seen, pathFromDroppedFile(files[i]));
+    }
+    collectUriListPaths(dataTransfer, paths, seen);
+    return paths;
+  }
+
+  function hasDroppedFileData(dataTransfer) {
+    if (!dataTransfer) return false;
+    if (dataTransfer.files && dataTransfer.files.length) return true;
+    var types = dataTransfer.types || [];
+    for (var i = 0; i < types.length; i++) {
+      if (types[i] === 'Files' || types[i] === 'text/uri-list') return true;
+    }
+    return false;
+  }
+
+  function addDroppedFiles(dataTransfer) {
+    var paths = collectDroppedPaths(dataTransfer);
+    if (!paths.length) return false;
+    pendingPaths = paths;
+    DCShell.setActiveTab('assets');
+    DCUI.openCategoryModal('addAssets', 'Add Assets', categories());
+    return true;
+  }
+
+  function attachDropTarget(target) {
+    if (!target || typeof target.addEventListener !== 'function') return;
+    target.addEventListener('dragover', function (e) {
+      if (!hasDroppedFileData(e.dataTransfer)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      try { e.dataTransfer.dropEffect = 'copy'; } catch (eDrop) { }
+    });
+    target.addEventListener('drop', function (e) {
+      if (!hasDroppedFileData(e.dataTransfer)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (!addDroppedFiles(e.dataTransfer)) {
+        DCUI.toast('Could not read dropped file paths.', true, 5000);
+      }
+    });
+  }
+
   function addFlow() {
     DCBridge.call('pickAssetFiles', [], function (result) {
       var r = DCBridge.parseJson(result);
@@ -265,8 +354,10 @@ var DCAssets = (function () {
   return {
     init: init, load: load, refresh: refresh, rerender: rerender,
     ensureLoaded: ensureLoaded, resetLoaded: resetLoaded,
-    addFlow: addFlow, confirmCategory: confirmCategory,
+    addFlow: addFlow, addDroppedFiles: addDroppedFiles, attachDropTarget: attachDropTarget,
+    confirmCategory: confirmCategory,
     importItem: importItem, confirmRename: confirmRename, confirmDelete: confirmDelete,
     toggleSection: toggleSection, onCardAction: onCardAction, clearPending: clearPending
   };
 }());
+if (typeof module !== 'undefined' && module.exports) { module.exports = DCAssets; }
