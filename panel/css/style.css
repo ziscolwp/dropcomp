@@ -1,3 +1,4 @@
+/* TODO: split by concern */
 :root {
   --bg: #161616;
   --bg-raised: #222222;
@@ -241,7 +242,17 @@ body {
 #toast.success { background: var(--gold); color: var(--on-gold); }
 #toast.error { background: var(--danger); color: #fff; }
 
-#library.grid--s .card-actions { display: none; }
+#library.grid--s .card-actions {
+  display: flex; left: auto; top: 3px; right: 3px; gap: 2px; flex-wrap: nowrap;
+}
+#library.grid--s .card-action {
+  width: 18px; height: 18px;
+}
+#library.grid--s .card-action svg { width: 10px; height: 10px; }
+#library.grid--s .card-action:not([data-action="favorite"]):not([data-action="delete"]) {
+  display: none;
+}
+#library.grid--s .card-action[data-action="delete"] { display: inline-flex; }
 #library.grid--s .import-bar { padding: 2px 0; font-size: 10px; left: 4px; right: 4px; bottom: 4px; }
 #library.grid--s .import-bar svg { width: 9px; height: 9px; }
 #library.grid--s .card-meta { display: none; }
@@ -455,7 +466,17 @@ body {
 /* ---- dense grid (contact sheet) ---- */
 #library.view-compact .grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 5px; }
 #library.view-compact .card-info { display: none; }
-#library.view-compact .card-actions { display: none; }
+#library.view-compact .card-actions {
+  display: flex; left: auto; top: 3px; right: 3px; gap: 2px; flex-wrap: nowrap;
+}
+#library.view-compact .card-action {
+  width: 18px; height: 18px;
+}
+#library.view-compact .card-action svg { width: 10px; height: 10px; }
+#library.view-compact .card-action:not([data-action="favorite"]):not([data-action="delete"]) {
+  display: none;
+}
+#library.view-compact .card-action[data-action="delete"] { display: inline-flex; }
 #library.view-compact .import-bar { left: 3px; right: 3px; bottom: 3px; padding: 2px 0; font-size: 10px; }
 #library.view-compact .import-bar svg { width: 9px; height: 9px; }
 #library.view-compact .generate-chip { font-size: 9px; padding: 0 6px; }
