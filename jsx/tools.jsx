@@ -481,6 +481,36 @@ function tlSequence(numStr, stepFramesStr) {
 }
 $.global.tlSequence = tlSequence;
 
+function tlMatchCompLength() {
+    var comp = tlActiveComp();
+    if (!comp) return jerr('Open a composition first.');
+    try {
+        app.beginUndoGroup('DropComp Match Comp Length');
+        var count = 0, lastErr = '';
+        for (var i = 1; i <= comp.numLayers; i++) {
+            var layer = comp.layer(i);
+            var wasLocked = false;
+            try {
+                wasLocked = layer.locked;
+                if (wasLocked) layer.locked = false;
+                layer.outPoint = comp.duration;
+                if (wasLocked) layer.locked = true;
+                count++;
+            } catch (eL) {
+                lastErr = eL.toString();
+                if (wasLocked) { try { layer.locked = true; } catch (eR) {} }
+            }
+        }
+        app.endUndoGroup();
+        if (count === 0 && comp.numLayers > 0) return jerr('Could not match comp length: ' + lastErr);
+        return '{"ok":true,"count":' + count + '}';
+    } catch (e) {
+        try { app.endUndoGroup(); } catch (e2) {}
+        return jerr(e.toString());
+    }
+}
+$.global.tlMatchCompLength = tlMatchCompLength;
+
 function tlPreComp() {
     var comp = tlActiveComp();
     if (!comp) return jerr('Open a composition first.');
