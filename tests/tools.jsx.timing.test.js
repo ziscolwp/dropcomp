@@ -156,6 +156,7 @@ function makeKeyProp(initialKeys, layerIndex = 1, options = {}) {
         key(index).outType = outType;
       },
       setSelectedAtKey(index, selected) {
+        if (options.ignoreSetSelectedAtKey) return;
         key(index).selected = selected;
       },
     },
@@ -235,7 +236,7 @@ test('tlAdjustTiming reuses key target when AE drops selectedProperties after ke
   assert.equal(layer.startTime, 10);
 });
 
-test('tlAdjustTiming uses layers when cached key target has no selected keys', () => {
+test('tlAdjustTiming keeps cached key target when AE stops reporting selected keys', () => {
   const keyProp = makeKeyProp([
     { time: 1, value: [10], inType: 'LINEAR', outType: 'LINEAR', selected: true },
     { time: 2, value: [20], inType: 'HOLD', outType: 'HOLD', selected: true },
@@ -254,7 +255,71 @@ test('tlAdjustTiming uses layers when cached key target has no selected keys', (
   const second = JSON.parse(tools.tlAdjustTiming('1', '5', 'sequence'));
 
   assert.equal(first.target, 'keys');
+  assert.equal(second.target, 'keys');
+  assert.deepEqual(
+    keyProp.snapshot().map((k) => k.time),
+    [1, 3]
+  );
+  assert.equal(layer.startTime, 10);
+});
+
+test('tlAdjustTiming keeps key target for repeated presses even when setSelectedAtKey does not stick', () => {
+  const keyProp = makeKeyProp(
+    [
+      { time: 1, value: [10], inType: 'LINEAR', outType: 'LINEAR', selected: true },
+      { time: 2, value: [20], inType: 'HOLD', outType: 'HOLD', selected: true },
+    ],
+    1,
+    { ignoreSetSelectedAtKey: true }
+  );
+  const layer = makeLayer(1, 10);
+  const comp = makeComp({
+    frameDuration: 0.1,
+    selectedProperties: [keyProp.prop],
+    selectedLayers: [layer],
+  });
+  const tools = loadTools({ comp });
+
+  const first = JSON.parse(tools.tlAdjustTiming('1', '5', 'sequence'));
+  keyProp.setSelectedFlags(false);
+  comp.selectedProperties = [];
+  const second = JSON.parse(tools.tlAdjustTiming('1', '5', 'sequence'));
+  const third = JSON.parse(tools.tlAdjustTiming('1', '5', 'sequence'));
+
+  assert.equal(first.target, 'keys');
+  assert.equal(second.target, 'keys');
+  assert.equal(third.target, 'keys');
+  assert.deepEqual(
+    keyProp.snapshot().map((k) => k.time),
+    [1, 3.5]
+  );
+  assert.equal(layer.startTime, 10);
+});
+
+test('tlAdjustTiming can use layers after key target layer selection changes', () => {
+  const keyProp = makeKeyProp([
+    { time: 1, value: [10], inType: 'LINEAR', outType: 'LINEAR', selected: true },
+    { time: 2, value: [20], inType: 'HOLD', outType: 'HOLD', selected: true },
+  ]);
+  const firstLayer = makeLayer(1, 10);
+  const secondLayer = makeLayer(2, 20);
+  const comp = makeComp({
+    frameDuration: 0.1,
+    selectedProperties: [keyProp.prop],
+    selectedLayers: [firstLayer],
+  });
+  const tools = loadTools({ comp });
+
+  const first = JSON.parse(tools.tlAdjustTiming('1', '5', 'sequence'));
+  keyProp.setSelectedFlags(false);
+  comp.selectedProperties = [];
+  comp.selectedLayers = [secondLayer];
+  const second = JSON.parse(tools.tlAdjustTiming('1', '5', 'align'));
+
+  assert.equal(first.target, 'keys');
   assert.equal(second.target, 'layers');
+  assert.equal(firstLayer.startTime, 10);
+  assert.equal(secondLayer.startTime, 0);
 });
 
 test('tlAdjustTiming aligns selected layers to the playhead when no keyframes are selected', () => {

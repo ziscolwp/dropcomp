@@ -146,8 +146,8 @@ function tlClearKeyTimingCache() {
 }
 $.global.tlClearKeyTimingCache = tlClearKeyTimingCache;
 
-function tlRememberKeyTargets(keys) {
-    var cache = { order: [], byIndex: {}, total: keys.total };
+function tlRememberKeyTargets(comp, keys) {
+    var cache = { comp: comp, order: [], byIndex: {}, total: keys.total };
     var i, j, li, g, pr, saved;
     for (i = 0; i < keys.order.length; i++) {
         li = keys.order[i];
@@ -167,8 +167,14 @@ $.global.tlRememberKeyTargets = tlRememberKeyTargets;
 function tlCachedKeyTargetsForSelection(comp) {
     var cache = $.global.TL_TIMING_KEY_CACHE;
     var sel = comp.selectedLayers;
-    var selected = {}, i, j, li, g, pr, selectedKeys, hasSelectedKeys = false;
+    var selected = {}, i, li;
     if (!cache || !sel || sel.length === 0) return null;
+    // AE/CEP can stop reporting selected keys after a panel action; keep the
+    // key-target session alive while the same comp and layer set are active.
+    if (cache.comp && cache.comp !== comp) {
+        tlClearKeyTimingCache();
+        return null;
+    }
     if (sel.length !== cache.order.length) {
         tlClearKeyTimingCache();
         return null;
@@ -180,19 +186,6 @@ function tlCachedKeyTargetsForSelection(comp) {
             tlClearKeyTimingCache();
             return null;
         }
-    }
-    for (i = 0; i < cache.order.length; i++) {
-        g = cache.byIndex[cache.order[i]];
-        for (j = 0; j < g.props.length; j++) {
-            pr = g.props[j];
-            selectedKeys = null;
-            try { selectedKeys = pr.prop.selectedKeys; } catch (e) { selectedKeys = null; }
-            if (selectedKeys && selectedKeys.length > 0) hasSelectedKeys = true;
-        }
-    }
-    if (!hasSelectedKeys) {
-        tlClearKeyTimingCache();
-        return null;
     }
     return cache;
 }
@@ -324,7 +317,7 @@ function tlAdjustTiming(amountStr, stepFramesStr, mode) {
             if (mode === 'align') kr = tlAlignKeysToTime(keys, comp.time);
             else if (mode === 'random') kr = tlRandomizeKeys(keys, amount, step, fd);
             else kr = tlSequenceKeys(keys, mode === 'reverse' ? -tlAbs(step) : step, fd);
-            tlRememberKeyTargets(keys);
+            tlRememberKeyTargets(comp, keys);
             app.endUndoGroup();
             return '{"ok":true,"count":' + kr.count + ',"mode":"' + (mode === 'align' || mode === 'random' ? mode : 'keys') + '","target":"keys","unit":"' + kr.unit + '"}';
         }
