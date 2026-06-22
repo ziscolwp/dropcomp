@@ -71,7 +71,7 @@ function makeLayer(index, startTime) {
   };
 }
 
-function makeKeyProp(initialKeys, layerIndex = 1) {
+function makeKeyProp(initialKeys, layerIndex = 1, options = {}) {
   const keys = clone(initialKeys);
 
   function sortKeys() {
@@ -97,12 +97,21 @@ function makeKeyProp(initialKeys, layerIndex = 1) {
   }
 
   return {
+    setSelectedFlags(selected) {
+      for (const currentKey of keys) currentKey.selected = selected;
+    },
     snapshot() {
       return clone(keys);
     },
     prop: {
       propertyDepth: 1,
-      selectedKeys: initialKeys.map((_, i) => i + 1),
+      get selectedKeys() {
+        const selected = [];
+        for (let i = 0; i < keys.length; i += 1) {
+          if (keys[i].selected) selected.push(i + 1);
+        }
+        return selected;
+      },
       propertyGroup() {
         return { index: layerIndex };
       },
@@ -114,6 +123,9 @@ function makeKeyProp(initialKeys, layerIndex = 1) {
       },
       nearestKeyIndex,
       addKey(time) {
+        if (options.clearSelectionOnAdd) {
+          for (const existingKey of keys) existingKey.selected = false;
+        }
         keys.push({
           time,
           value: null,
@@ -165,6 +177,84 @@ test('tlAdjustTiming aligns selected keyframes so the first key lands on the pla
     keyProp.snapshot().map((k) => k.time),
     [3, 4]
   );
+});
+
+test('tlAdjustTiming keeps all moved keyframes selected so repeated presses stay on keyframes', () => {
+  const keyProp = makeKeyProp(
+    [
+      { time: 1, value: [10], inType: 'LINEAR', outType: 'LINEAR', selected: true },
+      { time: 2, value: [20], inType: 'HOLD', outType: 'HOLD', selected: true },
+      { time: 3, value: [30], inType: 'BEZIER', outType: 'BEZIER', selected: true },
+    ],
+    1,
+    { clearSelectionOnAdd: true }
+  );
+  const layer = makeLayer(1, 10);
+  const comp = makeComp({
+    frameDuration: 0.1,
+    selectedProperties: [keyProp.prop],
+    selectedLayers: [layer],
+  });
+  const tools = loadTools({ comp });
+
+  const result = JSON.parse(tools.tlAdjustTiming('1', '5', 'sequence'));
+
+  assert.equal(result.target, 'keys');
+  assert.deepEqual(keyProp.prop.selectedKeys, [1, 2, 3]);
+  assert.deepEqual(
+    keyProp.snapshot().map((k) => k.time),
+    [1, 2.5, 4]
+  );
+  assert.equal(layer.startTime, 10);
+});
+
+test('tlAdjustTiming reuses key target when AE drops selectedProperties after key timing', () => {
+  const keyProp = makeKeyProp([
+    { time: 1, value: [10], inType: 'LINEAR', outType: 'LINEAR', selected: true },
+    { time: 2, value: [20], inType: 'HOLD', outType: 'HOLD', selected: true },
+    { time: 3, value: [30], inType: 'BEZIER', outType: 'BEZIER', selected: true },
+  ]);
+  const layer = makeLayer(1, 10);
+  const comp = makeComp({
+    frameDuration: 0.1,
+    selectedProperties: [keyProp.prop],
+    selectedLayers: [layer],
+  });
+  const tools = loadTools({ comp });
+
+  const first = JSON.parse(tools.tlAdjustTiming('1', '5', 'sequence'));
+  comp.selectedProperties = [];
+  const second = JSON.parse(tools.tlAdjustTiming('1', '5', 'sequence'));
+
+  assert.equal(first.target, 'keys');
+  assert.equal(second.target, 'keys');
+  assert.deepEqual(
+    keyProp.snapshot().map((k) => k.time),
+    [1, 3, 5]
+  );
+  assert.equal(layer.startTime, 10);
+});
+
+test('tlAdjustTiming uses layers when cached key target has no selected keys', () => {
+  const keyProp = makeKeyProp([
+    { time: 1, value: [10], inType: 'LINEAR', outType: 'LINEAR', selected: true },
+    { time: 2, value: [20], inType: 'HOLD', outType: 'HOLD', selected: true },
+  ]);
+  const layer = makeLayer(1, 10);
+  const comp = makeComp({
+    frameDuration: 0.1,
+    selectedProperties: [keyProp.prop],
+    selectedLayers: [layer],
+  });
+  const tools = loadTools({ comp });
+
+  const first = JSON.parse(tools.tlAdjustTiming('1', '5', 'sequence'));
+  keyProp.setSelectedFlags(false);
+  comp.selectedProperties = [];
+  const second = JSON.parse(tools.tlAdjustTiming('1', '5', 'sequence'));
+
+  assert.equal(first.target, 'keys');
+  assert.equal(second.target, 'layers');
 });
 
 test('tlAdjustTiming aligns selected layers to the playhead when no keyframes are selected', () => {

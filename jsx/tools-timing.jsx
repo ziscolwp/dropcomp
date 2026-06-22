@@ -102,7 +102,11 @@ function tlSetKeyTimes(prop, times, newTimes) {
     entries.sort(function (a, b) { return a.newTime - b.newTime; });
     for (i = 0; i < entries.length; i++) {
         idx = prop.addKey(entries[i].newTime);
+        entries[i].newIndex = idx;
         tlRestoreKeyframe(prop, idx, entries[i].key);
+    }
+    for (i = 0; i < entries.length; i++) {
+        try { prop.setSelectedAtKey(entries[i].newIndex, entries[i].key.selected); } catch (e) {}
     }
 }
 $.global.tlSetKeyTimes = tlSetKeyTimes;
@@ -114,6 +118,7 @@ function tlApplyKeyDeltas(prop, times, deltas) {
         if (deltas[i] !== 0) changed = true;
     }
     if (changed) tlSetKeyTimes(prop, times, newTimes);
+    return newTimes;
 }
 $.global.tlApplyKeyDeltas = tlApplyKeyDeltas;
 
@@ -136,6 +141,63 @@ function tlAbs(n) {
 }
 $.global.tlAbs = tlAbs;
 
+function tlClearKeyTimingCache() {
+    $.global.TL_TIMING_KEY_CACHE = null;
+}
+$.global.tlClearKeyTimingCache = tlClearKeyTimingCache;
+
+function tlRememberKeyTargets(keys) {
+    var cache = { order: [], byIndex: {}, total: keys.total };
+    var i, j, li, g, pr, saved;
+    for (i = 0; i < keys.order.length; i++) {
+        li = keys.order[i];
+        g = keys.byIndex[li];
+        cache.order.push(li);
+        cache.byIndex[li] = { layer: g.layer, props: [] };
+        for (j = 0; j < g.props.length; j++) {
+            pr = g.props[j];
+            saved = { prop: pr.prop, times: pr.times.slice(0) };
+            cache.byIndex[li].props.push(saved);
+        }
+    }
+    $.global.TL_TIMING_KEY_CACHE = cache;
+}
+$.global.tlRememberKeyTargets = tlRememberKeyTargets;
+
+function tlCachedKeyTargetsForSelection(comp) {
+    var cache = $.global.TL_TIMING_KEY_CACHE;
+    var sel = comp.selectedLayers;
+    var selected = {}, i, j, li, g, pr, selectedKeys, hasSelectedKeys = false;
+    if (!cache || !sel || sel.length === 0) return null;
+    if (sel.length !== cache.order.length) {
+        tlClearKeyTimingCache();
+        return null;
+    }
+    for (i = 0; i < sel.length; i++) selected[sel[i].index] = true;
+    for (i = 0; i < cache.order.length; i++) {
+        li = cache.order[i];
+        if (!selected[li]) {
+            tlClearKeyTimingCache();
+            return null;
+        }
+    }
+    for (i = 0; i < cache.order.length; i++) {
+        g = cache.byIndex[cache.order[i]];
+        for (j = 0; j < g.props.length; j++) {
+            pr = g.props[j];
+            selectedKeys = null;
+            try { selectedKeys = pr.prop.selectedKeys; } catch (e) { selectedKeys = null; }
+            if (selectedKeys && selectedKeys.length > 0) hasSelectedKeys = true;
+        }
+    }
+    if (!hasSelectedKeys) {
+        tlClearKeyTimingCache();
+        return null;
+    }
+    return cache;
+}
+$.global.tlCachedKeyTargetsForSelection = tlCachedKeyTargetsForSelection;
+
 function tlSequenceKeys(keys, step, fd) {
     var i, j, t, g, pr, deltas, d;
     if (keys.order.length >= 2) {
@@ -146,7 +208,7 @@ function tlSequenceKeys(keys, step, fd) {
                 pr = g.props[j];
                 deltas = [];
                 for (t = 0; t < pr.times.length; t++) deltas.push(d);
-                tlApplyKeyDeltas(pr.prop, pr.times, deltas);
+                pr.times = tlApplyKeyDeltas(pr.prop, pr.times, deltas);
             }
         }
         return { count: keys.order.length, unit: 'layer' };
@@ -156,7 +218,7 @@ function tlSequenceKeys(keys, step, fd) {
         pr = g.props[j];
         deltas = [];
         for (t = 0; t < pr.times.length; t++) deltas.push(t * step * fd);
-        tlApplyKeyDeltas(pr.prop, pr.times, deltas);
+        pr.times = tlApplyKeyDeltas(pr.prop, pr.times, deltas);
     }
     return { count: keys.total, unit: 'key' };
 }
@@ -172,6 +234,7 @@ function tlAlignKeysToTime(keys, playhead) {
             newTimes = [];
             for (t = 0; t < pr.times.length; t++) newTimes.push(pr.times[t] + delta);
             tlSetKeyTimes(pr.prop, pr.times, newTimes);
+            pr.times = newTimes;
         }
     }
     return { count: keys.total, unit: 'key' };
@@ -190,6 +253,7 @@ function tlRandomizeKeys(keys, amount, step, fd) {
             newTimes = [];
             for (t = 0; t < pr.times.length; t++) newTimes.push(base + slots[t] * unitStep);
             tlSetKeyTimes(pr.prop, pr.times, newTimes);
+            pr.times = newTimes;
         }
     }
     return { count: keys.total, unit: 'key' };
@@ -251,11 +315,16 @@ function tlAdjustTiming(amountStr, stepFramesStr, mode) {
         app.beginUndoGroup('DropComp Adjust Timing');
 
         var keys = tlCollectSelectedKeys(comp);
+        if (keys.total === 0) {
+            var cachedKeys = tlCachedKeyTargetsForSelection(comp);
+            if (cachedKeys) keys = cachedKeys;
+        }
         if (keys.total > 0) {
             var kr;
             if (mode === 'align') kr = tlAlignKeysToTime(keys, comp.time);
             else if (mode === 'random') kr = tlRandomizeKeys(keys, amount, step, fd);
             else kr = tlSequenceKeys(keys, mode === 'reverse' ? -tlAbs(step) : step, fd);
+            tlRememberKeyTargets(keys);
             app.endUndoGroup();
             return '{"ok":true,"count":' + kr.count + ',"mode":"' + (mode === 'align' || mode === 'random' ? mode : 'keys') + '","target":"keys","unit":"' + kr.unit + '"}';
         }
@@ -266,6 +335,7 @@ function tlAdjustTiming(amountStr, stepFramesStr, mode) {
             return jerr('Select layers, or keyframes to adjust.');
         }
 
+        tlClearKeyTimingCache();
         var lr;
         if (mode === 'align') lr = tlAlignLayersToTime(sel, comp.time);
         else if (mode === 'random') lr = tlRandomizeLayers(sel, amount, step, fd);
