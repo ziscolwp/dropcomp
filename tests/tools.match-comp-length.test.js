@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const root = path.join(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
@@ -12,6 +13,46 @@ function functionBody(src, name) {
   const exportStart = src.indexOf(`$.global.${name} = ${name};`, start);
   assert.notEqual(exportStart, -1, `${name} must export to $.global`);
   return src.slice(start, exportStart);
+}
+
+function makeComp(CompItem, duration, layers) {
+  const comp = new CompItem();
+  comp.duration = duration;
+  comp.numLayers = layers.length;
+  comp.selectedLayers = [];
+  comp.layer = (index) => layers[index - 1];
+  return comp;
+}
+
+function makeLayer(overrides = {}) {
+  return {
+    locked: overrides.locked || false,
+    outPoint: overrides.outPoint || 0,
+    source: overrides.source || null,
+  };
+}
+
+function loadTools(comp, CompItem) {
+  const context = {
+    $: { global: {} },
+    app: {
+      project: { activeItem: comp },
+      beginUndoGroup() {},
+      endUndoGroup() {},
+    },
+    CompItem,
+    CameraLayer: function CameraLayer() {},
+    LightLayer: function LightLayer() {},
+    jerr(message) {
+      return JSON.stringify({ ok: false, error: message });
+    },
+    jsonEscape(value) {
+      return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    },
+  };
+  vm.createContext(context);
+  vm.runInContext(read('jsx/tools.jsx'), context, { filename: 'tools.jsx' });
+  return context.$.global;
 }
 
 test('tlMatchCompLength extends every layer to the active comp duration', () => {
@@ -36,4 +77,29 @@ test('Tools panel exposes Match Length in the pre-comp group', () => {
   assert.match(html, /data-tool="precomp"\s+data-arg="matchLength"/, 'button routes through the pre-comp tool handler');
   assert.match(html, />Match Length<\/span>/, 'button label fits the pre-comp grid');
   assert.match(html, /active comp length|active comp's duration/i, 'button tooltip explains the target duration');
+});
+
+test('tlMatchCompLength also expands selected precomp sources and their layers', () => {
+  function CompItem() {}
+  const innerLayers = [
+    makeLayer({ outPoint: 1 }),
+    makeLayer({ locked: true, outPoint: 2 }),
+  ];
+  const sourceComp = makeComp(CompItem, 2, innerLayers);
+  const precompLayer = makeLayer({ outPoint: 2, source: sourceComp });
+  const outerLayer = makeLayer({ outPoint: 4 });
+  const activeComp = makeComp(CompItem, 12, [precompLayer, outerLayer]);
+  activeComp.selectedLayers = [precompLayer];
+  const tools = loadTools(activeComp, CompItem);
+
+  const result = JSON.parse(tools.tlMatchCompLength());
+
+  assert.equal(result.ok, true);
+  assert.equal(result.count, 4);
+  assert.equal(result.comps, 1);
+  assert.equal(sourceComp.duration, 12);
+  assert.equal(precompLayer.outPoint, 12);
+  assert.equal(outerLayer.outPoint, 12);
+  assert.deepEqual(innerLayers.map((layer) => layer.outPoint), [12, 12]);
+  assert.equal(innerLayers[1].locked, true, 'locked source layers are restored after changing outPoint');
 });

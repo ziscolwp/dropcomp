@@ -33,7 +33,10 @@ var DCTools = (function () {
     if (fn === 'tlMultiPreComp') return 'Precomposed ' + plural(n, 'layer') + ' separately.';
     if (fn === 'tlDecompose') return 'Decomposed into ' + plural(n, 'layer') + '.' + ((r && r.warn) ? ' Not preserved: ' + r.warn + '.' : '');
     if (fn === 'tlIndependent') return 'Made ' + plural(n, 'layer') + ' unique.' + ((r && r.ignored) ? ' ' + r.ignored + ' ignored.' : '');
-    if (fn === 'tlMatchCompLength') return 'Matched comp length on ' + plural(n, 'layer') + '.';
+    if (fn === 'tlMatchCompLength') {
+      var comps = (r && typeof r.comps === 'number') ? r.comps : 0;
+      return 'Matched comp length on ' + plural(n, 'layer') + (comps ? ' across ' + plural(comps, 'precomp') : '') + '.';
+    }
     return 'Done.';
   }
 
