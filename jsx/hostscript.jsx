@@ -276,6 +276,7 @@ function pickMainComp(comps, preferredName) {
 
 function importComp(aepPath) {
     var suppressing = false;
+    var undoing = false;
     try {
         if (!app.project) return 'Error: Please open a project first.';
         var fileToImport = new File(aepPath);
@@ -288,6 +289,7 @@ function importComp(aepPath) {
         app.beginSuppressDialogs();
         suppressing = true;
         app.beginUndoGroup('DropComp Import');
+        undoing = true;
         var importedFolder = app.project.importFile(new ImportOptions(fileToImport));
         importedFolder.name = compName + ' [DropComp]';
 
@@ -345,7 +347,9 @@ function importComp(aepPath) {
             }
         }
         app.endUndoGroup();
+        undoing = false;
         app.endSuppressDialogs(false);
+        suppressing = false;
 
         var missingNote = stillMissing
             ? ' Warning: ' + stillMissing + ' asset' + (stillMissing === 1 ? '' : 's') + ' missing (not in library).'
@@ -358,7 +362,8 @@ function importComp(aepPath) {
         }
         return 'Success: Project imported, but no composition found to add to timeline.' + missingNote + healNote;
     } catch (e) {
-        try { if (suppressing) app.endSuppressDialogs(false); } catch (e2) { }
+        try { if (undoing) app.endUndoGroup(); } catch (e2) { }
+        try { if (suppressing) app.endSuppressDialogs(false); } catch (e3) { }
         return 'Error: ' + e.toString();
     }
 }
