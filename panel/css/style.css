@@ -1,3 +1,4 @@
+/* TODO: split by concern */
 :root {
   --bg: #161616;
   --bg-raised: #222222;
@@ -126,6 +127,7 @@ body {
 #add-aep-btn { width: 32px; height: 32px; }
 
 #thumb-slider { -webkit-appearance: none; width: 64px; height: 2px; background: var(--border-strong); border-radius: 1px; flex-shrink: 0; }
+#thumb-slider.hidden { display: inline-block !important; visibility: hidden; pointer-events: none; }
 #thumb-slider::-webkit-slider-thumb {
   -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%;
   background: var(--gold); cursor: pointer;
