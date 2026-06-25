@@ -75,6 +75,7 @@
   els.addAepBtn.addEventListener('click', DCLibrary.addAepFlow);
   if (els.addAssetsBtn && typeof DCAssets !== 'undefined') {
     els.addAssetsBtn.addEventListener('click', DCAssets.addFlow);
+    DCAssets.attachDropTarget(els.app);
   }
   els.settingsBtn.addEventListener('click', DCShell.openSettings);
 
