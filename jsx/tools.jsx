@@ -141,10 +141,22 @@ function tlCreateLayer(kind) {
     var comp = tlActiveComp();
     if (!comp) return jerr('Open a composition first.');
     try {
+        var parentTargets = [];
+        if (kind === 'null') {
+            var selected = comp.selectedLayers;
+            if (selected) {
+                for (var s = 0; s < selected.length; s++) parentTargets.push(selected[s]);
+            }
+        }
         app.beginUndoGroup('DropComp Create Layer');
         var layer = null;
         if (kind === 'null') {
             layer = comp.layers.addNull();
+            var anchorProp = layer.property('ADBE Transform Group').property('ADBE Anchor Point');
+            var anchor = anchorProp.value;
+            if (anchor.length === 3) anchorProp.setValue([50, 50, anchor[2]]);
+            else anchorProp.setValue([50, 50]);
+            for (var p = 0; p < parentTargets.length; p++) parentTargets[p].parent = layer;
         } else if (kind === 'adjustment') {
             // white solid matches AE's native adjustment layer; the color is invisible while adjustmentLayer is true
             layer = comp.layers.addSolid([1, 1, 1], 'Adjustment Layer', comp.width, comp.height, comp.pixelAspect);
