@@ -181,7 +181,8 @@ var DCScripts = (function () {
 
   function buildRow(s) {
     var usage = DCScriptsCore.getUsage(usageMeta, s.uniqueId);
-    var row = el('div', 'script-row' + (usage.isFavorite ? ' has-fav' : '') + (s.params && s.params.length ? ' has-form' : ''));
+    var mode = DCScriptsCore.runMode(s);
+    var row = el('div', 'script-row' + (usage.isFavorite ? ' has-fav' : '') + (mode === 'params' ? ' has-form' : ''));
     row.dataset.id = s.uniqueId;
     var tip = DCTooltip.buildScriptTip(s, usage);
     row.setAttribute('data-tip-title', tip.title);
@@ -239,12 +240,14 @@ var DCScripts = (function () {
   }
 
   function okMsg(s) {
-    return s.opensWindow ? ('Opened "' + s.name + '" in a floating AE window.') : ('Ran "' + s.name + '".');
+    return 'Ran "' + s.name + '".';
   }
 
   function runScript(s) {
     var row = els.list.querySelector('.script-row[data-id="' + s.uniqueId + '"]');
-    if (s.params && s.params.length && row) { toggleRunForm(row, s); return; }
+    var mode = DCScriptsCore.runMode(s);
+    if (mode === 'params' && row) { toggleRunForm(row, s); return; }
+    if (mode === 'windowNotice' && row) { toggleWindowNotice(row, s); return; }
     if (!DCBridge.acquire('runScript')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return; }
     var fn = s.source === 'file' ? 'scRunFile' : 'scRunSnippet';
     var arg = s.source === 'file' ? s.path : s.body;
@@ -267,6 +270,28 @@ var DCScripts = (function () {
     row.appendChild(form);
     var first = form.querySelector('input, select, textarea');
     if (first) first.focus();
+  }
+
+  function toggleWindowNotice(row, s) {
+    var existing = row.querySelector('.script-window-note');
+    var open = els.list.querySelector('.script-form');
+    if (open) open.parentNode.removeChild(open);
+    if (existing) return;
+    var wrap = el('div', 'script-form script-window-note');
+    wrap.appendChild(el('div', 'script-window-title', 'Separate AE window blocked'));
+    wrap.appendChild(el('div', 'script-window-copy', '"' + s.name + '" is marked as a ScriptUI panel. DropComp cannot embed that UI; add Inputs and read DC_PARAMS to run it as an in-panel form.'));
+    var btns = el('div', 'script-form-btns');
+    var edit = el('button', 'btn-gold', 'Edit Inputs'); edit.type = 'button';
+    edit.addEventListener('click', function () { openEditor(s); });
+    var cancel = el('button', 'btn-dark', 'Cancel'); cancel.type = 'button';
+    cancel.addEventListener('click', function () {
+      var note = row.querySelector('.script-window-note');
+      if (note) note.parentNode.removeChild(note);
+    });
+    btns.appendChild(cancel);
+    btns.appendChild(edit);
+    wrap.appendChild(btns);
+    row.appendChild(wrap);
   }
 
   function runWithParams(s, valuesJson) {

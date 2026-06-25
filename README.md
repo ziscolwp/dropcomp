@@ -53,9 +53,9 @@ type, and default for each), then in the script read them from `DC_PARAMS`:
     var spacing = (P.spacing != null) ? P.spacing : 10;
 
 `DC_PARAMS` is set only when DropComp runs the script with a form, so the `|| {}`
-guard keeps the script working if you run it the old way too. Third-party panels
-you can't edit still run as a floating window — tick "opens its own floating window"
-on them so the panel labels them honestly.
+guard keeps the script working if you run it the old way too. Third-party ScriptUI
+panels cannot be embedded inside DropComp; mark them as requiring a separate AE
+window so the run button stays in-panel instead of launching their floating UI.
 
 ## Updates
 

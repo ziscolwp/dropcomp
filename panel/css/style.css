@@ -409,6 +409,8 @@ body {
 .script-form-btns { display: flex; gap: 8px; justify-content: flex-end; }
 .script-form-btns button { padding: 6px 14px; }
 .script-row.has-form .script-run { box-shadow: 0 0 0 2px var(--gold-bg); }
+.script-window-title { font-size: 12px; color: var(--text); font-weight: 600; }
+.script-window-copy { font-size: 11px; color: var(--text-mid); line-height: 1.4; }
 
 /* ---- editor inputs builder ---- */
 .label-aside { color: var(--text-dim); font-weight: 400; }
