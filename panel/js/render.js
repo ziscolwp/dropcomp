@@ -221,8 +221,13 @@ var DCRender = (function () {
     }
     var viewMode = DCState.normalizeViewMode(
       kind === 'asset' ? prefs.viewModeAssets : prefs.viewMode);
+    var parent = container;
+    if (prefs.folderColumns && viewMode !== 'list') {
+      parent = el('div', 'category-columns');
+      container.appendChild(parent);
+    }
     groups.forEach(function (g) {
-      container.appendChild(buildSection(g, prefs, usageMeta, busts, kind, viewMode));
+      parent.appendChild(buildSection(g, prefs, usageMeta, busts, kind, viewMode));
     });
   }
 

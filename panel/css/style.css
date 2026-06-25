@@ -1,3 +1,4 @@
+/* TODO: split by concern */
 :root {
   --bg: #161616;
   --bg-raised: #222222;
@@ -145,6 +146,18 @@ body {
 .category-name { font-size: 12px; color: var(--text); font-weight: 600; }
 .category-count { font-size: 11px; color: var(--gold); background: var(--gold-bg); border-radius: 8px; padding: 0 7px; }
 .category.collapsed .grid, .category.collapsed .list { display: none; }
+
+#library .category-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0 12px;
+  align-items: start;
+}
+#library .category-columns .category { min-width: 0; }
+#library .category-columns .category-name {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#library .category-columns .grid { grid-template-columns: 1fr; }
 
 .grid {
   display: grid; gap: 8px;
