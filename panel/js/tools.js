@@ -9,6 +9,20 @@ var DCTools = (function () {
   };
   function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
 
+  function timingMessage(r) {
+    var n = (r && typeof r.count === 'number') ? r.count : 0;
+    var target = (r && r.target === 'keys') ? 'keyframe' : 'layer';
+    if (r && r.mode === 'align') return 'Aligned ' + plural(n, target) + ' to playhead.';
+    if (r && r.mode === 'random') return 'Randomized ' + plural(n, target) + '.';
+    if (r && r.mode === 'keys') {
+      return r.unit === 'key'
+        ? 'Sequenced ' + plural(n, 'keyframe') + '.'
+        : 'Staggered keyframes on ' + plural(n, 'layer') + '.';
+    }
+    if (r && r.mode === 'duplicate') return 'Added ' + plural(n, 'duplicate') + '.';
+    return 'Staggered ' + plural(n, 'layer') + '.';
+  }
+
   // Build a counted/named success message from the host's JSON result. The host
   // returns { ok, count, name?, ignored?, approx?, warn? }; surface those so the
   // user sees what actually happened instead of a flat "Done."
@@ -20,15 +34,7 @@ var DCTools = (function () {
     if (fn === 'tlAlign') return 'Aligned ' + plural(n, 'layer') + '.' + approx;
     if (fn === 'tlDistribute') return 'Distributed ' + plural(n, 'layer') + '.' + approx;
     if (fn === 'tlReset') return 'Recentered ' + plural(n, 'layer') + '.' + approx;
-    if (fn === 'tlSequence') {
-      if (r && r.mode === 'keys') {
-        return r.unit === 'key'
-          ? 'Sequenced ' + plural(n, 'keyframe') + '.'
-          : 'Staggered keyframes on ' + plural(n, 'layer') + '.';
-      }
-      if (r && r.mode === 'duplicate') return 'Added ' + plural(n, 'duplicate') + '.';
-      return 'Staggered ' + plural(n, 'layer') + '.';
-    }
+    if (fn === 'tlSequence' || fn === 'tlAdjustTiming') return timingMessage(r);
     if (fn === 'tlPreComp') return 'Precomposed ' + plural(n, 'layer') + ((r && r.name) ? ' → ' + r.name : '') + '.';
     if (fn === 'tlMultiPreComp') return 'Precomposed ' + plural(n, 'layer') + ' separately.';
     if (fn === 'tlDecompose') return 'Decomposed into ' + plural(n, 'layer') + '.' + ((r && r.warn) ? ' Not preserved: ' + r.warn + '.' : '');
@@ -124,10 +130,10 @@ var DCTools = (function () {
       run('distribute', 'tlDistribute', [arg]);
     } else if (tool === 'reset') {
       run('reset', 'tlReset', []);
-    } else if (tool === 'sequence') {
-      var num = DCToolsCore.clampInt(document.getElementById('tools-num').value, 1, 500, 1);
-      var step = DCToolsCore.clampInt(document.getElementById('tools-step').value, -100000, 100000, 5);
-      run('sequence', 'tlSequence', [num, step]);
+    } else if (tool === 'adjust-time') {
+      var amount = DCToolsCore.clampInt(document.getElementById('tools-num').value, 1, 500, 1);
+      var stepFrames = DCToolsCore.clampInt(document.getElementById('tools-step').value, -100000, 100000, 5);
+      run('adjust timing', 'tlAdjustTiming', [amount, stepFrames, arg]);
     } else if (tool === 'precomp') {
       var fn = PRECOMP_FN[arg];
       if (fn) run('precomp', fn, []);

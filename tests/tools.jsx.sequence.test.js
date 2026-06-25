@@ -13,8 +13,10 @@ function loadTools() {
     LightLayer: function LightLayer() {},
   };
   vm.createContext(context);
-  const src = fs.readFileSync(path.join(__dirname, '..', 'jsx', 'tools.jsx'), 'utf8');
-  vm.runInContext(src, context, { filename: 'tools.jsx' });
+  for (const file of ['tools.jsx', 'tools-timing.jsx']) {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'jsx', file), 'utf8');
+    vm.runInContext(src, context, { filename: file });
+  }
   return context.$.global;
 }
 
@@ -111,8 +113,9 @@ test('tlApplyKeyDeltas moves selected keyframes without setKeyTime and keeps the
     { time: 3, value: [30, 30], inType: 'HOLD', outType: 'BEZIER', selected: true },
   ]);
 
-  tools.tlApplyKeyDeltas(keyProp.prop, [1, 2, 3], [0, 0.5, 1], true);
+  const movedTimes = tools.tlApplyKeyDeltas(keyProp.prop, [1, 2, 3], [0, 0.5, 1]);
 
+  assert.deepEqual(movedTimes, [1, 2.5, 4]);
   assert.deepEqual(keyProp.snapshot(), [
     { time: 1, value: [10, 10], inType: 'LINEAR', outType: 'LINEAR', selected: true },
     { time: 2.5, value: [20, 20], inType: 'BEZIER', outType: 'HOLD', selected: true },
@@ -120,6 +123,6 @@ test('tlApplyKeyDeltas moves selected keyframes without setKeyTime and keeps the
   ]);
   assert.deepEqual(
     keyProp.calls.filter((call) => call[0] === 'addKey').map((call) => call[1]),
-    [4, 2.5]
+    [1, 2.5, 4]
   );
 });
