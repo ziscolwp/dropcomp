@@ -15,6 +15,7 @@ var DCScriptsCore = (function () {
   // Normalise raw form input into a stored registry entry.
   function makeEntry(input, now) {
     var isFile = input.source === 'file';
+    var params = input.params ? normalizeParams(input.params) : [];
     return {
       uniqueId: input.uniqueId || newUniqueId(input.name, now),
       name: String(input.name || '').trim(),
@@ -25,8 +26,8 @@ var DCScriptsCore = (function () {
       body: isFile ? null : String(input.body || ''),
       addedAt: input.addedAt || now,
       tags: input.tags || [],
-      params: input.params ? normalizeParams(input.params) : [],
-      opensWindow: !!input.opensWindow
+      params: params,
+      opensWindow: params.length ? false : !!input.opensWindow
     };
   }
 
@@ -52,12 +53,24 @@ var DCScriptsCore = (function () {
       var list = (obj.scripts && obj.scripts.length !== undefined) ? obj.scripts : [];
       var clean = [];
       for (var i = 0; i < list.length; i++) {
-        if (list[i] && list[i].uniqueId && list[i].name) clean.push(list[i]);
+        if (list[i] && list[i].uniqueId && list[i].name) clean.push(normalizeLoadedEntry(list[i]));
       }
       return { version: obj.version || REGISTRY_VERSION, scripts: clean };
     } catch (e) {
       return { version: REGISTRY_VERSION, scripts: [] };
     }
+  }
+
+  function normalizeLoadedEntry(entry) {
+    var params = entry.params ? normalizeParams(entry.params) : [];
+    if (!params.length) return entry;
+    var out = {};
+    for (var k in entry) {
+      if (entry.hasOwnProperty(k)) out[k] = entry[k];
+    }
+    out.params = params;
+    out.opensWindow = false;
+    return out;
   }
 
   function serializeRegistry(scripts) {

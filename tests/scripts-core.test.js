@@ -160,12 +160,19 @@ test('normalizeParams fills labels and coerces defaults to the right type', () =
   assert.equal(out[2].default, 'a');
 });
 
-test('makeEntry carries normalized params and opensWindow', () => {
+test('makeEntry treats parameterized scripts as in-panel entries', () => {
   const e = C.makeEntry({ name: 'X', source: 'snippet', body: 'a', opensWindow: true,
     params: [{ key: 'n', type: 'number', default: '2' }] }, 5);
-  assert.equal(e.opensWindow, true);
+  assert.equal(e.opensWindow, false);
   assert.equal(e.params.length, 1);
   assert.equal(e.params[0].default, 2);
+});
+
+test('parseRegistry treats parameterized scripts as in-panel entries', () => {
+  const r = C.parseRegistry('{"scripts":[{"uniqueId":"x_1","name":"X","source":"snippet","body":"a","opensWindow":true,"params":[{"key":"msg","type":"text","default":"hi"}]}]}');
+  assert.equal(r.scripts.length, 1);
+  assert.equal(r.scripts[0].opensWindow, false);
+  assert.equal(r.scripts[0].params[0].default, 'hi');
 });
 
 test('validateEntry rejects an entry whose params are invalid', () => {
