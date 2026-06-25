@@ -1,3 +1,4 @@
+/* TODO: split by concern */
 :root {
   --bg: #161616;
   --bg-raised: #222222;
@@ -223,6 +224,7 @@ body {
 .modal-buttons { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
 .modal-buttons.stack { flex-direction: column; }
 .modal-buttons.stack button { width: 100%; }
+#settings-version { margin-top: 14px; }
 
 #loading-spinner {
   position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
