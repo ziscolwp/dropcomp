@@ -137,6 +137,23 @@ function scValidParamsJson(s) {
 }
 $.global.scValidParamsJson = scValidParamsJson;
 
+function scParamsPrelude(valuesJson) {
+    return 'var __dropcompHadParams = false;\n' +
+           'try { __dropcompHadParams = $.global.hasOwnProperty("DC_PARAMS"); } catch (__dropcompParamCheckErr) { __dropcompHadParams = (typeof $.global.DC_PARAMS !== "undefined"); }\n' +
+           'var __dropcompPrevParams = $.global.DC_PARAMS;\n' +
+           'try {\n' +
+           '$.global.DC_PARAMS = ' + valuesJson + ';\n';
+}
+$.global.scParamsPrelude = scParamsPrelude;
+
+function scParamsPostlude() {
+    return '\n} finally {\n' +
+           'if (__dropcompHadParams) $.global.DC_PARAMS = __dropcompPrevParams;\n' +
+           'else { try { delete $.global.DC_PARAMS; } catch (__dropcompParamDeleteErr) { $.global.DC_PARAMS = undefined; } }\n' +
+           '}\n';
+}
+$.global.scParamsPostlude = scParamsPostlude;
+
 // Run an external file with DropComp-provided params. Sets $.global.DC_PARAMS, then
 // evalFiles the real file (never modified). valuesJson is JSON from the panel - a subset
 // of ES3 literal syntax - so inlining it after '=' is safe (cannot break out).
@@ -146,8 +163,9 @@ function scRunFileWithParams(path, valuesJson) {
         var f = new File(path);
         if (!f.exists) return jerr('Script file not found:\n' + path);
         if (!scValidParamsJson(valuesJson)) return jerr('Bad parameters.');
-        var src = '$.global.DC_PARAMS = ' + valuesJson + ';\n' +
-                  '$.evalFile(new File("' + jsonEscape(f.fsName) + '"));\n';
+        var src = scParamsPrelude(valuesJson) +
+                  '$.evalFile(new File("' + jsonEscape(f.fsName) + '"));\n' +
+                  scParamsPostlude();
         tmp = scWriteTemp(src);
         if (!tmp) return jerr('Could not write a temporary script file.');
         $.evalFile(tmp);
@@ -166,7 +184,7 @@ function scRunSnippetWithParams(body, valuesJson) {
     try {
         if (body === null || body === undefined || String(body) === '') return jerr('Snippet is empty.');
         if (!scValidParamsJson(valuesJson)) return jerr('Bad parameters.');
-        var src = '$.global.DC_PARAMS = ' + valuesJson + ';\n' + String(body);
+        var src = scParamsPrelude(valuesJson) + String(body) + scParamsPostlude();
         tmp = scWriteTemp(src);
         if (!tmp) return jerr('Could not write a temporary script file.');
         $.evalFile(tmp);

@@ -9,13 +9,14 @@ Tanmay can test everything together inside After Effects.
 - Worktree path: `/Users/ziscol/Ziscol Media Projects/dropcomp-review-combined`
 - Baseline: `main` at `8ee2119` (`chore(release): bump to 2.5.0`)
 - Verification command: `npm test`
-- Latest local verification: `npm test` passed, 160 tests, 0 failures.
+- Latest local verification: `npm test` passed, 162 tests, 0 failures.
 
 ## Integration Notes
 
 - The bundle includes every task currently in `REVIEW-KANBAN.md` under `Waiting For Review`.
 - It also includes the `Approved` task branches that are not merged into `main`, so this local panel reflects the whole pending review board.
 - The `feature/feat-006-keyframe-distribution` merge supersedes the older inline `tlSequence` implementation from `bug-003`; timing/keyframe actions now live in `jsx/tools-timing.jsx`.
+- Manual smoke-test focus: after testing keyframe timing on one layer, clear key selection and verify layer timing behaves as expected on that same layer.
 - No task status files were changed by this bundle. Use this README for the review pass, then move individual tasks to `needs-fix`, `approved`, or `done` as appropriate.
 
 ## Waiting For Review
