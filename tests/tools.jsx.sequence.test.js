@@ -115,7 +115,7 @@ test('tlApplyKeyDeltas moves selected keyframes without setKeyTime and keeps the
 
   const movedTimes = tools.tlApplyKeyDeltas(keyProp.prop, [1, 2, 3], [0, 0.5, 1]);
 
-  assert.deepEqual(movedTimes, [1, 2.5, 4]);
+  assert.deepEqual(Array.from(movedTimes), [1, 2.5, 4]);
   assert.deepEqual(keyProp.snapshot(), [
     { time: 1, value: [10, 10], inType: 'LINEAR', outType: 'LINEAR', selected: true },
     { time: 2.5, value: [20, 20], inType: 'BEZIER', outType: 'HOLD', selected: true },
