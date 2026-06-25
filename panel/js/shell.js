@@ -29,9 +29,17 @@ var DCShell = (function () {
     els.thumbSlider.value = prefs.thumbMin;
     els.showNamesCb.checked = prefs.showNames;
     els.showMetaCb.checked = prefs.showMeta;
+    if (els.folderColsCb) els.folderColsCb.checked = prefs.folderColumns;
     els.favoritesBtn.classList.toggle('active', prefs.favoritesOnly);
     applyGridSize();
+    applyFolderColumns();
     applyView();
+  }
+
+  // Folder columns is a pure layout class on the shared #library element; it
+  // survives tab switches, so it only needs (re)applying at init and on change.
+  function applyFolderColumns() {
+    els.library.classList.toggle('folders-cols', !!prefs.folderColumns);
   }
 
   function applyGridSize() {
@@ -195,7 +203,9 @@ var DCShell = (function () {
     if (prefs.activeTab === 'tools') return;
     prefs.showNames = els.showNamesCb.checked;
     prefs.showMeta = els.showMetaCb.checked;
+    if (els.folderColsCb) prefs.folderColumns = els.folderColsCb.checked;
     persistPrefs();
+    applyFolderColumns();
     activeModule().rerender();
   }
   function onSlider() {
