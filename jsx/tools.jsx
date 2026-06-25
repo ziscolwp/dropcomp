@@ -115,6 +115,14 @@ function tlChainApprox(layer) {
 }
 $.global.tlChainApprox = tlChainApprox;
 
+function tlApplyFillEffect(layer) {
+    var fill = layer.property('ADBE Effect Parade').addProperty('ADBE Fill');
+    var color = fill.property('ADBE Fill-0002');
+    if (color) color.setValue([0.5, 0.5, 0.5]);
+    return fill;
+}
+$.global.tlApplyFillEffect = tlApplyFillEffect;
+
 function tlCreateLayer(kind) {
     var comp = tlActiveComp();
     if (!comp) return jerr('Open a composition first.');
@@ -129,6 +137,7 @@ function tlCreateLayer(kind) {
             layer.adjustmentLayer = true;
         } else if (kind === 'solid') {
             layer = comp.layers.addSolid([0.5, 0.5, 0.5], 'Solid', comp.width, comp.height, comp.pixelAspect);
+            tlApplyFillEffect(layer);
         } else if (kind === 'camera') {
             layer = comp.layers.addCamera('Camera 1', [comp.width / 2, comp.height / 2]);
         } else {
