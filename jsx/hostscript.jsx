@@ -288,9 +288,11 @@ function importComp(aepPath) {
 
         app.beginSuppressDialogs();
         suppressing = true;
+        // AE project import can corrupt the undo stack inside an explicit group.
+        // Import first, then group DropComp's relink/timeline edits.
+        var importedFolder = app.project.importFile(new ImportOptions(fileToImport));
         app.beginUndoGroup('DropComp Import');
         undoing = true;
-        var importedFolder = app.project.importFile(new ImportOptions(fileToImport));
         importedFolder.name = compName + ' [DropComp]';
 
         // self-heal: the saved aep keeps absolute footage paths that break when

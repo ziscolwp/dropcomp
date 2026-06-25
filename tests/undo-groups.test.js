@@ -24,3 +24,16 @@ test('importComp closes its undo group when import fails after opening it', () =
     'importComp catch path must close DropComp Import to avoid AE undo group mismatch warnings'
   );
 });
+
+test('importComp keeps project import outside the explicit undo group', () => {
+  const body = sectionBetween(hostSrc, 'function importComp', '// ---------- thumbnails ----------');
+  const importIndex = body.indexOf('app.project.importFile(new ImportOptions(fileToImport))');
+  const undoIndex = body.indexOf("app.beginUndoGroup('DropComp Import')");
+
+  assert.notEqual(importIndex, -1, 'importComp should import the AEP project');
+  assert.notEqual(undoIndex, -1, 'importComp should still group post-import timeline changes');
+  assert.ok(
+    importIndex < undoIndex,
+    'AE project import must happen before DropComp opens its explicit undo group'
+  );
+});
