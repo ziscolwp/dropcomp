@@ -146,6 +146,20 @@ body {
 .category-count { font-size: 11px; color: var(--gold); background: var(--gold-bg); border-radius: 8px; padding: 0 7px; }
 .category.collapsed .grid, .category.collapsed .list { display: none; }
 
+/* Folder columns: pack the category sections into a responsive multi-column grid
+   so many folders take far less vertical space and are easier to scroll. Skipped
+   in list view, whose full-width rows can't share a narrow column. */
+#library.folders-cols:not(.view-list) {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0 12px;
+  align-items: start;
+}
+#library.folders-cols:not(.view-list) .placeholder { grid-column: 1 / -1; }
+/* Inside a narrow folder column, stack cards one-per-row so they always fit the
+   column regardless of the thumbnail-size slider. */
+#library.folders-cols:not(.view-list) .grid { grid-template-columns: 1fr; }
+
 .grid {
   display: grid; gap: 8px;
   grid-template-columns: repeat(auto-fill, minmax(var(--thumb-min), 1fr));

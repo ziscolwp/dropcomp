@@ -23,6 +23,7 @@
     displayMenu: $('display-menu'),
     showNamesCb: $('show-names-cb'),
     showMetaCb: $('show-meta-cb'),
+    folderColsCb: $('folder-cols-cb'),
     addCompBtn: $('add-comp-btn'),
     addAepBtn: $('add-aep-btn'),
     addAssetsBtn: $('add-assets-btn'),
@@ -66,6 +67,7 @@
   $('relink-btn').addEventListener('click', DCLibrary.relinkMissing);
   els.showNamesCb.addEventListener('change', DCShell.onDisplayChange);
   els.showMetaCb.addEventListener('change', DCShell.onDisplayChange);
+  els.folderColsCb.addEventListener('change', DCShell.onDisplayChange);
   els.thumbSlider.addEventListener('input', DCShell.onSlider);
   els.viewSwitch.addEventListener('click', function (e) {
     var btn = e.target.closest('[data-view]');
