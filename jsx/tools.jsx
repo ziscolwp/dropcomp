@@ -583,6 +583,74 @@ function tlSequence(numStr, stepFramesStr) {
 }
 $.global.tlSequence = tlSequence;
 
+function tlMatchCompLength() {
+    var comp = tlActiveComp();
+    if (!comp) return jerr('Open a composition first.');
+    try {
+        app.beginUndoGroup('DropComp Match Comp Length');
+        var count = 0, compCount = 0, sourceErr = 0, lastErr = '';
+        var sources = [];
+        var sel = comp.selectedLayers;
+        if (sel) {
+            for (var s = 0; s < sel.length; s++) {
+                if (sel[s].source && sel[s].source instanceof CompItem) {
+                    var seen = false;
+                    for (var x = 0; x < sources.length; x++) {
+                        if (sources[x] === sel[s].source) seen = true;
+                    }
+                    if (!seen) sources.push(sel[s].source);
+                }
+            }
+        }
+        for (var c = 0; c < sources.length; c++) {
+            var src = sources[c];
+            try {
+                src.duration = comp.duration;
+                compCount++;
+            } catch (eD) {
+                sourceErr++;
+                lastErr = eD.toString();
+            }
+            for (var k = 1; k <= src.numLayers; k++) {
+                var sourceLayer = src.layer(k);
+                var sourceWasLocked = false;
+                try {
+                    sourceWasLocked = sourceLayer.locked;
+                    if (sourceWasLocked) sourceLayer.locked = false;
+                    sourceLayer.outPoint = comp.duration;
+                    if (sourceWasLocked) sourceLayer.locked = true;
+                    count++;
+                } catch (eS) {
+                    lastErr = eS.toString();
+                    if (sourceWasLocked) { try { sourceLayer.locked = true; } catch (eSR) {} }
+                }
+            }
+        }
+        for (var i = 1; i <= comp.numLayers; i++) {
+            var layer = comp.layer(i);
+            var wasLocked = false;
+            try {
+                wasLocked = layer.locked;
+                if (wasLocked) layer.locked = false;
+                layer.outPoint = comp.duration;
+                if (wasLocked) layer.locked = true;
+                count++;
+            } catch (eL) {
+                lastErr = eL.toString();
+                if (wasLocked) { try { layer.locked = true; } catch (eR) {} }
+            }
+        }
+        app.endUndoGroup();
+        if (sourceErr > 0) return jerr('Could not match precomp duration: ' + lastErr);
+        if (count === 0 && comp.numLayers > 0) return jerr('Could not match comp length: ' + lastErr);
+        return '{"ok":true,"count":' + count + (compCount ? ',"comps":' + compCount : '') + '}';
+    } catch (e) {
+        try { app.endUndoGroup(); } catch (e2) {}
+        return jerr(e.toString());
+    }
+}
+$.global.tlMatchCompLength = tlMatchCompLength;
+
 function tlPreComp() {
     var comp = tlActiveComp();
     if (!comp) return jerr('Open a composition first.');
