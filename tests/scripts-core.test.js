@@ -175,6 +175,12 @@ test('parseRegistry treats parameterized scripts as in-panel entries', () => {
   assert.equal(r.scripts[0].params[0].default, 'hi');
 });
 
+test('runMode keeps windowed scripts in panel unless they expose params', () => {
+  assert.equal(C.runMode({ opensWindow: true, params: [] }), 'windowNotice');
+  assert.equal(C.runMode({ opensWindow: true, params: [{ key: 'msg' }] }), 'params');
+  assert.equal(C.runMode({ opensWindow: false, params: [] }), 'direct');
+});
+
 test('validateEntry rejects an entry whose params are invalid', () => {
   const r = C.validateEntry({ name: 'X', source: 'snippet', body: 'a', params: [{ key: '1', type: 'text' }] });
   assert.equal(r.valid, false);

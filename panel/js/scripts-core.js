@@ -96,6 +96,12 @@ var DCScriptsCore = (function () {
     return out;
   }
 
+  function runMode(entry) {
+    if (entry && entry.params && entry.params.length) return 'params';
+    if (entry && entry.opensWindow) return 'windowNotice';
+    return 'direct';
+  }
+
   function getUsage(usageMeta, uniqueId) {
     return (usageMeta && usageMeta[uniqueId]) || { lastRun: 0, runCount: 0, isFavorite: false };
   }
@@ -241,6 +247,7 @@ var DCScriptsCore = (function () {
     serializeRegistry: serializeRegistry,
     upsert: upsert,
     removeById: removeById,
+    runMode: runMode,
     getUsage: getUsage,
     filterScripts: filterScripts,
     sortScripts: sortScripts,
