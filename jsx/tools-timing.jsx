@@ -8,13 +8,16 @@
 //      last copy, preserving the old Sequence behavior.
 
 function tlCollectSelectedKeys(comp) {
-    var res = { order: [], byIndex: {}, total: 0 };
+    var res = { order: [], byIndex: {}, total: 0, propertyCount: 0, noKeyPropertyCount: 0 };
     var props = comp.selectedProperties;
     if (!props) return res;
+    res.propertyCount = props.length;
     for (var i = 0; i < props.length; i++) {
         var p = props[i];
-        var sel = null;
-        try { sel = p.selectedKeys; } catch (e) { sel = null; }
+        var sel = null, noKeys = false;
+        try { noKeys = typeof p.numKeys !== 'undefined' && p.numKeys === 0; } catch (e0) {}
+        try { sel = p.selectedKeys; } catch (e1) { sel = null; noKeys = true; }
+        if (noKeys) res.noKeyPropertyCount++;
         if (!sel || sel.length === 0) continue;
         var layer = p.propertyGroup(p.propertyDepth);
         var li = layer.index;
@@ -61,25 +64,25 @@ $.global.tlReadKeyframe = tlReadKeyframe;
 function tlRestoreKeyframe(prop, index, k) {
     prop.setValueAtKey(index, k.value);
     try {
-        if (typeof k.inType !== 'undefined') prop.setInterpolationTypeAtKey(index, k.inType, k.outType);
+        if (typeof k.temporalContinuous !== 'undefined') prop.setTemporalContinuousAtKey(index, k.temporalContinuous);
     } catch (e0) {}
     try {
-        if (typeof k.inEase !== 'undefined') prop.setTemporalEaseAtKey(index, k.inEase, k.outEase);
+        if (typeof k.temporalAuto !== 'undefined') prop.setTemporalAutoBezierAtKey(index, k.temporalAuto);
     } catch (e1) {}
     try {
-        if (typeof k.temporalContinuous !== 'undefined') prop.setTemporalContinuousAtKey(index, k.temporalContinuous);
+        if (typeof k.inType !== 'undefined') prop.setInterpolationTypeAtKey(index, k.inType, k.outType);
     } catch (e2) {}
     try {
-        if (typeof k.temporalAuto !== 'undefined') prop.setTemporalAutoBezierAtKey(index, k.temporalAuto);
+        if (typeof k.inEase !== 'undefined') prop.setTemporalEaseAtKey(index, k.inEase, k.outEase);
     } catch (e3) {}
     try {
-        if (typeof k.inSpatial !== 'undefined') prop.setSpatialTangentsAtKey(index, k.inSpatial, k.outSpatial);
+        if (typeof k.spatialContinuous !== 'undefined') prop.setSpatialContinuousAtKey(index, k.spatialContinuous);
     } catch (e4) {}
     try {
-        if (typeof k.spatialContinuous !== 'undefined') prop.setSpatialContinuousAtKey(index, k.spatialContinuous);
+        if (typeof k.spatialAuto !== 'undefined') prop.setSpatialAutoBezierAtKey(index, k.spatialAuto);
     } catch (e5) {}
     try {
-        if (typeof k.spatialAuto !== 'undefined') prop.setSpatialAutoBezierAtKey(index, k.spatialAuto);
+        if (typeof k.inSpatial !== 'undefined') prop.setSpatialTangentsAtKey(index, k.inSpatial, k.outSpatial);
     } catch (e6) {}
     try {
         if (typeof k.roving !== 'undefined') prop.setRovingAtKey(index, k.roving);
@@ -308,7 +311,9 @@ function tlAdjustTiming(amountStr, stepFramesStr, mode) {
         app.beginUndoGroup('DropComp Adjust Timing');
 
         var keys = tlCollectSelectedKeys(comp);
-        if (keys.total === 0) {
+        if (keys.total === 0 && keys.noKeyPropertyCount > 0) {
+            tlClearKeyTimingCache();
+        } else if (keys.total === 0) {
             var cachedKeys = tlCachedKeyTargetsForSelection(comp);
             if (cachedKeys) keys = cachedKeys;
         }
