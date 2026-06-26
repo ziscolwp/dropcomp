@@ -65,7 +65,13 @@
         <div id="display-menu" class="hidden">
           <label><input type="checkbox" id="show-names-cb" checked> Show names</label>
           <label><input type="checkbox" id="show-meta-cb" checked> Show info</label>
-          <label><input type="checkbox" id="folder-cols-cb" checked> Folder columns</label>
+          <label class="menu-field">
+            <span>Folder layout</span>
+            <select id="folder-layout-select" aria-label="Folder layout">
+              <option value="columns" selected>Columns</option>
+              <option value="rows">Rows</option>
+            </select>
+          </label>
         </div>
       </div>
     </div>

@@ -87,7 +87,15 @@ test('render wraps folder sections for column layout when enabled', () => {
 
 test('render keeps sections direct when folder columns are disabled', () => {
   const container = makeNode('main');
-  DCRender.render(container, groups(), prefs({ folderColumns: false }), {}, {}, 'empty');
+  DCRender.render(container, groups(), prefs({ folderLayout: 'rows', folderColumns: false }), {}, {}, 'empty');
+
+  assert.equal(container.children.length, 2);
+  assert.equal(container.children[0].className, 'category');
+});
+
+test('render uses folderLayout rows over stale folderColumns true', () => {
+  const container = makeNode('main');
+  DCRender.render(container, groups(), prefs({ folderLayout: 'rows', folderColumns: true }), {}, {}, 'empty');
 
   assert.equal(container.children.length, 2);
   assert.equal(container.children[0].className, 'category');

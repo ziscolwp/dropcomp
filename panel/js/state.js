@@ -112,11 +112,32 @@ var DCState = (function () {
   var PREFS_KEY = 'dropcomp_prefs';
   var USAGE_KEY = 'dropcomp_metadata';
   var ASSETS_USAGE_KEY = 'dropcomp_assets_metadata';
+  var FOLDER_LAYOUT_VERSION = 1;
+
+  function normalizeFolderLayout(v) {
+    return v === 'rows' ? 'rows' : 'columns';
+  }
+
+  function migrateFolderLayout(prefs, saved) {
+    if (saved && saved.folderLayout !== undefined) {
+      prefs.folderLayout = normalizeFolderLayout(saved.folderLayout);
+    } else {
+      prefs.folderLayout = 'columns';
+    }
+    prefs.folderColumns = prefs.folderLayout === 'columns';
+    prefs.folderLayoutVersion = FOLDER_LAYOUT_VERSION;
+    return prefs;
+  }
+
+  function isFolderColumns(prefs) {
+    return normalizeFolderLayout(prefs && prefs.folderLayout) === 'columns';
+  }
 
   function defaultPrefs() {
     return { thumbMin: 130, sort: 'recent', showNames: true, showMeta: true,
       favoritesOnly: false, collapsed: [], activeTab: 'library', collapsedAssets: [],
-      viewMode: 'comfortable', viewModeAssets: 'comfortable', folderColumns: true };
+      viewMode: 'comfortable', viewModeAssets: 'comfortable',
+      folderLayout: 'columns', folderLayoutVersion: FOLDER_LAYOUT_VERSION, folderColumns: true };
   }
 
   function loadPrefs(storage) {
@@ -128,17 +149,18 @@ var DCState = (function () {
         Object.keys(prefs).forEach(function (k) {
           if (saved[k] !== undefined) prefs[k] = saved[k];
         });
-        return prefs;
+        return migrateFolderLayout(prefs, saved);
       }
       if (storage.getItem('dropcomp_density') === 'compact') prefs.thumbMin = 100;
       if (storage.getItem('dropcomp_view') === 'list') prefs.viewMode = 'list';
       storage.removeItem('dropcomp_view');
       storage.removeItem('dropcomp_density');
     } catch (e) { return defaultPrefs(); }
-    return prefs;
+    return migrateFolderLayout(prefs, null);
   }
 
   function savePrefs(storage, prefs) {
+    migrateFolderLayout(prefs, prefs);
     try { storage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (e) {}
   }
 
@@ -194,6 +216,8 @@ var DCState = (function () {
     gridSizeClass: gridSizeClass,
     normalizeViewMode: normalizeViewMode,
     viewClass: viewClass,
+    normalizeFolderLayout: normalizeFolderLayout,
+    isFolderColumns: isFolderColumns,
     VIEW_MODES: VIEW_MODES
   };
 }());

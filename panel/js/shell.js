@@ -29,6 +29,7 @@ var DCShell = (function () {
     els.thumbSlider.value = prefs.thumbMin;
     els.showNamesCb.checked = prefs.showNames;
     els.showMetaCb.checked = prefs.showMeta;
+    if (els.folderLayoutSelect) els.folderLayoutSelect.value = DCState.normalizeFolderLayout(prefs.folderLayout);
     if (els.folderColsCb) els.folderColsCb.checked = prefs.folderColumns;
     els.favoritesBtn.classList.toggle('active', prefs.favoritesOnly);
     applyGridSize();
@@ -39,7 +40,7 @@ var DCShell = (function () {
   // Folder columns is a pure layout class on the shared #library element; it
   // survives tab switches, so it only needs (re)applying at init and on change.
   function applyFolderColumns() {
-    els.library.classList.toggle('folders-cols', !!prefs.folderColumns);
+    els.library.classList.toggle('folders-cols', DCState.isFolderColumns(prefs));
   }
 
   function applyGridSize() {
@@ -203,7 +204,14 @@ var DCShell = (function () {
     if (prefs.activeTab === 'tools') return;
     prefs.showNames = els.showNamesCb.checked;
     prefs.showMeta = els.showMetaCb.checked;
+    if (els.folderLayoutSelect) {
+      prefs.folderLayout = DCState.normalizeFolderLayout(els.folderLayoutSelect.value);
+      prefs.folderColumns = DCState.isFolderColumns(prefs);
+    }
     if (els.folderColsCb) prefs.folderColumns = els.folderColsCb.checked;
+    if (!els.folderLayoutSelect && els.folderColsCb) {
+      prefs.folderLayout = els.folderColsCb.checked ? 'columns' : 'rows';
+    }
     persistPrefs();
     applyFolderColumns();
     activeModule().rerender();

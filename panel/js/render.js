@@ -228,7 +228,7 @@ var DCRender = (function () {
     var viewMode = DCState.normalizeViewMode(
       kind === 'asset' ? prefs.viewModeAssets : prefs.viewMode);
     var parent = container;
-    if (prefs.folderColumns && viewMode !== 'list') {
+    if (DCState.isFolderColumns(prefs) && viewMode !== 'list') {
       parent = el('div', 'category-columns');
       container.appendChild(parent);
     }

@@ -16,7 +16,8 @@ test('defaultPrefs shape', () => {
   assert.deepEqual(DCState.defaultPrefs(), {
     thumbMin: 130, sort: 'recent', showNames: true, showMeta: true,
     favoritesOnly: false, collapsed: [], activeTab: 'library', collapsedAssets: [],
-    viewMode: 'comfortable', viewModeAssets: 'comfortable', folderColumns: true
+    viewMode: 'comfortable', viewModeAssets: 'comfortable',
+    folderLayout: 'columns', folderLayoutVersion: 1, folderColumns: true
   });
 });
 
@@ -104,21 +105,49 @@ test('viewClass maps modes to CSS classes and clamps junk', () => {
   assert.equal(DCState.viewClass('bogus'), 'view-comfortable');
 });
 
-test('folderColumns defaults on but round-trips when switched off', () => {
-  assert.equal(DCState.defaultPrefs().folderColumns, true);
+test('folder layout defaults to columns and round-trips an explicit rows choice', () => {
+  assert.equal(DCState.defaultPrefs().folderLayout, 'columns');
   const s = mockStorage();
   const p = DCState.defaultPrefs();
+  p.folderLayout = 'rows';
   p.folderColumns = false;
   DCState.savePrefs(s, p);
-  assert.equal(DCState.loadPrefs(s).folderColumns, false);
+  const loaded = DCState.loadPrefs(s);
+  assert.equal(loaded.folderLayout, 'rows');
+  assert.equal(loaded.folderColumns, false);
+  assert.equal(loaded.folderLayoutVersion, 1);
 });
 
-test('loadPrefs enables folderColumns for prefs saved before the option existed', () => {
+test('loadPrefs migrates pre-layout folderColumns false to columns once', () => {
   const s = mockStorage();
   const legacy = DCState.defaultPrefs();
   delete legacy.folderColumns;
+  legacy.folderColumns = false;
+  delete legacy.folderLayout;
+  delete legacy.folderLayoutVersion;
   s.setItem('dropcomp_prefs', JSON.stringify(legacy));
-  assert.equal(DCState.loadPrefs(s).folderColumns, true);
+  const loaded = DCState.loadPrefs(s);
+  assert.equal(loaded.folderLayout, 'columns');
+  assert.equal(loaded.folderColumns, true);
+});
+
+test('loadPrefs enables folder columns for prefs saved before the option existed', () => {
+  const s = mockStorage();
+  const legacy = DCState.defaultPrefs();
+  delete legacy.folderLayout;
+  delete legacy.folderLayoutVersion;
+  delete legacy.folderColumns;
+  s.setItem('dropcomp_prefs', JSON.stringify(legacy));
+  const loaded = DCState.loadPrefs(s);
+  assert.equal(loaded.folderLayout, 'columns');
+  assert.equal(loaded.folderColumns, true);
+});
+
+test('normalizeFolderLayout clamps unknown layout modes to columns', () => {
+  assert.equal(DCState.normalizeFolderLayout('rows'), 'rows');
+  assert.equal(DCState.normalizeFolderLayout('columns'), 'columns');
+  assert.equal(DCState.normalizeFolderLayout('masonry'), 'columns');
+  assert.equal(DCState.normalizeFolderLayout(undefined), 'columns');
 });
 
 test('per-tab view modes round-trip independently', () => {
