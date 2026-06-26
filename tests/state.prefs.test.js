@@ -16,7 +16,7 @@ test('defaultPrefs shape', () => {
   assert.deepEqual(DCState.defaultPrefs(), {
     thumbMin: 130, sort: 'recent', showNames: true, showMeta: true,
     favoritesOnly: false, collapsed: [], activeTab: 'library', collapsedAssets: [],
-    viewMode: 'comfortable', viewModeAssets: 'comfortable', folderColumns: false
+    viewMode: 'comfortable', viewModeAssets: 'comfortable', folderColumns: true
   });
 });
 
@@ -104,21 +104,21 @@ test('viewClass maps modes to CSS classes and clamps junk', () => {
   assert.equal(DCState.viewClass('bogus'), 'view-comfortable');
 });
 
-test('folderColumns defaults off and round-trips when saved', () => {
-  assert.equal(DCState.defaultPrefs().folderColumns, false);
+test('folderColumns defaults on but round-trips when switched off', () => {
+  assert.equal(DCState.defaultPrefs().folderColumns, true);
   const s = mockStorage();
   const p = DCState.defaultPrefs();
-  p.folderColumns = true;
+  p.folderColumns = false;
   DCState.savePrefs(s, p);
-  assert.equal(DCState.loadPrefs(s).folderColumns, true);
+  assert.equal(DCState.loadPrefs(s).folderColumns, false);
 });
 
-test('loadPrefs keeps folderColumns off for prefs saved before the option existed', () => {
+test('loadPrefs enables folderColumns for prefs saved before the option existed', () => {
   const s = mockStorage();
   const legacy = DCState.defaultPrefs();
   delete legacy.folderColumns;
   s.setItem('dropcomp_prefs', JSON.stringify(legacy));
-  assert.equal(DCState.loadPrefs(s).folderColumns, false);
+  assert.equal(DCState.loadPrefs(s).folderColumns, true);
 });
 
 test('per-tab view modes round-trip independently', () => {

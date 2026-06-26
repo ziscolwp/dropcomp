@@ -116,7 +116,7 @@ var DCState = (function () {
   function defaultPrefs() {
     return { thumbMin: 130, sort: 'recent', showNames: true, showMeta: true,
       favoritesOnly: false, collapsed: [], activeTab: 'library', collapsedAssets: [],
-      viewMode: 'comfortable', viewModeAssets: 'comfortable', folderColumns: false };
+      viewMode: 'comfortable', viewModeAssets: 'comfortable', folderColumns: true };
   }
 
   function loadPrefs(storage) {
