@@ -39,6 +39,8 @@ var DCRender = (function () {
     var card = el('article', 'card' + (usage.isFavorite ? ' has-fav' : ''));
     card.dataset.uniqueId = comp.uniqueId;
     card.dataset.category = comp.category;
+    card.dataset.dragKind = 'library-card';
+    card.draggable = true;
     card.title = comp.name + '\nDouble-click to import';
 
     var thumbWrap = el('div', 'card-thumb');
@@ -145,6 +147,10 @@ var DCRender = (function () {
     var card = el('article', 'card card--row' + (usage.isFavorite ? ' has-fav' : ''));
     card.dataset.uniqueId = item.uniqueId;
     card.dataset.category = item.category;
+    if (!isAsset) {
+      card.dataset.dragKind = 'library-card';
+      card.draggable = true;
+    }
     card.title = item.name + '\nDouble-click to import';
 
     var thumbWrap = el('div', 'card-thumb');

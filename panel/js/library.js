@@ -1,3 +1,4 @@
+// TODO: split by concern - library rendering, actions, and drag-move wiring.
 var DCLibrary = (function () {
   'use strict';
 
@@ -7,7 +8,9 @@ var DCLibrary = (function () {
   var pendingAepPath = null;
   var renameTarget = null;
   var deleteTarget = null;
+  var dragCard = null;
   var loadedOnce = false;
+  var DRAG_MIME = 'application/x-dropcomp-library-card';
 
   function init() { usageMeta = DCState.loadUsageMeta(localStorage); }
 
@@ -272,6 +275,103 @@ var DCLibrary = (function () {
     });
   }
 
+  function moveToCategory(uniqueId, fromCategory, targetCategory) {
+    var comp = findComp(uniqueId);
+    var sourceCategory = comp ? comp.category : fromCategory;
+    if (!comp || !targetCategory || targetCategory === sourceCategory) return false;
+    if (!DCBridge.acquire('moving card')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return false; }
+    DCUI.spinner(true);
+    DCBridge.call('moveStashedComp', [libPath(), sourceCategory, uniqueId, targetCategory], function (result) {
+      DCUI.spinner(false);
+      DCBridge.release();
+      var r = DCBridge.parseJson(result);
+      if (r && r.ok) {
+        DCUI.toast('Moved to ' + targetCategory + '.', false);
+        load();
+      } else {
+        DCUI.toast((r && r.error) || result, true);
+      }
+    });
+    return true;
+  }
+
+  function closestCategory(target) {
+    return target && target.closest ? target.closest('.category') : null;
+  }
+
+  function closestLibraryCard(target) {
+    var card = target && target.closest ? target.closest('.card') : null;
+    return card && card.dataset && card.dataset.dragKind === 'library-card' ? card : null;
+  }
+
+  function canDropOn(section) {
+    return dragCard && section && section.dataset &&
+      section.dataset.category && section.dataset.category !== dragCard.category;
+  }
+
+  function clearDropTarget(target) {
+    var section = closestCategory(target);
+    if (section && section.classList) section.classList.remove('drop-target');
+  }
+
+  function clearAllDropTargets() {
+    var root = els().library;
+    if (!root || !root.querySelectorAll) return;
+    var nodes = root.querySelectorAll('.drop-target');
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].classList) nodes[i].classList.remove('drop-target');
+    }
+  }
+
+  function attachMoveTarget(target) {
+    if (!target || !target.addEventListener) return;
+    target.addEventListener('dragstart', function (e) {
+      if (DCShell.getPrefs().activeTab !== 'library') return;
+      var card = closestLibraryCard(e.target);
+      if (!card) return;
+      dragCard = { uniqueId: card.dataset.uniqueId, category: card.dataset.category };
+      if (e.dataTransfer) {
+        try { e.dataTransfer.effectAllowed = 'move'; } catch (effErr) { }
+        try { e.dataTransfer.setData(DRAG_MIME, JSON.stringify(dragCard)); } catch (setErr) { }
+        try { e.dataTransfer.setData('text/plain', dragCard.uniqueId); } catch (textErr) { }
+      }
+      if (card.classList) card.classList.add('dragging');
+    });
+    target.addEventListener('dragover', function (e) {
+      var section = closestCategory(e.target);
+      if (!canDropOn(section)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer) {
+        try { e.dataTransfer.dropEffect = 'move'; } catch (dropErr) { }
+      }
+      if (section.classList) section.classList.add('drop-target');
+    });
+    target.addEventListener('dragleave', function (e) {
+      var section = closestCategory(e.target);
+      if (section && (!e.relatedTarget || !section.contains(e.relatedTarget)) && section.classList) {
+        section.classList.remove('drop-target');
+      }
+    });
+    target.addEventListener('drop', function (e) {
+      var section = closestCategory(e.target);
+      if (!canDropOn(section)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      var card = dragCard;
+      dragCard = null;
+      clearAllDropTargets();
+      moveToCategory(card.uniqueId, card.category, section.dataset.category);
+    });
+    target.addEventListener('dragend', function (e) {
+      var card = closestLibraryCard(e.target);
+      if (card && card.classList) card.classList.remove('dragging');
+      clearDropTarget(e.target);
+      clearAllDropTargets();
+      dragCard = null;
+    });
+  }
+
   function relinkMissing() {
     if (!DCBridge.acquire('relinking footage')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return; }
     DCUI.spinner(true);
@@ -320,11 +420,14 @@ var DCLibrary = (function () {
   function clearPending() {
     renameTarget = null;
     deleteTarget = null;
+    dragCard = null;
+    clearAllDropTargets();
   }
 
   return {
     init: init, load: load, refresh: refresh, rerender: rerender,
     ensureLoaded: ensureLoaded, resetLoaded: resetLoaded,
+    attachMoveTarget: attachMoveTarget, moveToCategory: moveToCategory,
     stashFlow: stashFlow, addAepFlow: addAepFlow, confirmCategory: confirmCategory,
     importItem: importItem, confirmRename: confirmRename, confirmDelete: confirmDelete,
     relinkMissing: relinkMissing, toggleSection: toggleSection,

@@ -147,6 +147,9 @@ body {
 .category-name { font-size: 12px; color: var(--text); font-weight: 600; }
 .category-count { font-size: 11px; color: var(--gold); background: var(--gold-bg); border-radius: 8px; padding: 0 7px; }
 .category.collapsed .grid, .category.collapsed .list { display: none; }
+.category.drop-target .category-header { color: var(--gold); }
+.category.drop-target .category-name { color: var(--gold); }
+.category.drop-target .grid, .category.drop-target .list { outline: 1px solid var(--gold); outline-offset: 3px; }
 
 #library .category-columns {
   display: grid;
@@ -169,6 +172,7 @@ body {
   background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius);
   overflow: hidden; cursor: pointer; transition: border-color 0.15s ease;
 }
+.card.dragging { opacity: 0.55; }
 .card:hover { border-color: var(--gold); }
 
 .card-thumb { position: relative; aspect-ratio: 16 / 9; background: var(--bg-inset); }

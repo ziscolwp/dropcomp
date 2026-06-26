@@ -79,6 +79,7 @@
     els.addAssetsBtn.addEventListener('click', DCAssets.addFlow);
     DCAssets.attachDropTarget(els.app);
   }
+  DCLibrary.attachMoveTarget(els.library);
   els.settingsBtn.addEventListener('click', DCShell.openSettings);
 
   els.displayBtn.addEventListener('click', function (e) {

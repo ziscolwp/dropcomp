@@ -100,3 +100,21 @@ test('render keeps list view full-width even when folder columns are enabled', (
   assert.equal(container.children.length, 2);
   assert.equal(container.children[0].className, 'category');
 });
+
+test('library cards are draggable between folders', () => {
+  const container = makeNode('main');
+  DCRender.render(container, groups(), prefs({ folderColumns: true }), {}, {}, 'empty');
+
+  const card = container.children[0].children[0].children[1].children[0];
+  assert.equal(card.draggable, true);
+  assert.equal(card.dataset.dragKind, 'library-card');
+});
+
+test('asset cards do not opt into library folder moves', () => {
+  const container = makeNode('main');
+  DCRender.render(container, groups(), prefs({ folderColumns: true }), {}, {}, 'empty', 'asset');
+
+  const card = container.children[0].children[0].children[1].children[0];
+  assert.notEqual(card.draggable, true);
+  assert.equal(card.dataset.dragKind, undefined);
+});
