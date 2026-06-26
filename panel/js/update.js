@@ -1,11 +1,13 @@
 var DCUpdate = (function () {
   'use strict';
 
-  var VERSION = '2.6.0';
+  var VERSION = '2.6.1';
   var RELEASES_API = 'https://api.github.com/repos/ziscolwp/dropcomp/releases/latest';
   var RELEASES_PAGE = 'https://github.com/ziscolwp/dropcomp/releases/latest';
   var CHECK_KEY = 'dropcomp_update_check';
-  var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000;
+  var UPDATE_AVAILABLE_CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000;
+  var NO_UPDATE_CHECK_INTERVAL_MS = 15 * 60 * 1000;
+  var CHECK_INTERVAL_MS = UPDATE_AVAILABLE_CHECK_INTERVAL_MS;
 
   function parseVersion(v) {
     var m = /^v?(\d+)\.(\d+)\.(\d+)/.exec(String(v === undefined || v === null ? '' : v).trim());
@@ -32,12 +34,19 @@ var DCUpdate = (function () {
     try { storage.setItem(CHECK_KEY, JSON.stringify(cache)); } catch (e) {}
   }
 
+  function cacheInterval(cache) {
+    return cache && cache.latest && isNewer(cache.latest, VERSION) ?
+      UPDATE_AVAILABLE_CHECK_INTERVAL_MS :
+      NO_UPDATE_CHECK_INTERVAL_MS;
+  }
+
   // Calls cb with the newer release tag (e.g. 'v2.2.0') or null when up to date.
   // Network failures and malformed responses are silent (cb(null)) - an update
   // notice is a nicety, never an error condition.
-  function check(storage, now, cb) {
+  function check(storage, now, cb, opts) {
     var cache = readCache(storage);
-    if (cache && cache.ts && (now - cache.ts) < CHECK_INTERVAL_MS) {
+    var force = opts && opts.force;
+    if (!force && cache && cache.ts && (now - cache.ts) < cacheInterval(cache)) {
       cb(isNewer(cache.latest, VERSION) ? cache.latest : null);
       return;
     }
@@ -62,6 +71,9 @@ var DCUpdate = (function () {
     VERSION: VERSION,
     RELEASES_PAGE: RELEASES_PAGE,
     CHECK_KEY: CHECK_KEY,
+    CHECK_INTERVAL_MS: CHECK_INTERVAL_MS,
+    UPDATE_AVAILABLE_CHECK_INTERVAL_MS: UPDATE_AVAILABLE_CHECK_INTERVAL_MS,
+    NO_UPDATE_CHECK_INTERVAL_MS: NO_UPDATE_CHECK_INTERVAL_MS,
     parseVersion: parseVersion,
     isNewer: isNewer,
     check: check

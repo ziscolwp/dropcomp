@@ -147,12 +147,25 @@
     if (nodeAvailable) DCUpdater.open();
     else csInterface.openURLInDefaultBrowser(DCUpdate.RELEASES_PAGE);
   });
-  DCUpdate.check(window.localStorage, Date.now(), function (latest) {
-    if (!latest) return;
+  function showUpdateChip(latest) {
     updateChip.textContent = 'Update ' + String(latest).replace(/^v/, '');
     updateChip.classList.remove('hidden');
     DCUpdater.setLatest(latest);
+  }
+  function checkForUpdates(force) {
+    DCUpdate.check(window.localStorage, Date.now(), function (latest) {
+      if (!latest) {
+        if (force) DCUI.toast('No update found.');
+        return;
+      }
+      showUpdateChip(latest);
+      if (force) DCUI.toast('Update ' + String(latest).replace(/^v/, '') + ' is available.');
+    }, force ? { force: true } : null);
+  }
+  $('check-updates-btn').addEventListener('click', function () {
+    checkForUpdates(true);
   });
+  checkForUpdates(false);
   DCUpdater.onBoot();
 
   // host modules must load before any relink/assets-dependent call

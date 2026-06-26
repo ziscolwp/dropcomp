@@ -5,6 +5,7 @@ const path = require('node:path');
 
 const panelHtml = fs.readFileSync(path.join(__dirname, '..', 'panel', 'index.html'), 'utf8');
 const toolsJs = fs.readFileSync(path.join(__dirname, '..', 'panel', 'js', 'tools.js'), 'utf8');
+const mainJs = fs.readFileSync(path.join(__dirname, '..', 'panel', 'js', 'main.js'), 'utf8');
 
 test('Tools tab exposes timing adjustment modes with Amount and Step controls', () => {
   assert.match(panelHtml, /<span class="tool-label">Amount<\/span>/);
@@ -22,4 +23,14 @@ test('Tools tab dispatches timing modes to tlAdjustTiming', () => {
   assert.match(toolsJs, /tool === 'adjust-time'/);
   assert.match(toolsJs, /run\('adjust timing', 'tlAdjustTiming', \[amount, stepFrames, arg\]\)/);
   assert.match(toolsJs, /fn === 'tlSequence' \|\| fn === 'tlAdjustTiming'/);
+});
+
+test('Settings exposes a manual update check button', () => {
+  assert.match(panelHtml, /id="check-updates-btn"/);
+  assert.match(panelHtml, />Check for Updates</);
+});
+
+test('Settings update check bypasses the cached update result', () => {
+  assert.match(mainJs, /check-updates-btn/);
+  assert.match(mainJs, /DCUpdate\.check\(window\.localStorage,\s*Date\.now\(\),[\s\S]*\{\s*force:\s*true\s*\}/);
 });

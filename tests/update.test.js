@@ -104,3 +104,85 @@ test('check uses the cached result inside the throttle window (no network)', () 
   DCUpdate.check(storage, now, (latest) => { got = latest; });
   assert.equal(got, null, 'older cached release must not signal an update');
 });
+
+test('check refreshes a non-newer cached result after the short no-update window', () => {
+  const store = {};
+  const storage = {
+    getItem: (k) => (k in store ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+  };
+  const now = 1000000000000;
+  let constructed = 0;
+  storage.setItem(DCUpdate.CHECK_KEY, JSON.stringify({ ts: now, latest: DCUpdate.VERSION }));
+  global.XMLHttpRequest = function () {
+    constructed++;
+    this.open = () => {};
+    this.send = function () {
+      this.readyState = 4;
+      this.status = 200;
+      this.responseText = JSON.stringify({ tag_name: 'v9.9.9' });
+      this.onreadystatechange();
+    };
+  };
+  try {
+    let got = 'unset';
+    DCUpdate.check(storage, now + (15 * 60 * 1000) - 1, (latest) => { got = latest; });
+    assert.equal(constructed, 0, 'same/current version cache should still throttle inside 15 minutes');
+    assert.equal(got, null);
+
+    DCUpdate.check(storage, now + (15 * 60 * 1000), (latest) => { got = latest; });
+    assert.equal(constructed, 1, 'same/current version cache must refresh after 15 minutes');
+    assert.equal(got, 'v9.9.9');
+  } finally {
+    delete global.XMLHttpRequest;
+  }
+});
+
+test('check keeps a cached newer release for the long update-available window', () => {
+  const store = {};
+  const storage = {
+    getItem: (k) => (k in store ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+  };
+  const now = 1000000000000;
+  storage.setItem(DCUpdate.CHECK_KEY, JSON.stringify({ ts: now, latest: 'v9.9.9' }));
+  global.XMLHttpRequest = function () {
+    throw new Error('network should not be reached for a cached newer release');
+  };
+  try {
+    let got = 'unset';
+    DCUpdate.check(storage, now + (60 * 60 * 1000), (latest) => { got = latest; });
+    assert.equal(got, 'v9.9.9');
+  } finally {
+    delete global.XMLHttpRequest;
+  }
+});
+
+test('check can bypass the cache for a manual refresh', () => {
+  const store = {};
+  const storage = {
+    getItem: (k) => (k in store ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+  };
+  const now = 1000000000000;
+  let constructed = 0;
+  storage.setItem(DCUpdate.CHECK_KEY, JSON.stringify({ ts: now, latest: DCUpdate.VERSION }));
+  global.XMLHttpRequest = function () {
+    constructed++;
+    this.open = () => {};
+    this.send = function () {
+      this.readyState = 4;
+      this.status = 200;
+      this.responseText = JSON.stringify({ tag_name: 'v9.9.9' });
+      this.onreadystatechange();
+    };
+  };
+  try {
+    let got = 'unset';
+    DCUpdate.check(storage, now + 1000, (latest) => { got = latest; }, { force: true });
+    assert.equal(constructed, 1);
+    assert.equal(got, 'v9.9.9');
+  } finally {
+    delete global.XMLHttpRequest;
+  }
+});
