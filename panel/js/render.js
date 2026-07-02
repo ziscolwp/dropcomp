@@ -20,11 +20,13 @@ var DCRender = (function () {
     return b;
   }
 
-  // On a broken thumbnail, swap in the photo-off glyph instead of vanishing.
-  function showThumbFallback(img) {
+  // On a broken thumbnail, swap in a placeholder instead of vanishing: the
+  // asset's extension badge when we know it, else the photo-off glyph.
+  function showThumbFallback(img, ext) {
     if (!img.parentNode) return;
     var ph = el('div', 'thumb-placeholder');
-    ph.innerHTML = ICONS.photoOff;
+    if (ext) ph.appendChild(el('span', 'ext-badge', String(ext).toUpperCase()));
+    else ph.innerHTML = ICONS.photoOff;
     img.parentNode.replaceChild(ph, img);
   }
 
@@ -91,7 +93,9 @@ var DCRender = (function () {
     return card;
   }
 
-  var RENDERABLE_EXTS = { png: 1, jpg: 1, jpeg: 1, gif: 1, bmp: 1 };
+  // Formats the embedded Chromium can paint in an <img>; everything else gets
+  // an extension badge. svg renders natively (vector, so it stays crisp).
+  var RENDERABLE_EXTS = { png: 1, jpg: 1, jpeg: 1, gif: 1, bmp: 1, svg: 1 };
 
   function buildAssetCard(asset, usage, prefs) {
     var card = el('article', 'card card--asset' + (usage.isFavorite ? ' has-fav' : ''));
@@ -106,7 +110,7 @@ var DCRender = (function () {
       img.alt = '';
       // addedAt changes when the same filename is re-added, busting the stale cache
       img.src = thumbUrl(asset.filePath, asset.addedAt || null);
-      img.onerror = function () { showThumbFallback(img); };
+      img.onerror = function () { showThumbFallback(img, asset.ext); };
       thumbWrap.appendChild(img);
     } else {
       var ph = el('div', 'thumb-placeholder');
@@ -161,7 +165,7 @@ var DCRender = (function () {
       img.alt = '';
       img.src = thumbUrl(isAsset ? item.filePath : item.thumbPath,
         isAsset ? (item.addedAt || null) : bust);
-      img.onerror = function () { showThumbFallback(img); };
+      img.onerror = function () { showThumbFallback(img, isAsset ? item.ext : null); };
       thumbWrap.appendChild(img);
     } else {
       var ph = el('div', 'thumb-placeholder');
