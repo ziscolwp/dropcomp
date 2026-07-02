@@ -60,3 +60,25 @@ test('tool sections have a grouping style', () => {
   assert.ok(m, '.tool-section rule exists');
   assert.match(m[1], /flex-direction:\s*column/);
 });
+
+// feat-013 follow-up: the four timing modes were bare 16px glyphs behind
+// tooltips. They are now labeled buttons, and the remaining icon row gets a
+// larger, clearer hit target.
+test('timing modes are labeled buttons, not bare glyphs', () => {
+  const tools = toolsSection(read('panel/index.html'));
+  const timing = tools.slice(tools.indexOf('>timing<'), tools.indexOf('align &amp; distribute'));
+  for (const label of ['Playhead', 'Sequence', 'Reverse', 'Random']) {
+    assert.match(timing, new RegExp('<span>' + label + '</span>'), label + ' has a visible label');
+  }
+  assert.doesNotMatch(timing, /class="tool-icon"/, 'no unlabeled icon buttons remain in the timing section');
+  assert.equal((timing.match(/class="tool-btn"/g) || []).length, 4, 'all four modes use the labeled button style');
+});
+
+test('align/distribute icons have larger, clearer targets', () => {
+  const css = read('panel/css/style.css');
+  const btn = /\.tool-icon\s*\{([^}]*)\}/.exec(css);
+  assert.ok(btn, '.tool-icon rule exists');
+  assert.match(btn[1], /height:\s*3[4-9]px/, 'taller touch target');
+  const svg = /\.tool-icon svg\s*\{([^}]*)\}/.exec(css);
+  assert.match(svg[1], /width:\s*18px/, 'larger glyph');
+});

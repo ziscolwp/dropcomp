@@ -376,11 +376,12 @@ body {
 .stepper-btn:hover { background: var(--bg-hover); color: var(--gold); }
 .stepper-btn:active { background: var(--gold-bg); }
 /* de-golded: neutral icon buttons; gold reserved for hover/active/CTA */
-.time-mode-icons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
-.tool-icons { display: flex; align-items: center; gap: 5px; }
-.tool-icon { flex: 1; height: 30px; background: var(--bg-inset); border: 1px solid var(--border); border-radius: 6px; color: var(--text-mid); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
-.tool-icon svg { width: 16px; height: 16px; }
-.tool-icon:hover { background: var(--bg-hover); border-color: var(--border-strong); color: var(--text); }
+/* timing modes are 2x2 labeled buttons (.tool-grid-2); icon size follows .tool-btn */
+.time-mode-btns .tool-btn { padding: 8px 6px; }
+.tool-icons { display: flex; align-items: center; gap: 6px; }
+.tool-icon { flex: 1; height: 34px; background: var(--bg-inset); border: 1px solid var(--border); border-radius: 6px; color: var(--text-mid); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+.tool-icon svg { width: 18px; height: 18px; }
+.tool-icon:hover { background: var(--bg-hover); border-color: var(--border-strong); color: var(--gold); }
 .tool-icon:active { background: var(--gold-bg); border-color: var(--gold-dim); color: var(--gold); }
 .tool-divider { width: 1px; height: 18px; background: var(--border-strong); flex: 0 0 auto; margin: 0 1px; }
 .tool-group { display: flex; flex-direction: column; }
