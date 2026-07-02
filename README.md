@@ -5,18 +5,24 @@ with thumbnails, categories, favorites, and one-click import.
 
 ## Install
 
-- **macOS (recommended)** — paste this in Terminal (⌘-Space, type "Terminal"):
+- **Recommended (Mac & Windows)** — download `DropComp-<version>.zxp` from the
+  [latest release](https://github.com/ziscolwp/dropcomp/releases/latest) and
+  open it with the free [aescripts ZXP Installer](https://aescripts.com/learn/zxp-installer/)
+  (drag the file in, done). No Terminal, no security prompts. After the first
+  install, updates arrive through the panel's built-in Update button.
+- macOS alternative — paste this in Terminal (⌘-Space, type "Terminal"):
 
   ```
   curl -fsSL https://raw.githubusercontent.com/ziscolwp/dropcomp/main/install.sh | bash
   ```
 
-  It downloads the latest release, backs up any previous install, and enables
-  the panel. Gatekeeper blocks the double-clickable `install.command` for
-  unsigned developers, so the Terminal one-liner is the reliable path; if you
-  downloaded the zip anyway, `bash install.command` from Terminal also works.
-- Windows: double-click `install.bat` (backup, copy, enable unsigned panels)
+  (Gatekeeper blocks the double-clickable `install.command` for unsigned
+  developers; from Terminal, `bash install.command` inside the zip also works.)
+- Windows alternative: download the release zip and double-click `install.bat`
 - Development (macOS): run `./dev-link.command` (symlinks this repo as the extension)
+
+Release builds: `./scripts/build-dist.sh` (zip) and `./scripts/build-zxp.sh`
+(self-signed .zxp for the ZXP Installer) — upload both as release assets.
 
 Restart After Effects, then Window > Extensions > DropComp. Updating = run the
 installer again; your library folder, favorites, and settings are untouched.

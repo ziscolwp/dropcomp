@@ -170,6 +170,8 @@ var DCUpdater = (function () {
 
   function onBoot() {
     if (!_cfg || !_cfg.nodeAvailable || !_paths) return;
+    // keep the panel loadable after self-updates break the ZXP signature
+    try { DCUpdaterFS.ensureDebugMode(); } catch (eDbg) {}
     try {
       const st = DCUpdaterFS.readStatus(_paths.statusFile);
       if (st && st.state === 'ok') {

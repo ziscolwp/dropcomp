@@ -267,6 +267,27 @@ var DCUpdaterFS = (function () {
     return Promise.resolve();
   }
 
+  // ZXP-installed panels load because their signature is valid - but every
+  // self-update rewrites files and breaks that signature. Re-asserting
+  // PlayerDebugMode (user-level, no elevation) on each boot keeps the panel
+  // loading forever regardless of how it was first installed.
+  function ensureDebugMode(platform, _cp) {
+    const cp = _cp || require('child_process');
+    const plat = platform || process.platform;
+    let ok = false;
+    for (let v = 8; v <= 12; v++) {
+      try {
+        if (plat === 'darwin') {
+          cp.execFileSync('/usr/bin/defaults', ['write', 'com.adobe.CSXS.' + v, 'PlayerDebugMode', '1']);
+        } else if (plat === 'win32') {
+          cp.execFileSync('reg.exe', ['add', 'HKCU\\SOFTWARE\\Adobe\\CSXS.' + v, '/v', 'PlayerDebugMode', '/t', 'REG_SZ', '/d', '1', '/f']);
+        }
+        ok = true;
+      } catch (e) { /* per-version failures are fine; any success is enough */ }
+    }
+    return ok;
+  }
+
   function readStatus(statusFile, _fs) {
     const fs = _fs || require('fs');
     try { return JSON.parse(fs.readFileSync(statusFile, 'utf8')); } catch (e) { return null; }
@@ -316,6 +337,7 @@ var DCUpdaterFS = (function () {
     applyMacSwap: applyMacSwap,
     buildWindowsApplyScript: buildWindowsApplyScript,
     spawnWindowsHelper: spawnWindowsHelper,
+    ensureDebugMode: ensureDebugMode,
     writeStatus: writeStatus,
     readStatus: readStatus,
     cleanupStale: cleanupStale
