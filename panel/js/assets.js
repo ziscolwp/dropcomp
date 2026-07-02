@@ -198,6 +198,18 @@ var DCAssets = (function () {
     });
   }
 
+  // Adds the original image file(s) behind the current AE selection. The host
+  // resolves selection -> source paths; the rest reuses the Add Assets flow.
+  function addSelectedFlow() {
+    DCBridge.call('getSelectedFootagePaths', [], function (result) {
+      var r = DCBridge.parseJson(result);
+      if (!r) { DCUI.toast('Error: unexpected response.', true); return; }
+      if (!r.ok) { DCUI.toast(r.error, true, 6000); return; }
+      pendingPaths = r.paths;
+      DCUI.openCategoryModal('addAssets', 'Add Selected Image', categories());
+    });
+  }
+
   function confirmCategory(categoryName) {
     if (!pendingPaths || !pendingPaths.length) { DCUI.closeModal(els().categoryModal); return; }
     if (!DCBridge.acquire('adding assets')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return; }
@@ -354,7 +366,8 @@ var DCAssets = (function () {
   return {
     init: init, load: load, refresh: refresh, rerender: rerender,
     ensureLoaded: ensureLoaded, resetLoaded: resetLoaded,
-    addFlow: addFlow, addDroppedFiles: addDroppedFiles, attachDropTarget: attachDropTarget,
+    addFlow: addFlow, addSelectedFlow: addSelectedFlow,
+    addDroppedFiles: addDroppedFiles, attachDropTarget: attachDropTarget,
     confirmCategory: confirmCategory,
     importItem: importItem, confirmRename: confirmRename, confirmDelete: confirmDelete,
     toggleSection: toggleSection, onCardAction: onCardAction, clearPending: clearPending

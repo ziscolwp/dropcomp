@@ -28,6 +28,7 @@
     addCompBtn: $('add-comp-btn'),
     addAepBtn: $('add-aep-btn'),
     addAssetsBtn: $('add-assets-btn'),
+    addSelectedImageBtn: $('add-selected-image-btn'),
     thumbSlider: $('thumb-slider'),
     viewSwitch: $('view-switch'),
     settingsBtn: $('settings-btn'),
@@ -79,6 +80,7 @@
   els.addAepBtn.addEventListener('click', DCLibrary.addAepFlow);
   if (els.addAssetsBtn && typeof DCAssets !== 'undefined') {
     els.addAssetsBtn.addEventListener('click', DCAssets.addFlow);
+    if (els.addSelectedImageBtn) els.addSelectedImageBtn.addEventListener('click', DCAssets.addSelectedFlow);
     DCAssets.attachDropTarget(els.app);
   }
   DCLibrary.attachMoveTarget(els.library);

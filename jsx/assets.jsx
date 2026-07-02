@@ -278,6 +278,46 @@ function importAsset(filePath) {
     }
 }
 
+// Source file paths behind the current AE selection: selected comp layers
+// first, else the Project-panel selection. Filtered to supported image files
+// so the panel can pipe them straight into addAssetFiles.
+function getSelectedFootagePaths() {
+    try {
+        if (!app.project) return jerr('Open a project first.');
+        var items = [];
+        var comp = app.project.activeItem;
+        var sel = (comp && comp instanceof CompItem) ? comp.selectedLayers : null;
+        if (sel && sel.length) {
+            for (var i = 0; i < sel.length; i++) {
+                if (sel[i].source && sel[i].source instanceof FootageItem) items.push(sel[i].source);
+            }
+        } else if (app.project.selection && app.project.selection.length) {
+            var psel = app.project.selection;
+            for (var j = 0; j < psel.length; j++) {
+                if (psel[j] instanceof FootageItem) items.push(psel[j]);
+            }
+        } else {
+            return jerr('Select an image layer in a comp or image footage in the Project panel first.');
+        }
+        var paths = [];
+        var seen = {};
+        for (var k = 0; k < items.length; k++) {
+            var srcFile = (items[k].mainSource && items[k].mainSource.file) ? items[k].mainSource.file : null;
+            if (!srcFile || !srcFile.exists) continue;
+            if (!isSupportedAsset(decodeURI(srcFile.name))) continue;
+            if (seen[srcFile.fsName]) continue;
+            seen[srcFile.fsName] = 1;
+            paths.push('"' + jsonEscape(srcFile.fsName) + '"');
+        }
+        if (paths.length === 0) {
+            return jerr('No supported image files in the selection (png, jpg, gif, bmp, tif, tga, psd, ai, eps, svg).');
+        }
+        return '{"ok":true,"paths":[' + paths.join(',') + ']}';
+    } catch (e) {
+        return jerr(e.toString());
+    }
+}
+
 // ---- exports (see header comment) ----
 $.global.assetExt = assetExt;
 $.global.isSupportedAsset = isSupportedAsset;
@@ -293,6 +333,7 @@ $.global.uniqueAssetTarget = uniqueAssetTarget;
 $.global.addAssetFiles = addAssetFiles;
 $.global.renameAsset = renameAsset;
 $.global.deleteAsset = deleteAsset;
+$.global.getSelectedFootagePaths = getSelectedFootagePaths;
 $.global.findProjectFootageByPath = findProjectFootageByPath;
 $.global.findOrCreateAssetsBin = findOrCreateAssetsBin;
 $.global.importAsset = importAsset;
