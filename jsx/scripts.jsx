@@ -62,14 +62,17 @@ $.global.scErr = scErr;
 
 // Run an external script file by absolute path. No undo group is forced - user
 // scripts manage their own undo; wrapping them risks conflicting groups.
-function scRunFile(path) {
+function scRunFile(path, allowWindow) {
     try {
         var f = new File(path);
         if (!f.exists) return jerr('Script file not found:\n' + path);
-        // the panel cannot read file scripts, so the window guard lives here
-        try {
-            if (scDetectsWindow(readTextFile(f))) return scWindowRefusal();
-        } catch (eW) {}
+        // the panel cannot read file scripts, so the window guard lives here;
+        // allowWindow is the panel's explicit "Run Anyway" consent
+        if (!allowWindow) {
+            try {
+                if (scDetectsWindow(readTextFile(f))) return scWindowRefusal();
+            } catch (eW) {}
+        }
         $.evalFile(f);
         return '{"ok":true}';
     } catch (e) { return scErr(e); }
@@ -78,13 +81,13 @@ $.global.scRunFile = scRunFile;
 
 // Run a pasted snippet by writing it to a temp .jsx and evalFile-ing that. The
 // temp file is always cleaned up. Folder.temp is a real path (not /tmp symlink).
-function scRunSnippet(body) {
+function scRunSnippet(body, allowWindow) {
     var tmp = null;
     try {
         if (body === null || body === undefined || String(body) === '') {
             return jerr('Snippet is empty.');
         }
-        if (scDetectsWindow(body)) return scWindowRefusal();
+        if (!allowWindow && scDetectsWindow(body)) return scWindowRefusal();
         SC_TMP_SEQ = SC_TMP_SEQ + 1;
         tmp = new File(Folder.temp.fsName + '/dropcomp_run_' + (new Date().getTime()) + '_' + SC_TMP_SEQ + '.jsx');
         if (!writeTextFile(tmp, String(body))) return jerr('Could not write a temporary script file.');
