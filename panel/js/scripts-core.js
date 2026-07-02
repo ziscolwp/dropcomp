@@ -96,9 +96,18 @@ var DCScriptsCore = (function () {
     return out;
   }
 
+  // Heuristic: does this source build a ScriptUI window? The Window constructor
+  // always takes a type/resource string first, so require a quote after '('.
+  // (Mirrored host-side in jsx/scripts.jsx scDetectsWindow for file scripts.)
+  function detectsWindow(body) {
+    if (!body) return false;
+    return /new\s+Window\s*\(\s*["']/.test(String(body));
+  }
+
   function runMode(entry) {
     if (entry && entry.params && entry.params.length) return 'params';
     if (entry && entry.opensWindow) return 'windowNotice';
+    if (entry && entry.source === 'snippet' && detectsWindow(entry.body)) return 'windowNotice';
     return 'direct';
   }
 
@@ -248,6 +257,7 @@ var DCScriptsCore = (function () {
     upsert: upsert,
     removeById: removeById,
     runMode: runMode,
+    detectsWindow: detectsWindow,
     getUsage: getUsage,
     filterScripts: filterScripts,
     sortScripts: sortScripts,

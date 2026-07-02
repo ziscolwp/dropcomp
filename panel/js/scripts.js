@@ -255,6 +255,9 @@ var DCScripts = (function () {
       DCBridge.release();
       var r = DCBridge.parseJson(result);
       if (r && r.ok) { bumpUsage(s.uniqueId); DCUI.toast(okMsg(s), false); render(); }
+      // the host refused a ScriptUI window script (file scripts are only
+      // readable host-side): show the same in-panel notice as opensWindow
+      else if (r && r.windowScript && row) toggleWindowNotice(row, s);
       else DCUI.toast((r && r.error) || result || 'Script failed.', true);
     });
   }
