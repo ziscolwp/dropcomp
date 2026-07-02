@@ -3,11 +3,27 @@
 // Reuses jerr(), jsonEscape(), readTextFile(), writeTextFile() (host-global).
 //
 // Runs the user's own custom scripts on demand: external .jsx/.jsxbin files by
-// reference, or pasted snippets via a temp file. ScriptUI 'palette' scripts run
-// this way float as windows (verified), so the user keeps them undocked.
+// reference, or pasted snippets via a temp file. ScriptUI window scripts are
+// refused up front (windowScript flag) so the panel can show its in-panel
+// notice instead of a surprise floating window; DC_PARAMS runs stay open as
+// the supported in-panel path.
 
 var SC_REGISTRY_NAME = '.dropcomp_scripts.json';
 var SC_TMP_SEQ = 0;
+
+// Mirrors DCScriptsCore.detectsWindow (panel). The Window constructor takes a
+// type/resource string first, so require a quote right after the paren.
+// .jsxbin sources are compiled and never match - they run unguarded.
+function scDetectsWindow(src) {
+    if (!src) return false;
+    return /new\s+Window\s*\(\s*["']/.test(String(src));
+}
+$.global.scDetectsWindow = scDetectsWindow;
+
+function scWindowRefusal() {
+    return '{"ok":false,"windowScript":true,"error":"This script opens a separate ScriptUI window, which DropComp cannot embed. Add Inputs and read DC_PARAMS to run it as an in-panel form."}';
+}
+$.global.scWindowRefusal = scWindowRefusal;
 
 function scRegistryFile(libPath) {
     return new File(libPath + '/' + SC_REGISTRY_NAME);
@@ -50,6 +66,10 @@ function scRunFile(path) {
     try {
         var f = new File(path);
         if (!f.exists) return jerr('Script file not found:\n' + path);
+        // the panel cannot read file scripts, so the window guard lives here
+        try {
+            if (scDetectsWindow(readTextFile(f))) return scWindowRefusal();
+        } catch (eW) {}
         $.evalFile(f);
         return '{"ok":true}';
     } catch (e) { return scErr(e); }
@@ -64,6 +84,7 @@ function scRunSnippet(body) {
         if (body === null || body === undefined || String(body) === '') {
             return jerr('Snippet is empty.');
         }
+        if (scDetectsWindow(body)) return scWindowRefusal();
         SC_TMP_SEQ = SC_TMP_SEQ + 1;
         tmp = new File(Folder.temp.fsName + '/dropcomp_run_' + (new Date().getTime()) + '_' + SC_TMP_SEQ + '.jsx');
         if (!writeTextFile(tmp, String(body))) return jerr('Could not write a temporary script file.');
