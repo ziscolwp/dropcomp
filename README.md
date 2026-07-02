@@ -5,8 +5,17 @@ with thumbnails, categories, favorites, and one-click import.
 
 ## Install
 
-- macOS: run `./install.command` (copies files; backs up the previous version first)
-- Windows: double-click `install.bat` (same thing: backup, copy, enable unsigned panels)
+- **macOS (recommended)** — paste this in Terminal (⌘-Space, type "Terminal"):
+
+  ```
+  curl -fsSL https://raw.githubusercontent.com/ziscolwp/dropcomp/main/install.sh | bash
+  ```
+
+  It downloads the latest release, backs up any previous install, and enables
+  the panel. Gatekeeper blocks the double-clickable `install.command` for
+  unsigned developers, so the Terminal one-liner is the reliable path; if you
+  downloaded the zip anyway, `bash install.command` from Terminal also works.
+- Windows: double-click `install.bat` (backup, copy, enable unsigned panels)
 - Development (macOS): run `./dev-link.command` (symlinks this repo as the extension)
 
 Restart After Effects, then Window > Extensions > DropComp. Updating = run the
