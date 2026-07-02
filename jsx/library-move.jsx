@@ -70,6 +70,47 @@ function moveStashedComp(libraryPath, category, uniqueId, targetCategory) {
     }
 }
 
+// Rename a library category folder (Satyjeet's "rename the B-roll folder"
+// request). Comp uniqueIds are category-independent folder names, so usage
+// metadata survives; the index is rebuilt from disk and project footage is
+// relinked from the old path, mirroring moveStashedComp.
+function renameCategory(libraryPath, category, newName) {
+    try {
+        category = String(category || '');
+        newName = String(newName || '').replace(/^\s+|\s+$/g, '');
+        if (!category) return jerr('Missing folder name.');
+        if (!newName) return jerr('Name cannot be empty.');
+        if (newName.length > 200) return jerr('Name is too long (max 200 characters).');
+        if (isInvalidMovePathPart(newName)) return jerr('Name contains invalid characters (< > : " / \\ | ? *).');
+        if (/^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i.test(newName)) return jerr('Name uses a reserved system name.');
+        if (isReservedCategory(category) || isReservedCategory(newName)) {
+            return jerr('"Assets" is reserved for the Assets tab.');
+        }
+        if (newName === category) return '{"ok":true,"noop":true}';
+
+        var oldFolder = new Folder(libraryPath + '/' + category);
+        if (!oldFolder.exists) return jerr('Folder not found on disk.');
+        // allow case-only renames on case-insensitive filesystems
+        if (newName.toLowerCase() !== category.toLowerCase() &&
+            new Folder(libraryPath + '/' + newName).exists) {
+            return jerr('A folder with that name already exists.');
+        }
+
+        var oldPath = oldFolder.fsName;
+        if (!oldFolder.rename(newName)) return jerr('Could not rename the folder on disk.');
+        var newPath = new Folder(libraryPath + '/' + newName).fsName;
+
+        rebuildLibraryIndex(libraryPath);
+        if (ensureHostModules()) {
+            relinkProjectFootage(oldPath, newPath);
+        }
+        return '{"ok":true,"category":"' + jsonEscape(newName) + '"}';
+    } catch (e) {
+        return jerr(e.toString());
+    }
+}
+
 $.global.copyFolderRecursive = copyFolderRecursive;
 $.global.isInvalidMovePathPart = isInvalidMovePathPart;
 $.global.moveStashedComp = moveStashedComp;
+$.global.renameCategory = renameCategory;

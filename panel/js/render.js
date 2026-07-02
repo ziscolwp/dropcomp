@@ -205,6 +205,16 @@ var DCRender = (function () {
     header.innerHTML = ICONS.chevron;
     header.appendChild(el('span', 'category-name', group.category));
     header.appendChild(el('span', 'category-count', String(group.items.length)));
+    if (kind !== 'asset') {
+      // library folders are plain disk folders and can be renamed in place;
+      // asset categories keep index-coupled ids, so they stay rename-free here
+      var renameBtn = el('button', 'category-rename');
+      renameBtn.dataset.action = 'renameCategory';
+      renameBtn.title = 'Rename folder';
+      renameBtn.setAttribute('aria-label', 'Rename folder "' + group.category + '"');
+      renameBtn.innerHTML = ICONS.pencil;
+      header.appendChild(renameBtn);
+    }
     section.appendChild(header);
 
     var isList = viewMode === 'list';

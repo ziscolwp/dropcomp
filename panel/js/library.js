@@ -7,6 +7,7 @@ var DCLibrary = (function () {
   var busts = {};
   var pendingAepPath = null;
   var renameTarget = null;
+  var renameCategoryTarget = null;
   var deleteTarget = null;
   var dragCard = null;
   var loadedOnce = false;
@@ -175,11 +176,52 @@ var DCLibrary = (function () {
   function renameFlow(uniqueId, category) {
     var comp = findComp(uniqueId);
     if (!comp) return;
+    renameCategoryTarget = null;
     renameTarget = { uniqueId: uniqueId, category: category, oldName: comp.name };
     DCUI.openRenameModal('library', comp.name);
   }
 
+  // Rename a whole category folder (reuses the shared rename modal).
+  function renameCategoryFlow(category) {
+    if (!category) return;
+    renameTarget = null;
+    renameCategoryTarget = category;
+    DCUI.openRenameModal('library', category);
+  }
+
+  function confirmCategoryRename() {
+    var oldName = renameCategoryTarget;
+    var newName = els().newNameInput.value.trim();
+    if (!newName || newName === oldName) {
+      DCUI.closeModal(els().renameModal);
+      renameCategoryTarget = null;
+      return;
+    }
+    var v = DCValidate.validateName(newName, 'Folder name');
+    if (!v.valid) { DCUI.toast(v.error, true); return; }
+    if (!DCBridge.acquire('renaming folder')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return; }
+    DCUI.closeModal(els().renameModal);
+    DCUI.spinner(true);
+    renameCategoryTarget = null;
+    DCBridge.call('renameCategory', [libPath(), oldName, v.name], function (result) {
+      DCUI.spinner(false);
+      DCBridge.release();
+      var r = DCBridge.parseJson(result);
+      if (r && r.ok) {
+        // keep the section's collapsed state under its new name
+        var prefs = DCShell.getPrefs();
+        var ci = prefs.collapsed.indexOf(oldName);
+        if (ci !== -1) { prefs.collapsed.splice(ci, 1, v.name); DCShell.persistPrefs(); }
+        DCUI.toast('Folder renamed to "' + v.name + '".', false);
+        load();
+      } else {
+        DCUI.toast((r && r.error) || result, true);
+      }
+    });
+  }
+
   function confirmRename() {
+    if (renameCategoryTarget) { confirmCategoryRename(); return; }
     if (!renameTarget) return;
     var newName = els().newNameInput.value.trim();
     if (!newName || newName === renameTarget.oldName) {
@@ -419,6 +461,7 @@ var DCLibrary = (function () {
 
   function clearPending() {
     renameTarget = null;
+    renameCategoryTarget = null;
     deleteTarget = null;
     dragCard = null;
     clearAllDropTargets();
@@ -430,6 +473,7 @@ var DCLibrary = (function () {
     attachMoveTarget: attachMoveTarget, moveToCategory: moveToCategory,
     stashFlow: stashFlow, addAepFlow: addAepFlow, confirmCategory: confirmCategory,
     importItem: importItem, confirmRename: confirmRename, confirmDelete: confirmDelete,
+    renameCategoryFlow: renameCategoryFlow,
     relinkMissing: relinkMissing, toggleSection: toggleSection,
     onCardAction: onCardAction, clearPending: clearPending
   };

@@ -228,6 +228,8 @@ var DCShell = (function () {
   }
   function onCardDblClick(uniqueId) { activeModule().importItem(uniqueId); }
   function toggleSection(category) { activeModule().toggleSection(category); }
+  // the rename affordance only renders on Library section headers
+  function renameCategory(category) { DCLibrary.renameCategoryFlow(category); }
 
   return {
     init: init, boot: boot, verifyAndLoad: verifyAndLoad,
@@ -239,6 +241,7 @@ var DCShell = (function () {
     closeAllModals: closeAllModals,
     onSearch: onSearch, onSortChange: onSortChange, onFavoritesToggle: onFavoritesToggle,
     onDisplayChange: onDisplayChange, onSlider: onSlider, onViewChange: onViewChange,
-    onCardAction: onCardAction, onCardDblClick: onCardDblClick, toggleSection: toggleSection
+    onCardAction: onCardAction, onCardDblClick: onCardDblClick, toggleSection: toggleSection,
+    renameCategory: renameCategory
   };
 }());

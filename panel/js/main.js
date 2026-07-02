@@ -116,6 +116,10 @@
       DCShell.toggleSection(actionEl.closest('.category').dataset.category);
       return;
     }
+    if (action === 'renameCategory') {
+      DCShell.renameCategory(actionEl.closest('.category').dataset.category);
+      return;
+    }
     var card = actionEl.closest('.card');
     if (!card) return;
     DCShell.onCardAction(action, card.dataset.uniqueId, card.dataset.category);
