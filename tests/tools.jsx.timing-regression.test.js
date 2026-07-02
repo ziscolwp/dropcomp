@@ -157,6 +157,10 @@ function makeKeyProp(initialKeys, options = {}) {
       setTemporalEaseAtKey(index, inEase, outEase) {
         key(index).inEase = clone(inEase);
         key(index).outEase = clone(outEase);
+        if (options.easeMutatesInterpolation) {
+          key(index).inType = 'BEZIER';
+          key(index).outType = 'BEZIER';
+        }
       },
       keyTemporalAutoBezier(index) {
         return key(index).temporalAuto;
@@ -284,6 +288,36 @@ test('tlSetKeyTimes restores explicit interpolation and ease after auto-bezier f
         inEase: [{ speed: 22, influence: 30 }],
         outEase: [{ speed: 23, influence: 35 }],
       },
+    ]
+  );
+});
+
+// Real AE converts a key to BEZIER whenever setTemporalEaseAtKey is called, so
+// restoring ease AFTER the interpolation type turned every sequenced LINEAR
+// key into bezier (bug-014). The interpolation type must be restored last.
+test('tlSetKeyTimes keeps LINEAR keys linear when ease restore converts to bezier', () => {
+  const keyProp = makeKeyProp(
+    [
+      // AE reports temporal ease values even on LINEAR/HOLD keys, so the
+      // restore path always calls setTemporalEaseAtKey
+      { time: 1, value: [10], inType: 'LINEAR', outType: 'LINEAR', inEase: [{ speed: 10, influence: 16.7 }], outEase: [{ speed: 10, influence: 16.7 }], selected: true },
+      { time: 2, value: [20], inType: 'LINEAR', outType: 'LINEAR', inEase: [{ speed: 10, influence: 16.7 }], outEase: [{ speed: 10, influence: 16.7 }], selected: true },
+      { time: 3, value: [30], inType: 'HOLD', outType: 'HOLD', inEase: [{ speed: 0, influence: 16.7 }], outEase: [{ speed: 0, influence: 16.7 }], selected: true },
+    ],
+    { easeMutatesInterpolation: true }
+  );
+  const comp = makeComp({ frameDuration: 0.1, selectedProperties: [keyProp.prop] });
+  const tools = loadTools(comp);
+
+  const result = JSON.parse(tools.tlAdjustTiming('1', '5', 'sequence'));
+
+  assert.equal(result.target, 'keys');
+  assert.deepEqual(
+    keyProp.snapshot().map((k) => ({ time: k.time, inType: k.inType, outType: k.outType })),
+    [
+      { time: 1, inType: 'LINEAR', outType: 'LINEAR' },
+      { time: 2.5, inType: 'LINEAR', outType: 'LINEAR' },
+      { time: 4, inType: 'HOLD', outType: 'HOLD' },
     ]
   );
 });
