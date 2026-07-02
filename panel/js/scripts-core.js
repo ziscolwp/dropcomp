@@ -237,6 +237,20 @@ var DCScriptsCore = (function () {
       .map(function (cat) { return { category: cat, items: map[cat] }; });
   }
 
+  // Toggle a category in the collapsed-set (returns a new array; used by the
+  // Scripts tab's collapsible section headers).
+  function toggleCollapsed(collapsed, category) {
+    var out = [];
+    var found = false;
+    var list = collapsed || [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] === category) { found = true; continue; }
+      out.push(list[i]);
+    }
+    if (!found) out.push(category);
+    return out;
+  }
+
   function categories(scripts) {
     var seen = {}, out = [];
     for (var i = 0; i < scripts.length; i++) {
@@ -263,6 +277,7 @@ var DCScriptsCore = (function () {
     sortScripts: sortScripts,
     groupByCategory: groupByCategory,
     categories: categories,
+    toggleCollapsed: toggleCollapsed,
     validateParams: validateParams,
     normalizeParams: normalizeParams,
     coerceValue: coerceValue,
