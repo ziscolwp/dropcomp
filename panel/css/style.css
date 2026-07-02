@@ -388,8 +388,19 @@ body {
 #scripts-list { display: flex; flex-direction: column; gap: 12px; }
 
 .script-category { display: flex; flex-direction: column; gap: 6px; }
-.script-cat-header { display: flex; align-items: center; gap: 8px; padding: 2px 2px 0; }
+/* sticky: the current category stays readable while scrolling a long list */
+.script-cat-header {
+  display: flex; align-items: center; gap: 8px; padding: 4px 2px;
+  cursor: pointer;
+  position: sticky; top: 0;
+  z-index: 2;
+  background: var(--bg);
+}
+.script-cat-header .chev { width: 12px; height: 12px; color: var(--text-mid); transition: transform 0.15s ease; }
+.script-category.collapsed .script-cat-header .chev { transform: rotate(-90deg); }
+.script-category.collapsed .script-row { display: none; }
 .script-cat-name { font-size: 11px; color: var(--text-dim); letter-spacing: .05em; text-transform: uppercase; }
+.script-cat-header:hover .script-cat-name { color: var(--text); }
 .script-cat-count { font-size: 11px; color: var(--gold); background: var(--gold-bg); border-radius: 8px; padding: 0 7px; }
 
 .script-row { display: flex; align-items: center; gap: 10px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius); padding: 9px 10px; }

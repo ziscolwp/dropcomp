@@ -5,6 +5,7 @@ var DCScripts = (function () {
   'use strict';
 
   var USAGE_KEY = 'dropcomp_scripts_metadata';
+  var VIEW_KEY = 'dropcomp_scripts_view'; // persisted view state (collapsed categories)
 
   var ICON = DCIcons; // shared icon registry
 
@@ -13,7 +14,19 @@ var DCScripts = (function () {
   var loadFailed = false; // registry exists but couldn't be read - block saves so we never clobber it
   var scripts = [];
   var usageMeta = {};
-  var view = { search: '', sort: 'recent', favoritesOnly: false };
+  var view = { search: '', sort: 'recent', favoritesOnly: false, collapsed: [] };
+
+  function loadViewState() {
+    try {
+      var raw = localStorage.getItem(VIEW_KEY);
+      var parsed = raw ? JSON.parse(raw) : null;
+      if (parsed && parsed.collapsed instanceof Array) view.collapsed = parsed.collapsed;
+    } catch (e) { /* corrupted view state: fall back to everything expanded */ }
+  }
+
+  function saveViewState() {
+    try { localStorage.setItem(VIEW_KEY, JSON.stringify({ collapsed: view.collapsed })); } catch (e) { }
+  }
   var editing = null;
   var pendingDelete = null;
   var els = {};
@@ -78,6 +91,7 @@ var DCScripts = (function () {
     els.list.addEventListener('click', onListClick);
 
     usageMeta = DCState.loadUsageMeta(localStorage, USAGE_KEY);
+    loadViewState();
   }
 
   function load() {
@@ -170,13 +184,25 @@ var DCScripts = (function () {
   }
 
   function buildSection(group) {
-    var section = el('section', 'script-category');
+    var collapsed = view.collapsed.indexOf(group.category) !== -1;
+    var section = el('section', 'script-category' + (collapsed ? ' collapsed' : ''));
+    section.dataset.category = group.category;
     var header = el('div', 'script-cat-header');
+    header.dataset.action = 'toggleCat';
+    header.setAttribute('role', 'button');
+    header.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    header.innerHTML = ICON.chevron;
     header.appendChild(el('span', 'script-cat-name', group.category));
     header.appendChild(el('span', 'script-cat-count', String(group.items.length)));
     section.appendChild(header);
     group.items.forEach(function (s) { section.appendChild(buildRow(s)); });
     return section;
+  }
+
+  function toggleCategory(category) {
+    view.collapsed = DCScriptsCore.toggleCollapsed(view.collapsed, category);
+    saveViewState();
+    render();
   }
 
   function buildRow(s) {
@@ -227,6 +253,11 @@ var DCScripts = (function () {
   function onListClick(e) {
     var actionEl = e.target.closest('[data-action]');
     if (!actionEl) return;
+    if (actionEl.dataset.action === 'toggleCat') {
+      var section = actionEl.closest('.script-category');
+      if (section) toggleCategory(section.dataset.category);
+      return;
+    }
     var row = actionEl.closest('.script-row');
     if (!row) return;
     var s = byId(row.dataset.id);
