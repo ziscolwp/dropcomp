@@ -164,6 +164,22 @@ function tlCreateLayer(kind) {
             var anchor = anchorProp.value;
             if (anchor.length === 3) anchorProp.setValue([50, 50, anchor[2]]);
             else anchorProp.setValue([50, 50]);
+            // Center the null (and with it, its anchor) on the combined bounds
+            // of the selected layers so parenting pivots around their visual
+            // center. Bounds are measured BEFORE parenting; layers with no
+            // measurable bounds (cameras/lights/audio) are skipped, and with
+            // none at all the null stays where AE put it (comp center).
+            var bLeft = 1e9, bTop = 1e9, bRight = -1e9, bBottom = -1e9;
+            for (var t = 0; t < parentTargets.length; t++) {
+                if (!tlMovable(parentTargets[t])) continue;
+                var tb = tlLayerBounds(comp, parentTargets[t]);
+                if (!tb) continue;
+                if (tb.left < bLeft) bLeft = tb.left;
+                if (tb.top < bTop) bTop = tb.top;
+                if (tb.right > bRight) bRight = tb.right;
+                if (tb.bottom > bBottom) bBottom = tb.bottom;
+            }
+            if (bRight >= bLeft) tlWritePos(layer, (bLeft + bRight) / 2, (bTop + bBottom) / 2);
             for (var p = 0; p < parentTargets.length; p++) parentTargets[p].parent = layer;
         } else if (kind === 'adjustment') {
             // white solid matches AE's native adjustment layer; the color is invisible while adjustmentLayer is true
