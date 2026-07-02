@@ -357,7 +357,9 @@ body {
 .tool-btn:hover svg { color: var(--gold); }
 /* lighter icon line weight - 2px reads heavy at these sizes (overrides the inline stroke-width attribute) */
 #tools svg { stroke-width: 1.5; }
-.tool-inset { background: var(--bg-inset); border: 1px solid var(--border); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+.tool-inset { background: var(--bg-inset); border: 1px solid var(--border); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 14px; }
+/* one labeled family per section (timing / align & distribute) */
+.tool-section { display: flex; flex-direction: column; gap: 8px; }
 .tool-seq { align-items: flex-end; gap: 10px; flex-wrap: wrap; }
 .seq-field { display: flex; flex-direction: column; gap: 5px; }
 .seq-field .tool-label { margin-bottom: 0; }
