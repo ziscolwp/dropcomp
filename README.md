@@ -1,4 +1,4 @@
-# DropComp 2.1
+# DropComp 2.7
 
 After Effects CEP panel: a personal library of reusable comps and image assets
 with thumbnails, categories, favorites, and one-click import.
