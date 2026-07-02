@@ -149,8 +149,29 @@ function tlClearKeyTimingCache() {
 }
 $.global.tlClearKeyTimingCache = tlClearKeyTimingCache;
 
+// The cached key session may only bridge consecutive panel presses (AE can
+// drop key/property selection right after our own edit). A stale session must
+// never hijack a later, deliberate layer distribution - so it expires fast.
+var TL_TIMING_SESSION_MS = 15000;
+
+function tlTimingNow() {
+    return new Date().getTime();
+}
+$.global.tlTimingNow = tlTimingNow;
+
+// evalScript calls can hand us a fresh wrapper object for the same comp, so
+// object identity is not a safe comparison - match by the stable item id.
+function tlSameComp(a, b) {
+    if (!a || !b) return false;
+    try {
+        if (typeof a.id !== 'undefined' && typeof b.id !== 'undefined') return a.id === b.id;
+    } catch (e) {}
+    return a === b;
+}
+$.global.tlSameComp = tlSameComp;
+
 function tlRememberKeyTargets(comp, keys) {
-    var cache = { comp: comp, order: [], byIndex: {}, total: keys.total };
+    var cache = { comp: comp, at: tlTimingNow(), order: [], byIndex: {}, total: keys.total };
     var i, j, li, g, pr, saved;
     for (i = 0; i < keys.order.length; i++) {
         li = keys.order[i];
@@ -173,8 +194,13 @@ function tlCachedKeyTargetsForSelection(comp) {
     var selected = {}, i, li;
     if (!cache || !sel || sel.length === 0) return null;
     // AE/CEP can stop reporting selected keys after a panel action; keep the
-    // key-target session alive while the same comp and layer set are active.
-    if (cache.comp && cache.comp !== comp) {
+    // key-target session alive while the same comp and layer set are active -
+    // but only briefly, so selecting the same layers later still means layers.
+    if (typeof cache.at !== 'number' || tlTimingNow() - cache.at > TL_TIMING_SESSION_MS) {
+        tlClearKeyTimingCache();
+        return null;
+    }
+    if (!tlSameComp(cache.comp, comp)) {
         tlClearKeyTimingCache();
         return null;
     }
