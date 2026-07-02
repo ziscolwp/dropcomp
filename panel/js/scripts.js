@@ -293,6 +293,21 @@ var DCScripts = (function () {
     });
   }
 
+  // explicit "Run Anyway" consent: launches the script's own floating window
+  function runForced(s) {
+    if (!DCBridge.acquire('runScript')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return; }
+    var openNote = els.list.querySelector('.script-form');
+    if (openNote) openNote.parentNode.removeChild(openNote);
+    var fn = s.source === 'file' ? 'scRunFile' : 'scRunSnippet';
+    var arg = s.source === 'file' ? s.path : s.body;
+    DCBridge.call(fn, [arg, '1'], function (result) {
+      DCBridge.release();
+      var r = DCBridge.parseJson(result);
+      if (r && r.ok) { bumpUsage(s.uniqueId); DCUI.toast('Opened "' + s.name + '" in its own window.', false); render(); }
+      else DCUI.toast((r && r.error) || result || 'Script failed.', true);
+    });
+  }
+
   function toggleRunForm(row, s) {
     var existing = row.querySelector('.script-form');
     var open = els.list.querySelector('.script-form');
@@ -312,10 +327,12 @@ var DCScripts = (function () {
     if (open) open.parentNode.removeChild(open);
     if (existing) return;
     var wrap = el('div', 'script-form script-window-note');
-    wrap.appendChild(el('div', 'script-window-title', 'Separate AE window blocked'));
-    wrap.appendChild(el('div', 'script-window-copy', '"' + s.name + '" is marked as a ScriptUI panel. DropComp cannot embed that UI; add Inputs and read DC_PARAMS to run it as an in-panel form.'));
+    wrap.appendChild(el('div', 'script-window-title', 'Opens in its own window'));
+    wrap.appendChild(el('div', 'script-window-copy', '"' + s.name + '" builds a ScriptUI window, which cannot be embedded in DropComp. Run it as a floating window, or add Inputs (DC_PARAMS) to turn it into an in-panel form.'));
     var btns = el('div', 'script-form-btns');
-    var edit = el('button', 'btn-gold', 'Edit Inputs'); edit.type = 'button';
+    var runAnyway = el('button', 'btn-gold', 'Run Anyway'); runAnyway.type = 'button';
+    runAnyway.addEventListener('click', function () { runForced(s); });
+    var edit = el('button', 'btn-dark', 'Edit Inputs'); edit.type = 'button';
     edit.addEventListener('click', function () { openEditor(s); });
     var cancel = el('button', 'btn-dark', 'Cancel'); cancel.type = 'button';
     cancel.addEventListener('click', function () {
@@ -324,6 +341,7 @@ var DCScripts = (function () {
     });
     btns.appendChild(cancel);
     btns.appendChild(edit);
+    btns.appendChild(runAnyway);
     wrap.appendChild(btns);
     row.appendChild(wrap);
   }

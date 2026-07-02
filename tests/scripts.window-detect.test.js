@@ -141,3 +141,38 @@ test('the panel turns a host windowScript refusal into the in-panel notice', () 
   assert.match(src, /windowScript/, 'runScript inspects the refusal flag');
   assert.match(src, /windowScript[\s\S]{0,120}toggleWindowNotice/, 'refusal shows the window notice, not a bare toast');
 });
+
+// bug-012 follow-up: blocking with no way through made window scripts feel
+// broken. "Run Anyway" is the explicit consent path.
+test('scRunFile runs a window script when the panel passes Run Anyway consent', () => {
+  const { context, evaled } = createHarness({
+    '/scripts/palette.jsx': '$.global.PALETTE_RAN = true; // var w = new Window("palette");',
+  });
+  // make the file genuinely window-creating
+  context.File('/scripts/palette.jsx').content = 'var w = "x"; $.global.PALETTE_RAN = true; if (false) { new Window("palette"); }';
+
+  const refused = JSON.parse(context.$.global.scRunFile('/scripts/palette.jsx'));
+  assert.equal(refused.windowScript, true, 'still refused without consent');
+
+  const r = JSON.parse(context.$.global.scRunFile('/scripts/palette.jsx', '1'));
+  assert.equal(r.ok, true);
+  assert.equal(context.$.global.PALETTE_RAN, true);
+  assert.equal(evaled.length, 1);
+});
+
+test('scRunSnippet honors Run Anyway consent too', () => {
+  const { context } = createHarness();
+  const body = '$.global.SNIP_RAN = true; if (false) { new Window("dialog"); }';
+  assert.equal(JSON.parse(context.$.global.scRunSnippet(body)).windowScript, true);
+  assert.equal(JSON.parse(context.$.global.scRunSnippet(body, '1')).ok, true);
+  assert.equal(context.$.global.SNIP_RAN, true);
+});
+
+test('the window notice offers Run Anyway', () => {
+  const src = read('panel/js/scripts.js');
+  assert.match(src, /function runForced\(/, 'forced-run helper exists');
+  assert.match(src, /\[arg, '1'\]/, 'consent flag reaches the host');
+  assert.match(src, /'Run Anyway'/, 'button is offered');
+  assert.match(src, /runAnyway\.addEventListener\('click', function \(\) \{ runForced\(s\); \}\)/, 'button runs the script');
+  assert.doesNotMatch(src, /Separate AE window blocked/, 'copy no longer reads as an error');
+});
