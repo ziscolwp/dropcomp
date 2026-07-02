@@ -382,20 +382,19 @@ $.global.tlReset = tlReset;
 function tlMatchCompLength() {
     var comp = tlActiveComp();
     if (!comp) return jerr('Open a composition first.');
+    var sel = comp.selectedLayers;
+    if (!sel || sel.length === 0) return jerr('Select at least one layer.');
     try {
         app.beginUndoGroup('DropComp Match Comp Length');
         var count = 0, compCount = 0, sourceErr = 0, lastErr = '';
         var sources = [];
-        var sel = comp.selectedLayers;
-        if (sel) {
-            for (var s = 0; s < sel.length; s++) {
-                if (sel[s].source && sel[s].source instanceof CompItem) {
-                    var seen = false;
-                    for (var x = 0; x < sources.length; x++) {
-                        if (sources[x] === sel[s].source) seen = true;
-                    }
-                    if (!seen) sources.push(sel[s].source);
+        for (var s = 0; s < sel.length; s++) {
+            if (sel[s].source && sel[s].source instanceof CompItem) {
+                var seen = false;
+                for (var x = 0; x < sources.length; x++) {
+                    if (sources[x] === sel[s].source) seen = true;
                 }
+                if (!seen) sources.push(sel[s].source);
             }
         }
         for (var c = 0; c < sources.length; c++) {
@@ -422,8 +421,8 @@ function tlMatchCompLength() {
                 }
             }
         }
-        for (var i = 1; i <= comp.numLayers; i++) {
-            var layer = comp.layer(i);
+        for (var i = 0; i < sel.length; i++) {
+            var layer = sel[i];
             var wasLocked = false;
             try {
                 wasLocked = layer.locked;
@@ -438,7 +437,7 @@ function tlMatchCompLength() {
         }
         app.endUndoGroup();
         if (sourceErr > 0) return jerr('Could not match precomp duration: ' + lastErr);
-        if (count === 0 && comp.numLayers > 0) return jerr('Could not match comp length: ' + lastErr);
+        if (count === 0) return jerr('Could not match comp length: ' + lastErr);
         return '{"ok":true,"count":' + count + (compCount ? ',"comps":' + compCount : '') + '}';
     } catch (e) {
         try { app.endUndoGroup(); } catch (e2) {}
