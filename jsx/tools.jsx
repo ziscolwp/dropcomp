@@ -205,6 +205,41 @@ function tlCreateLayer(kind) {
 }
 $.global.tlCreateLayer = tlCreateLayer;
 
+// bug-015: a shape group rotates/scales around its OWN transform anchor, which
+// is unrelated to the layer anchor - so anchoring the layer alone left group
+// pivots behind. Align each top-level group's anchor to the same layer-space
+// point, compensating the group position so nothing moves on screen. Exact for
+// unrotated groups (the tool's standing assumption); throws are swallowed so
+// non-shape layers and odd groups pass through untouched.
+function tlAlignShapeGroupAnchors(layer, ax, ay, time) {
+    var vectors = null;
+    try { vectors = layer.property('ADBE Root Vectors Group'); } catch (eV) { return; }
+    if (!vectors || !vectors.numProperties) return;
+    for (var g = 1; g <= vectors.numProperties; g++) {
+        try {
+            var grp = vectors.property(g);
+            if (!grp || grp.matchName !== 'ADBE Vector Group') continue;
+            var gt = grp.property('ADBE Vector Transform Group');
+            if (!gt) continue;
+            var aProp = gt.property('ADBE Vector Anchor');
+            var pProp = gt.property('ADBE Vector Position');
+            if (!aProp || !pProp) continue;
+            var sProp = gt.property('ADBE Vector Scale');
+            var gA = aProp.value, gP = pProp.value;
+            var gS = sProp ? sProp.value : [100, 100];
+            var sx = (gS[0] || 0) / 100, sy = (gS[1] || 0) / 100;
+            if (sx === 0 || sy === 0) continue;
+            // group content point that renders at layer-space [ax, ay]:
+            // layerPoint = groupPos + (contentPoint - groupAnchor) * groupScale
+            var cx = gA[0] + (ax - gP[0]) / sx;
+            var cy = gA[1] + (ay - gP[1]) / sy;
+            tlSetPropertyValue(aProp, [cx, cy], time);
+            tlSetPropertyValue(pProp, [gP[0] + (cx - gA[0]) * sx, gP[1] + (cy - gA[1]) * sy], time);
+        } catch (eG) {}
+    }
+}
+$.global.tlAlignShapeGroupAnchors = tlAlignShapeGroupAnchors;
+
 function tlSetAnchor(fxStr, fyStr) {
     var comp = tlActiveComp();
     if (!comp) return jerr('Open a composition first.');
@@ -235,6 +270,7 @@ function tlSetAnchor(fxStr, fyStr) {
                 var pos = tlReadPos(layer);
                 if (pos.length === 3) tlWritePos(layer, pos[0] + dx, pos[1] + dy, pos[2]);
                 else tlWritePos(layer, pos[0] + dx, pos[1] + dy);
+                tlAlignShapeGroupAnchors(layer, newAX, newAY, time);
                 count++;
             } catch (eL) { lastErr = eL.toString(); }
         }
