@@ -41,7 +41,7 @@ var DCTools = (function () {
     if (fn === 'tlIndependent') return 'Made ' + plural(n, 'layer') + ' unique.' + ((r && r.ignored) ? ' ' + r.ignored + ' ignored.' : '');
     if (fn === 'tlMatchCompLength') {
       var comps = (r && typeof r.comps === 'number') ? r.comps : 0;
-      return 'Matched comp length on ' + plural(n, 'layer') + (comps ? ' across ' + plural(comps, 'precomp') : '') + '.';
+      return 'Matched comp length on ' + plural(n, 'selected layer') + (comps ? ' across ' + plural(comps, 'precomp') : '') + '.';
     }
     return 'Done.';
   }
