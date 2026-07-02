@@ -69,12 +69,15 @@ function tlRestoreKeyframe(prop, index, k) {
     try {
         if (typeof k.temporalAuto !== 'undefined') prop.setTemporalAutoBezierAtKey(index, k.temporalAuto);
     } catch (e1) {}
-    try {
-        if (typeof k.inType !== 'undefined') prop.setInterpolationTypeAtKey(index, k.inType, k.outType);
-    } catch (e2) {}
+    // ease BEFORE interpolation type: AE converts a key to BEZIER whenever
+    // setTemporalEaseAtKey runs, so the type restore must come last or every
+    // sequenced LINEAR/HOLD key silently turns bezier (bug-014)
     try {
         if (typeof k.inEase !== 'undefined') prop.setTemporalEaseAtKey(index, k.inEase, k.outEase);
     } catch (e3) {}
+    try {
+        if (typeof k.inType !== 'undefined') prop.setInterpolationTypeAtKey(index, k.inType, k.outType);
+    } catch (e2) {}
     try {
         if (typeof k.spatialContinuous !== 'undefined') prop.setSpatialContinuousAtKey(index, k.spatialContinuous);
     } catch (e4) {}
