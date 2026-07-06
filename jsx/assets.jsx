@@ -223,6 +223,17 @@ function findOrCreateAssetsBin() {
     return app.project.items.addFolder('Assets [DropComp]');
 }
 
+// Proportionally scale an oversized footage layer down so it fits inside the
+// comp bounds. Only ever scales DOWN - assets that already fit keep 100%.
+function fitLayerToComp(layer, footage, comp) {
+    try {
+        var w = footage.width, h = footage.height;
+        if (!w || !h || (w <= comp.width && h <= comp.height)) return;
+        var pct = Math.min(comp.width / w, comp.height / h) * 100;
+        layer.property('ADBE Transform Group').property('ADBE Scale').setValue([pct, pct]);
+    } catch (eFit) { }
+}
+
 // Text protocol (Success:/Error:) to mirror importComp exactly.
 function importAsset(filePath) {
     var suppressing = false;
@@ -259,6 +270,7 @@ function importAsset(filePath) {
                 if (assetExt(assetName) === 'svg') {
                     try { newLayer.collapseTransformation = true; } catch (eRast) { }
                 }
+                fitLayerToComp(newLayer, footage, activeComp);
                 addedToTimeline = true;
             } catch (eL) {
                 addedToTimeline = false;
@@ -336,4 +348,5 @@ $.global.deleteAsset = deleteAsset;
 $.global.getSelectedFootagePaths = getSelectedFootagePaths;
 $.global.findProjectFootageByPath = findProjectFootageByPath;
 $.global.findOrCreateAssetsBin = findOrCreateAssetsBin;
+$.global.fitLayerToComp = fitLayerToComp;
 $.global.importAsset = importAsset;
