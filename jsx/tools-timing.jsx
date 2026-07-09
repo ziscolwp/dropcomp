@@ -1,3 +1,4 @@
+// TODO: split by concern
 // DropComp Tools timing module (ExtendScript, ES3 only). Loaded after
 // tools.jsx; every function exports to $.global for hostscript verification.
 
@@ -249,6 +250,70 @@ function tlSequenceKeys(keys, step, fd) {
 }
 $.global.tlSequenceKeys = tlSequenceKeys;
 
+// Reverse must not drift the selection earlier in time (that pushed layers
+// off the front of the comp and moved further on every click). It assigns the
+// sequence slots in reverse order, anchored at the group's earliest key time.
+function tlReverseKeys(keys, step, fd) {
+    var unitStep = tlAbs(step) * fd;
+    var i, j, t, g, pr, base, groupFirst, d, deltas, newTimes, sorted, n;
+    if (keys.order.length >= 2) {
+        n = keys.order.length;
+        base = null;
+        for (i = 0; i < n; i++) {
+            g = keys.byIndex[keys.order[i]];
+            for (j = 0; j < g.props.length; j++) {
+                pr = g.props[j];
+                if (base === null || pr.times[0] < base) base = pr.times[0];
+            }
+        }
+        for (i = 0; i < n; i++) {
+            g = keys.byIndex[keys.order[i]];
+            groupFirst = null;
+            for (j = 0; j < g.props.length; j++) {
+                pr = g.props[j];
+                if (groupFirst === null || pr.times[0] < groupFirst) groupFirst = pr.times[0];
+            }
+            d = base + (n - 1 - i) * unitStep - groupFirst;
+            for (j = 0; j < g.props.length; j++) {
+                pr = g.props[j];
+                deltas = [];
+                for (t = 0; t < pr.times.length; t++) deltas.push(d);
+                pr.times = tlApplyKeyDeltas(pr.prop, pr.times, deltas);
+            }
+        }
+        return { count: n, unit: 'layer' };
+    }
+    g = keys.byIndex[keys.order[0]];
+    for (j = 0; j < g.props.length; j++) {
+        pr = g.props[j];
+        n = pr.times.length;
+        base = pr.times[0];
+        newTimes = [];
+        for (t = 0; t < n; t++) newTimes.push(base + (n - 1 - t) * unitStep);
+        tlSetKeyTimes(pr.prop, pr.times, newTimes);
+        // the cache keeps times ascending; the pairwise mapping above is what
+        // reverses the keys
+        sorted = newTimes.slice(0);
+        sorted.sort(function (a, b) { return a - b; });
+        pr.times = sorted;
+    }
+    return { count: keys.total, unit: 'key' };
+}
+$.global.tlReverseKeys = tlReverseKeys;
+
+function tlReverseLayers(sel, step, fd) {
+    var ordered = sel.slice(0), unitStep = tlAbs(step) * fd;
+    var i, base = null, n;
+    ordered.sort(function (a, b) { return a.index - b.index; });
+    n = ordered.length;
+    for (i = 0; i < n; i++) {
+        if (base === null || ordered[i].startTime < base) base = ordered[i].startTime;
+    }
+    for (i = 0; i < n; i++) ordered[i].startTime = base + (n - 1 - i) * unitStep;
+    return { count: n, mode: 'layers' };
+}
+$.global.tlReverseLayers = tlReverseLayers;
+
 function tlAlignKeysToTime(keys, playhead) {
     var i, j, t, g, pr, delta, newTimes;
     for (i = 0; i < keys.order.length; i++) {
@@ -350,7 +415,8 @@ function tlAdjustTiming(amountStr, stepFramesStr, mode) {
             var kr;
             if (mode === 'align') kr = tlAlignKeysToTime(keys, comp.time);
             else if (mode === 'random') kr = tlRandomizeKeys(keys, amount, step, fd);
-            else kr = tlSequenceKeys(keys, mode === 'reverse' ? -tlAbs(step) : step, fd);
+            else if (mode === 'reverse') kr = tlReverseKeys(keys, step, fd);
+            else kr = tlSequenceKeys(keys, step, fd);
             tlRememberKeyTargets(comp, keys);
             app.endUndoGroup();
             return '{"ok":true,"count":' + kr.count + ',"mode":"' + (mode === 'align' || mode === 'random' ? mode : 'keys') + '","target":"keys","unit":"' + kr.unit + '"}';
@@ -366,6 +432,7 @@ function tlAdjustTiming(amountStr, stepFramesStr, mode) {
         var lr;
         if (mode === 'align') lr = tlAlignLayersToTime(sel, comp.time);
         else if (mode === 'random') lr = tlRandomizeLayers(sel, amount, step, fd);
+        else if (mode === 'reverse' && sel.length >= 2) lr = tlReverseLayers(sel, step, fd);
         else lr = tlSequenceLayers(sel, amount, mode === 'reverse' ? -tlAbs(step) : step, fd);
         if (lr.select) $.global.tlSelectOnly(comp, lr.select);
         app.endUndoGroup();
