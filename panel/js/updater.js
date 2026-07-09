@@ -85,7 +85,7 @@ var DCUpdater = (function () {
       progress('staged');
       return { mode: 'win-pending', version: version };
     }
-    await fs.applyMacSwap(ctx.paths.liveDir, stagedRoot);
+    await fs.applySwap(ctx.paths.liveDir, stagedRoot);
     await fs.writeStatus(ctx.paths.statusFile, { state: 'ok', version: version });
     progress('done');
     return { mode: 'mac-applied', version: version };
@@ -105,7 +105,7 @@ var DCUpdater = (function () {
     try {
       const SystemPath = window.SystemPath;
       const extDir = cfg.csInterface.getSystemPath(SystemPath.EXTENSION);
-      _paths = DCUpdaterFS.paths(extDir, process.platform, require('os').homedir(), DCUpdate.VERSION);
+      _paths = DCUpdaterFS.paths(extDir, process.platform, require('os').homedir(), DCUpdate.VERSION, process.env);
       $('update-github-btn').addEventListener('click', function () { cfg.csInterface.openURLInDefaultBrowser(DCUpdate.RELEASES_PAGE); });
       $('update-later-btn').addEventListener('click', close);
       $('update-done-btn').addEventListener('click', close);
@@ -154,7 +154,7 @@ var DCUpdater = (function () {
         $('update-progress').classList.add('hidden');
         $('update-modal-title').textContent = r.mode === 'win-pending' ? 'Update ready' : 'Update complete';
         $('update-notes').textContent = r.mode === 'win-pending'
-          ? 'Quit and reopen After Effects to finish installing — it applies automatically the moment AE closes. Your work and library are safe.'
+          ? 'Quit After Effects and wait about 10 seconds before reopening — the update installs itself right after AE closes. (If AE comes back too soon, it simply finishes the next time the panel opens.) Your work and library are safe.'
           : 'Restart After Effects to finish — you\'ll be on ' + r.version + '. Your work and library are safe.';
         $('update-done-actions').classList.remove('hidden');
       })
@@ -172,17 +172,32 @@ var DCUpdater = (function () {
     if (!_cfg || !_cfg.nodeAvailable || !_paths) return;
     // keep the panel loadable after self-updates break the ZXP signature
     try { DCUpdaterFS.ensureDebugMode(); } catch (eDbg) {}
+    function reportStatus() {
+      try {
+        const st = DCUpdaterFS.readStatus(_paths.statusFile);
+        if (st && st.state === 'ok') {
+          if (window.DCUI) DCUI.toast('Updated to ' + st.version + '.');
+          DCUpdaterFS.writeStatus(_paths.statusFile, { state: 'idle' });
+        } else if (st && st.state === 'fail') {
+          if (window.DCUI) DCUI.toast('Update didn\'t finish — you\'re still on ' + DCUpdate.VERSION + '. Nothing was changed.', true, 6000);
+          DCUpdaterFS.writeStatus(_paths.statusFile, { state: 'idle' });
+        }
+        DCUpdaterFS.cleanupStale(_paths);
+      } catch (e) {}
+    }
+    // finish any staged update the exit-time helper never applied before
+    // reporting - this is the safety net for every way the helper can die
     try {
-      const st = DCUpdaterFS.readStatus(_paths.statusFile);
-      if (st && st.state === 'ok') {
-        if (window.DCUI) DCUI.toast('Updated to ' + st.version + '.');
-        DCUpdaterFS.writeStatus(_paths.statusFile, { state: 'idle' });
-      } else if (st && st.state === 'fail') {
-        if (window.DCUI) DCUI.toast('Update didn\'t finish — you\'re still on ' + DCUpdate.VERSION + '. Nothing was changed.', true, 6000);
-        DCUpdaterFS.writeStatus(_paths.statusFile, { state: 'idle' });
-      }
-      DCUpdaterFS.cleanupStale(_paths);
-    } catch (e) {}
+      DCUpdaterFS.applyPendingSwapAtBoot(_paths, { localVersion: DCUpdate.VERSION, isNewer: DCUpdate.isNewer })
+        .then(function (pend) {
+          if (pend.mode === 'applied') { window.location.reload(); return; }
+          if (pend.mode === 'respawned' && window.DCUI) {
+            DCUI.toast('Update to ' + pend.version + ' will finish right after you quit After Effects.', false, 6000);
+          }
+          reportStatus();
+        })
+        .catch(reportStatus);
+    } catch (e) { reportStatus(); }
   }
 
   return {

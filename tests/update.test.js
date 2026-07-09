@@ -158,6 +158,45 @@ test('check keeps a cached newer release for the long update-available window', 
   }
 });
 
+test('a failed check retries after the short error window instead of sitting silent', () => {
+  const store = {};
+  const storage = {
+    getItem: (k) => (k in store ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+  };
+  const now = 1000000000000;
+  let constructed = 0;
+  let respond = { status: 403, body: 'rate limited' }; // e.g. GitHub API rate limit at boot
+  global.XMLHttpRequest = function () {
+    constructed++;
+    this.open = () => {};
+    this.send = function () {
+      this.readyState = 4;
+      this.status = respond.status;
+      this.responseText = respond.body;
+      this.onreadystatechange();
+    };
+  };
+  try {
+    let got = 'unset';
+    DCUpdate.check(storage, now, (l) => { got = l; });
+    assert.equal(got, null);
+    assert.equal(constructed, 1);
+    // still throttled moments later (no hammering)
+    DCUpdate.check(storage, now + 1000, (l) => { got = l; });
+    assert.equal(constructed, 1);
+    // ...but a failure must retry after the SHORT error window, not 15 minutes -
+    // this is exactly the "no update pop-up ever appeared" bug
+    respond = { status: 200, body: JSON.stringify({ tag_name: 'v9.9.9' }) };
+    DCUpdate.check(storage, now + DCUpdate.ERROR_RETRY_MS, (l) => { got = l; });
+    assert.equal(constructed, 2, 'error result must re-check after ERROR_RETRY_MS');
+    assert.equal(got, 'v9.9.9');
+    assert.ok(DCUpdate.ERROR_RETRY_MS < DCUpdate.NO_UPDATE_CHECK_INTERVAL_MS, 'error window shorter than the no-update window');
+  } finally {
+    delete global.XMLHttpRequest;
+  }
+});
+
 test('check can bypass the cache for a manual refresh', () => {
   const store = {};
   const storage = {

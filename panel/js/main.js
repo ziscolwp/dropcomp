@@ -172,6 +172,9 @@
     checkForUpdates(true);
   });
   checkForUpdates(false);
+  // a network blip at boot caches a short-lived error result; one quiet
+  // re-check after that window means the chip still appears this session
+  setTimeout(function () { checkForUpdates(false); }, 2 * DCUpdate.ERROR_RETRY_MS);
   DCUpdater.onBoot();
 
   // host modules must load before any relink/assets-dependent call

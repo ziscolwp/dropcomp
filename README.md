@@ -1,4 +1,4 @@
-# DropComp 2.7
+# DropComp 2.8
 
 After Effects CEP panel: a personal library of reusable comps and image assets
 with thumbnails, categories, favorites, and one-click import.
@@ -87,7 +87,11 @@ chip still offers a manual download.
 
 - **macOS:** the swap happens immediately — restart AE to finish.
 - **Windows:** files in use can't be replaced while AE runs, so the update is
-  staged and applied automatically the moment you quit AE; reopen AE to finish.
+  staged and applied automatically a few seconds after you quit AE (give it
+  ~10 s before reopening). If AE comes back too soon — or the background helper
+  can't run at all — the panel finishes the staged update itself the next time
+  it opens. A diagnostic log is kept at
+  `%LOCALAPPDATA%\DropComp\update\updater.log`.
 
 **Rollout:** one-click self-update works from the first release that contains it
 onward. If you're on an older build, install the next release once with the
@@ -99,9 +103,11 @@ one-click.
 1. Bump the version in `package.json`, `CSXS/manifest.xml`, and `panel/js/update.js`
    (`npm test` fails if they disagree).
 2. `npm test`
-3. `./scripts/build-dist.sh`
+3. `./scripts/build-dist.sh` and `./scripts/build-zxp.sh` — every release ships
+   BOTH assets: the `.zip` (consumed by the in-panel self-updater) and the
+   `.zxp` (first installs via ZXP Installer).
 4. `git tag vX.Y.Z && git push origin main vX.Y.Z`
-5. `gh release create vX.Y.Z dist/DropComp-X.Y.Z.zip --title "DropComp X.Y.Z" --notes "..."`
+5. `gh release create vX.Y.Z dist/DropComp-X.Y.Z.zip dist/DropComp-X.Y.Z.zxp --title "DropComp X.Y.Z" --notes "..."`
 
 Everyone on an older version sees the update chip within 12 hours of opening the panel.
 

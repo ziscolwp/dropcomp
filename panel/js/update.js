@@ -1,12 +1,15 @@
 var DCUpdate = (function () {
   'use strict';
 
-  var VERSION = '2.7.0';
+  var VERSION = '2.8.0';
   var RELEASES_API = 'https://api.github.com/repos/ziscolwp/dropcomp/releases/latest';
   var RELEASES_PAGE = 'https://github.com/ziscolwp/dropcomp/releases/latest';
   var CHECK_KEY = 'dropcomp_update_check';
   var UPDATE_AVAILABLE_CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000;
   var NO_UPDATE_CHECK_INTERVAL_MS = 15 * 60 * 1000;
+  // a failed check (offline boot, GitHub rate limit) retries much sooner than
+  // a confirmed "no update" - otherwise a blip at boot hides the chip all day
+  var ERROR_RETRY_MS = 45 * 1000;
   var CHECK_INTERVAL_MS = UPDATE_AVAILABLE_CHECK_INTERVAL_MS;
 
   function parseVersion(v) {
@@ -35,6 +38,7 @@ var DCUpdate = (function () {
   }
 
   function cacheInterval(cache) {
+    if (cache && cache.err) return ERROR_RETRY_MS;
     return cache && cache.latest && isNewer(cache.latest, VERSION) ?
       UPDATE_AVAILABLE_CHECK_INTERVAL_MS :
       NO_UPDATE_CHECK_INTERVAL_MS;
@@ -60,8 +64,8 @@ var DCUpdate = (function () {
         try { latest = JSON.parse(xhr.responseText).tag_name || null; } catch (e) { latest = null; }
       }
       // cache failures too (latest: null) so rate-limited/offline boots
-      // don't re-fire the request until the window passes
-      writeCache(storage, { ts: now, latest: latest });
+      // don't re-fire the request until the (short) error window passes
+      writeCache(storage, { ts: now, latest: latest, err: xhr.status !== 200 });
       cb(latest && isNewer(latest, VERSION) ? latest : null);
     };
     try { xhr.send(); } catch (e) { cb(null); }
@@ -74,6 +78,7 @@ var DCUpdate = (function () {
     CHECK_INTERVAL_MS: CHECK_INTERVAL_MS,
     UPDATE_AVAILABLE_CHECK_INTERVAL_MS: UPDATE_AVAILABLE_CHECK_INTERVAL_MS,
     NO_UPDATE_CHECK_INTERVAL_MS: NO_UPDATE_CHECK_INTERVAL_MS,
+    ERROR_RETRY_MS: ERROR_RETRY_MS,
     parseVersion: parseVersion,
     isNewer: isNewer,
     check: check

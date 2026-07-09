@@ -51,7 +51,7 @@ function mockFs(over) {
     extract: async () => { calls.push('extract'); return '/tmp/staged'; },
     assertStagedTree: () => { calls.push('assert'); },
     backup: async () => { calls.push('backup'); },
-    applyMacSwap: async () => { calls.push('applyMacSwap'); },
+    applySwap: async () => { calls.push('applySwap'); },
     spawnWindowsHelper: async () => { calls.push('spawnWindowsHelper'); },
     writeStatus: async () => {}
   };
@@ -62,7 +62,7 @@ const baseCtx = (m, plat) => ({ fs: m.fs, paths: { tmpZip: '/tmp/d.zip', staging
 test('runUpdate (mac) runs steps in order and applies the swap', async () => {
   const m = mockFs();
   const r = await DCUpdater.runUpdate(baseCtx(m, 'darwin'));
-  assert.deepEqual(m.calls, ['download', 'extract', 'assert', 'backup', 'applyMacSwap']);
+  assert.deepEqual(m.calls, ['download', 'extract', 'assert', 'backup', 'applySwap']);
   assert.deepEqual(r, { mode: 'mac-applied', version: '2.5.0' });
 });
 
@@ -70,7 +70,7 @@ test('runUpdate (win) stages and spawns the helper instead of swapping', async (
   const m = mockFs();
   const r = await DCUpdater.runUpdate(baseCtx(m, 'win32'));
   assert.ok(m.calls.includes('spawnWindowsHelper'));
-  assert.ok(!m.calls.includes('applyMacSwap'));
+  assert.ok(!m.calls.includes('applySwap'));
   assert.equal(r.mode, 'win-pending');
 });
 
