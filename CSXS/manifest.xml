@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ExtensionManifest Version="7.0" ExtensionBundleId="com.DropComp.ext" ExtensionBundleVersion="2.7.0" ExtensionBundleName="DropComp" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<ExtensionManifest Version="7.0" ExtensionBundleId="com.DropComp.ext" ExtensionBundleVersion="2.8.0" ExtensionBundleName="DropComp" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <ExtensionList>
-    <Extension Id="com.DropComp.ext" Version="2.7.0" />
+    <Extension Id="com.DropComp.ext" Version="2.8.0" />
   </ExtensionList>
   <ExecutionEnvironment>
     <HostList>
