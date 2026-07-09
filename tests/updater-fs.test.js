@@ -273,9 +273,9 @@ test('spawnWindowsHelper writes the script + pending status and spawns detached'
   FS.mkdirpSync(p.liveDir);
   let spawned = null;
   const fakeCp = { spawn: (cmd, args, opts) => { spawned = { cmd, args, opts }; return { unref: () => {} }; } };
-  await FS.spawnWindowsHelper(p, 'C:\\stage\\DropComp-9.9.9', '2.5.0', { cp: fakeCp });
-  assert.equal(spawned.cmd, 'powershell.exe');
-  assert.ok(spawned.args.includes('-File'));
+  await FS.spawnWindowsHelper(p, 'C:\\stage\\DropComp-9.9.9', '2.5.0', { cp: fakeCp, env: {} });
+  assert.equal(spawned.cmd, 'powershell.exe', 'bare name when SystemRoot is not in the environment');
+  assert.ok(spawned.args.includes('-Command'));
   assert.equal(spawned.opts.detached, true);
   assert.ok(fs.existsSync(path.join(p.workDir, 'apply.ps1')));
   assert.equal(FS.readStatus(p.statusFile).state, 'pending');
@@ -304,5 +304,156 @@ test('cleanupStale leaves things alone while a Windows apply is pending', async 
   await FS.writeStatus(p.statusFile, { state: 'pending', version: '2.5.0' });
   await FS.cleanupStale(p);
   assert.ok(fs.existsSync(path.join(p.liveDir, 'CSXS.dcold')), 'pending apply not disturbed');
+  FS.rmrf(root);
+});
+
+// ---- Windows reliability (v2.8.0): the staged update must survive every way
+// ---- the exit-time helper can die, and every outcome must be reportable.
+
+test('readStatus tolerates the UTF-8 BOM Windows PowerShell 5.1 writes', () => {
+  const root = tmp();
+  const f = path.join(root, 'status.json');
+  fs.writeFileSync(f, '﻿{"state":"ok","version":"9.9.9"}', 'utf8');
+  const st = FS.readStatus(f);
+  assert.ok(st, 'BOM-prefixed status must still parse');
+  assert.equal(st.state, 'ok');
+  assert.equal(st.version, '9.9.9');
+  FS.rmrf(root);
+});
+
+test('paths (win32) stages under LOCALAPPDATA, not the synced Documents folder', () => {
+  const env = { LOCALAPPDATA: path.join('C:', 'Users', 'me', 'AppData', 'Local') };
+  const p = FS.paths(path.join('C:', 'ext', 'DropComp'), 'win32', path.join('C:', 'Users', 'me'), '2.7.0', env);
+  assert.ok(p.workDir.indexOf(env.LOCALAPPDATA) === 0, 'work dir must live under LOCALAPPDATA (OneDrive/CFA can lock Documents)');
+  assert.ok(p.stagingDir.indexOf(p.workDir) === 0);
+  assert.ok(p.statusFile.indexOf(p.workDir) === 0);
+  assert.ok(p.logFile && p.logFile.indexOf(p.workDir) === 0, 'log file lives beside status.json');
+  assert.ok(p.backupZip.indexOf('Documents') !== -1, 'user-facing backup stays in Documents');
+  assert.ok(p.legacyWorkDir && p.legacyWorkDir.indexOf('.dropcomp-update') !== -1, 'legacy dir exposed for cleanup');
+  // mac layout is live-verified - it must not move
+  const mac = FS.paths('/ext/DropComp', 'darwin', '/Users/me', '2.7.0');
+  assert.ok(mac.workDir.indexOf('/Users/me/Documents/DropComp') === 0);
+  assert.equal(mac.legacyWorkDir, null);
+});
+
+test('buildWindowsApplyScript waits only for After Effects, never other apps\' CEP engines', () => {
+  const s = FS.buildWindowsApplyScript({
+    liveDir: 'C:\\ext\\DropComp', stagedRoot: 'C:\\stage\\DropComp-9.9.9',
+    backupZip: 'C:\\b.zip', statusFile: 'C:\\s.json', logFile: 'C:\\u.log', version: '9.9.9'
+  });
+  assert.match(s, /AfterFX\*/, 'waits on AfterFX* (covers AfterFX + AfterFXLib)');
+  assert.ok(s.indexOf('CEPHtmlEngine') === -1, 'CEPHtmlEngine belongs to every Adobe app - waiting on it deadlocks the update');
+  assert.match(s, /WriteAllText/, 'status must be written BOM-free (Set-Content UTF8 adds a BOM on PS 5.1)');
+  assert.ok(s.indexOf('Set-Content') === -1, 'no BOM-writing status paths left');
+  assert.match(s, /quiet/i, 'requires consecutive quiet polls so a quick AE restart is not mistaken for a clean exit');
+  assert.match(s, /Write-Log/, 'writes a diagnostic log for field debugging');
+});
+
+test('buildWindowsApplyScript keeps state pending on timeout and re-waits if AE relaunches mid-swap', () => {
+  const s = FS.buildWindowsApplyScript({
+    liveDir: 'C:\\ext\\DropComp', stagedRoot: 'C:\\stage\\x',
+    backupZip: 'C:\\b.zip', statusFile: 'C:\\s.json', logFile: 'C:\\u.log', version: '9.9.9'
+  });
+  assert.ok(!/Write-Status "fail" "Timed out/.test(s), 'timeout must NOT write fail - boot fallback finishes the job');
+  assert.match(s, /Invoke-Retry|retry/i, 'per-dir moves retry to ride out AV scanners');
+  assert.match(s, /continue/, 'a swap failure while AE is running again returns to waiting instead of failing');
+});
+
+test('spawnWindowsHelper escapes Adobe\'s job object via WMI and an encoded command', async () => {
+  const root = tmp();
+  const p = FS.paths(path.join(root, 'DropComp'), 'win32', root, '2.4.0', { SystemRoot: 'C:\\WINDOWS' });
+  FS.mkdirpSync(p.liveDir);
+  let spawned = null;
+  const fakeCp = { spawn: (cmd, args, opts) => { spawned = { cmd, args, opts }; return { unref: () => {} }; } };
+  await FS.spawnWindowsHelper(p, 'C:\\stage\\DropComp-9.9.9', '2.5.0', { cp: fakeCp, env: { SystemRoot: 'C:\\WINDOWS' } });
+  assert.ok(spawned.cmd.indexOf('C:\\WINDOWS') === 0 && /powershell\.exe$/.test(spawned.cmd), 'absolute powershell path');
+  assert.equal(spawned.opts.detached, true);
+  const cmdArg = spawned.args[spawned.args.indexOf('-Command') + 1];
+  assert.match(cmdArg, /Invoke-CimMethod/, 'worker is created via Win32_Process.Create so it survives AE quitting');
+  assert.match(cmdArg, /Start-Process/, 'has a plain fallback if WMI is unavailable');
+  const b64 = /-EncodedCommand ([A-Za-z0-9+/=]+)/.exec(cmdArg);
+  assert.ok(b64, 'worker runs via -EncodedCommand (immune to script-file execution policy)');
+  const decoded = Buffer.from(b64[1], 'base64').toString('utf16le');
+  const expected = FS.buildWindowsApplyScript({ liveDir: p.liveDir, stagedRoot: 'C:\\stage\\DropComp-9.9.9', backupZip: p.backupZip, statusFile: p.statusFile, logFile: p.logFile, version: '2.5.0' });
+  assert.equal(decoded, expected, 'encoded command is exactly the apply script');
+  assert.ok(fs.existsSync(path.join(p.workDir, 'apply.ps1')), 'apply.ps1 kept as inspectable fallback');
+  assert.equal(FS.readStatus(p.statusFile).state, 'pending');
+  FS.rmrf(root);
+});
+
+function pendingSetup(root, stagedVersion) {
+  const p = FS.paths(path.join(root, 'DropComp'), 'win32', root, '2.4.0', { LOCALAPPDATA: path.join(root, 'Local') });
+  const live = p.liveDir;
+  FS.DIRS.forEach((d) => { FS.mkdirpSync(path.join(live, d)); fs.writeFileSync(path.join(live, d, 'v.txt'), 'OLD-' + d); });
+  const staged = path.join(p.stagingDir, 'DropComp-' + stagedVersion);
+  FS.DIRS.forEach((d) => { FS.mkdirpSync(path.join(staged, d)); fs.writeFileSync(path.join(staged, d, 'v.txt'), 'NEW-' + d); });
+  return { p, staged };
+}
+const semverNewer = (a, b) => require('../panel/js/update.js').isNewer(a, b);
+
+test('applyPendingSwapAtBoot finishes an update the exit-time helper never ran', async () => {
+  const root = tmp();
+  const { p } = pendingSetup(root, '9.9.9');
+  await FS.writeStatus(p.statusFile, { state: 'pending', version: '9.9.9' });
+  const r = await FS.applyPendingSwapAtBoot(p, { localVersion: '2.4.0', isNewer: semverNewer });
+  assert.equal(r.mode, 'applied');
+  assert.equal(r.version, '9.9.9');
+  FS.DIRS.forEach((d) => assert.equal(fs.readFileSync(path.join(p.liveDir, d, 'v.txt'), 'utf8'), 'NEW-' + d));
+  assert.equal(FS.readStatus(p.statusFile).state, 'ok', 'ok status so the post-reload boot can toast the result');
+  FS.rmrf(root);
+});
+
+test('applyPendingSwapAtBoot is a no-op without a pending status or without staged files', async () => {
+  const root = tmp();
+  const { p } = pendingSetup(root, '9.9.9');
+  await FS.writeStatus(p.statusFile, { state: 'ok', version: '9.9.9' });
+  assert.equal((await FS.applyPendingSwapAtBoot(p, { localVersion: '2.4.0', isNewer: semverNewer })).mode, 'none');
+  FS.rmrf(p.stagingDir);
+  await FS.writeStatus(p.statusFile, { state: 'pending', version: '9.9.9' });
+  assert.equal((await FS.applyPendingSwapAtBoot(p, { localVersion: '2.4.0', isNewer: semverNewer })).mode, 'none');
+  assert.equal(FS.readStatus(p.statusFile).state, 'idle', 'unusable pending state is cleared, not left forever');
+  FS.rmrf(root);
+});
+
+test('applyPendingSwapAtBoot clears a stale pending after the helper already applied it', async () => {
+  const root = tmp();
+  const { p } = pendingSetup(root, '2.4.0');
+  await FS.writeStatus(p.statusFile, { state: 'pending', version: '2.4.0' }); // we ARE 2.4.0 already
+  const r = await FS.applyPendingSwapAtBoot(p, { localVersion: '2.4.0', isNewer: semverNewer });
+  assert.equal(r.mode, 'none');
+  assert.equal(FS.readStatus(p.statusFile).state, 'idle');
+  FS.DIRS.forEach((d) => assert.equal(fs.readFileSync(path.join(p.liveDir, d, 'v.txt'), 'utf8'), 'OLD-' + d, 'live files untouched'));
+  FS.rmrf(root);
+});
+
+test('applyPendingSwapAtBoot falls back to the exit-time helper when files are locked', async () => {
+  const root = tmp();
+  const { p } = pendingSetup(root, '9.9.9');
+  await FS.writeStatus(p.statusFile, { state: 'pending', version: '9.9.9' });
+  const realFs = require('node:fs');
+  const lockedFs = Object.assign({}, realFs, {
+    renameSync(src, dest) {
+      if (String(src).indexOf(p.liveDir) === 0) { const e = new Error('EPERM: locked'); e.code = 'EPERM'; throw e; }
+      return realFs.renameSync(src, dest);
+    }
+  });
+  let spawned = null;
+  const fakeCp = { spawn: (cmd, args, opts) => { spawned = { cmd, args, opts }; return { unref: () => {} }; } };
+  const r = await FS.applyPendingSwapAtBoot(p, { localVersion: '2.4.0', isNewer: semverNewer }, { fs: lockedFs, cp: fakeCp, env: {} });
+  assert.equal(r.mode, 'respawned');
+  assert.ok(spawned, 'exit-time helper re-spawned for the next AE quit');
+  FS.DIRS.forEach((d) => assert.equal(fs.readFileSync(path.join(p.liveDir, d, 'v.txt'), 'utf8'), 'OLD-' + d, 'live install intact after rollback'));
+  assert.equal(FS.readStatus(p.statusFile).state, 'pending', 'still pending so the helper can finish it');
+  FS.rmrf(root);
+});
+
+test('cleanupStale sweeps the legacy Documents work dir left by pre-2.8.0 updaters', async () => {
+  const root = tmp();
+  const p = FS.paths(path.join(root, 'DropComp'), 'win32', root, '2.4.0', { LOCALAPPDATA: path.join(root, 'Local') });
+  FS.mkdirpSync(p.liveDir);
+  FS.mkdirpSync(p.legacyWorkDir);
+  fs.writeFileSync(path.join(p.legacyWorkDir, 'status.json'), '{"state":"pending"}');
+  await FS.cleanupStale(p);
+  assert.equal(fs.existsSync(p.legacyWorkDir), false, 'dead pre-2.8.0 staging removed');
   FS.rmrf(root);
 });
