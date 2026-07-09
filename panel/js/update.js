@@ -1,7 +1,7 @@
 var DCUpdate = (function () {
   'use strict';
 
-  var VERSION = '2.8.0';
+  var VERSION = '2.8.1';
   var RELEASES_API = 'https://api.github.com/repos/ziscolwp/dropcomp/releases/latest';
   var RELEASES_PAGE = 'https://github.com/ziscolwp/dropcomp/releases/latest';
   var CHECK_KEY = 'dropcomp_update_check';
