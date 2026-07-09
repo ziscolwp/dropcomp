@@ -5,7 +5,7 @@ set "DEST=%APPDATA%\Adobe\CEP\extensions\DropComp"
 set "BACKUPDIR=%USERPROFILE%\Documents\DropComp"
 set "BACKUP=%BACKUPDIR%\backup-previous-version.zip"
 
-echo DropComp 2.1.0 installer / updater
+echo DropComp installer / updater
 echo.
 
 rem back up the existing install once (kept until you delete it)
@@ -25,7 +25,7 @@ rem unsigned extensions need PlayerDebugMode (covers AE 2019-2026 CEP runtimes)
 for %%v in (9 10 11 12) do reg add "HKCU\Software\Adobe\CSXS.%%v" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul
 
 echo.
-echo DropComp 2.1.0 installed.
+echo DropComp installed.
 echo Restart After Effects, then open Window ^> Extensions ^> DropComp.
 echo Your library folder and favorites are untouched by updates.
 pause
