@@ -2,7 +2,9 @@
   'use strict';
 
   var csInterface = new CSInterface();
-  DCBridge.init(csInterface);
+  // ext path lets the bridge reload host modules and retry when a call hits
+  // an undefined module function ('EvalScript error.')
+  DCBridge.init(csInterface, csInterface.getSystemPath(SystemPath.EXTENSION));
 
   function $(id) { return document.getElementById(id); }
 
@@ -179,7 +181,11 @@
 
   // host modules must load before any relink/assets-dependent call
   DCBridge.call('loadHostModules', [csInterface.getSystemPath(SystemPath.EXTENSION)], function (r) {
-    if (r !== 'ok') console.error('DropComp: host module load failed -', r);
+    if (r !== 'ok') {
+      console.error('DropComp: host module load failed -', r);
+      // most features live in modules now - the user must see this, not just devtools
+      DCUI.toast('DropComp could not load its host modules: ' + r, true);
+    }
 
     // one-time v1 -> v2 settings migration (path used to live in panel localStorage)
     var oldPath = window.localStorage.getItem('ae_asset_stash_path');

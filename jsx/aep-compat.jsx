@@ -16,6 +16,7 @@
 
 var DC_AEP_SCAN_CHUNK = 524288; // bytes per read
 var DC_AEP_SCAN_OVERLAP = 4096; // catches markers straddling chunk borders
+var DC_AEP_SCAN_MAX = 33554432; // give up after 32 MB - XMP sits near EOF; a miss just means "unknown version"
 
 // last capture-group hit of a /g regex in text, or null
 function dcLastMatch(re, text) {
@@ -76,8 +77,8 @@ function aeRunningMajor() {
     }
 }
 
-// .aep and .aet are RIFX containers (big-endian RIFF); anything else is a
-// renamed/corrupt file that AE would reject with a cryptic error
+// .aep and .aet are always big-endian RIFX containers; plain 'RIFF' is media
+// (wav/avi/webp), so a renamed media file must NOT pass this gate
 function aepIsRifx(aepPath) {
     var f = new File(aepPath);
     if (!f.exists) return false;
@@ -85,13 +86,16 @@ function aepIsRifx(aepPath) {
     if (!f.open('r')) return false;
     var head = f.read(4);
     f.close();
-    return head === 'RIFX' || head === 'RIFF';
+    return head === 'RIFX';
 }
 
 // which AE last saved this project, e.g. "Adobe After Effects 2024 (Windows)".
 // Scans BACKWARD from EOF in chunks: the XMP packet sits near the end of real
 // projects, and the first agent hit walking backward is the last save in the
-// file - typically one read even on 100 MB templates.
+// file - typically one read even on 100 MB templates. The scan stops on any
+// XMP hit (CreatorTool lives in the same packet as the history, so an
+// agent-less chunk with a creator means there is no agent to find) and gives
+// up after DC_AEP_SCAN_MAX bytes so marker-less giants can't freeze AE.
 function aepReadSavedBy(aepPath) {
     var f = new File(aepPath);
     if (!f.exists) return null;
@@ -99,14 +103,16 @@ function aepReadSavedBy(aepPath) {
     if (!f.open('r')) return null;
     var agent = null;
     var creator = null;
+    var scanned = 0;
     var pos = f.length - DC_AEP_SCAN_CHUNK;
     if (pos < 0) pos = 0;
     while (true) {
         f.seek(pos, 0);
         var hit = aepScanSavedBy(f.read(DC_AEP_SCAN_CHUNK + DC_AEP_SCAN_OVERLAP));
         if (hit.agent) { agent = hit.agent; break; }
-        if (hit.creator && !creator) creator = hit.creator;
-        if (pos === 0) break;
+        if (hit.creator) { creator = hit.creator; break; }
+        scanned += DC_AEP_SCAN_CHUNK;
+        if (pos === 0 || scanned >= DC_AEP_SCAN_MAX) break;
         pos -= DC_AEP_SCAN_CHUNK;
         if (pos < 0) pos = 0;
     }
@@ -126,9 +132,11 @@ function aepPreflight(aepPath) {
         return res;
     }
     if (!aepIsRifx(aepPath)) {
+        var badName = f.name;
+        try { badName = decodeURI(f.name); } catch (eN) { }
         res.ok = false;
         res.reason = 'not-aep';
-        res.message = '"' + decodeURI(f.name) + '" is not a valid After Effects project (.aep/.aet). The download may be incomplete, or the file was renamed from another format.';
+        res.message = '"' + badName + '" is not a valid After Effects project (.aep/.aet). The download may be incomplete, or the file was renamed from another format.';
         return res;
     }
     res.savedBy = aepReadSavedBy(aepPath);
@@ -143,13 +151,16 @@ function aepPreflight(aepPath) {
 }
 
 // friendlier wrapper for a failed importFile: names the file and, when the
-// version is readable, says who saved it so "why" is obvious from the toast
-function aepImportFailureMessage(aepPath, errText) {
+// version is readable, says who saved it so "why" is obvious from the toast.
+// Pass the aepPreflight result when the caller already ran one - a 'newer'
+// verdict explains the failure fully, and reusing savedBy avoids rescanning.
+function aepImportFailureMessage(aepPath, errText, preflight) {
+    if (preflight && preflight.reason === 'newer') return preflight.message;
     var name = 'project';
     try { name = '"' + decodeURI(new File(aepPath).name) + '"'; } catch (e1) { }
     var hint = '';
     try {
-        var savedBy = aepReadSavedBy(aepPath);
+        var savedBy = preflight ? preflight.savedBy : aepReadSavedBy(aepPath);
         if (savedBy) hint = ' (saved by ' + savedBy + ', this After Effects is v' + app.version + ')';
     } catch (e2) { }
     return 'Could not import ' + name + hint + '. ' + String(errText);

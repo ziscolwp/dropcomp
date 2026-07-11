@@ -25,8 +25,12 @@ var DCBridge = (function () {
 
   var cs = null;
   var currentOp = false;
+  var extensionPath = null;
 
-  function init(csInterface) { cs = csInterface; }
+  function init(csInterface, extPath) {
+    cs = csInterface;
+    extensionPath = extPath || null;
+  }
 
   function acquire(name) {
     if (currentOp) return false;
@@ -39,7 +43,18 @@ var DCBridge = (function () {
   function busyWith() { return currentOp; }
 
   function call(fnName, args, cb) {
-    cs.evalScript(buildCall(fnName, args), cb || function () {});
+    cs.evalScript(buildCall(fnName, args), function (result) {
+      // CEP returns the literal 'EvalScript error.' when the host function is
+      // undefined - typically a module that failed to load at boot. Reload
+      // the modules once and retry before surfacing the raw error.
+      if (result === 'EvalScript error.' && extensionPath) {
+        cs.evalScript(buildCall('loadHostModules', [extensionPath]), function () {
+          cs.evalScript(buildCall(fnName, args), cb || function () {});
+        });
+        return;
+      }
+      (cb || function () {})(result);
+    });
   }
 
   return {

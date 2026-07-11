@@ -299,10 +299,13 @@ function importComp(aepPath) {
         var meta = readJson(metadataFile) || {};
         var compName = meta.displayName || 'Imported Comp';
 
-        // fail fast with a human message when the file needs a newer AE
+        // preflight is ADVISORY (see import-capture.jsx): block definitive
+        // junk only, and keep the verdict to explain a failed import
+        var pf = null;
+        var imported = false;
         if (ensureHostModules()) {
-            var pf = aepPreflight(fileToImport.fsName);
-            if (!pf.ok) return 'Error: ' + pf.message;
+            pf = aepPreflight(fileToImport.fsName);
+            if (pf.reason === 'missing' || pf.reason === 'not-aep') return 'Error: ' + pf.message;
         }
 
         app.beginSuppressDialogs();
@@ -310,6 +313,7 @@ function importComp(aepPath) {
         // AE project import can corrupt the undo stack inside an explicit group.
         // Import first, then group DropComp's relink/timeline edits.
         var importedFolder = app.project.importFile(new ImportOptions(fileToImport));
+        imported = true;
         app.beginUndoGroup('DropComp Import');
         undoing = true;
         importedFolder.name = compName + ' [DropComp]';
@@ -385,6 +389,10 @@ function importComp(aepPath) {
     } catch (e) {
         try { if (undoing) app.endUndoGroup(); } catch (e2) { }
         try { if (suppressing) app.endSuppressDialogs(false); } catch (e3) { }
+        // only dress up failures of the import itself, not post-import edits
+        if (!imported && typeof $.global.aepImportFailureMessage === 'function') {
+            return 'Error: ' + aepImportFailureMessage(aepPath, e.toString(), pf);
+        }
         return 'Error: ' + e.toString();
     }
 }
