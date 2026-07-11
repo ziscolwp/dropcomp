@@ -1,0 +1,330 @@
+// AEP version preflight: parse which After Effects last saved a project file
+// (last stEvt:softwareAgent in the embedded XMP, falling back to CreatorTool)
+// so a failed import of a newer-AE file gets a human explanation instead of a
+// raw AE exception. The verdict is advisory - AE stays the arbiter - because
+// down-saved files carry the newer app's save stamp while their FORMAT
+// targets an older AE. Field report: Envato "Cinematic_Backgrounds.aep".
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+
+const compatSrc = fs.readFileSync(path.join(__dirname, '..', 'jsx', 'aep-compat.jsx'), 'utf8');
+const hostSrc = fs.readFileSync(path.join(__dirname, '..', 'jsx', 'hostscript.jsx'), 'utf8');
+const captureSrc = fs.readFileSync(path.join(__dirname, '..', 'jsx', 'import-capture.jsx'), 'utf8');
+
+// ---- ExtendScript shims ----------------------------------------------------
+
+function makeFileShim(buffers, readCounter) {
+  function File(p) {
+    const key = String(p);
+    this.fsName = key;
+    this.name = key.split('/').pop();
+    const buf = buffers[key];
+    this.exists = !!buf;
+    this.length = buf ? buf.length : 0;
+    this.encoding = '';
+    this._pos = 0;
+    this.open = () => !!buf;
+    this.close = () => true;
+    this.seek = (pos) => {
+      this._pos = pos;
+      return true;
+    };
+    this.read = (n) => {
+      if (!buf) return '';
+      if (readCounter) readCounter.n++;
+      const end = Math.min(this._pos + n, buf.length);
+      const out = buf.slice(this._pos, end).toString('latin1');
+      this._pos = end;
+      return out;
+    };
+  }
+  return File;
+}
+
+function loadCompat(options = {}) {
+  const context = {
+    $: { global: {} },
+    app: { version: options.appVersion || '26.0x11' },
+    File: makeFileShim(options.buffers || {}, options.readCounter),
+    decodeURI,
+  };
+  vm.createContext(context);
+  vm.runInContext(compatSrc, context, { filename: 'aep-compat.jsx' });
+  return context.$.global;
+}
+
+function xmpPacket({ creator, agents }) {
+  let xml = '<x:xmpmeta xmlns:x="adobe:ns:meta/">';
+  if (creator) xml += '<xmp:CreatorTool>' + creator + '</xmp:CreatorTool>';
+  for (const a of agents || []) {
+    xml += '<stEvt:softwareAgent>' + a + '</stEvt:softwareAgent>';
+  }
+  xml += '</x:xmpmeta>';
+  return xml;
+}
+
+// A synthetic RIFX project: magic bytes, padding, XMP placed near the end
+// (like real AEPs), sized past one scan chunk so the chunked reader is used.
+function makeAepBuffer({ creator, agents, size = 2 * 1024 * 1024, magic = 'RIFX' }) {
+  const buf = Buffer.alloc(size, 0x20);
+  buf.write(magic + '\x00\x00\x00\x00Egg!', 0, 'latin1');
+  const xmp = xmpPacket({ creator, agents });
+  buf.write(xmp, size - xmp.length - 64, 'latin1');
+  return buf;
+}
+
+// ---- version string parsing ------------------------------------------------
+
+test('aeMajorFromSavedBy maps modern year-style versions', () => {
+  const g = loadCompat();
+  assert.equal(g.aeMajorFromSavedBy('Adobe After Effects 2024 (Windows)'), 24);
+  assert.equal(g.aeMajorFromSavedBy('Adobe After Effects 2026 (Macintosh)'), 26);
+  assert.equal(g.aeMajorFromSavedBy('Adobe After Effects 2022 (Macintosh Arm)'), 22);
+  // future-proof: years past the known table keep the year-2000 rule
+  assert.equal(g.aeMajorFromSavedBy('Adobe After Effects 2031 (Windows)'), 31);
+});
+
+test('aeMajorFromSavedBy maps the 2020/2021 era where year != major', () => {
+  const g = loadCompat();
+  assert.equal(g.aeMajorFromSavedBy('Adobe After Effects 2020 (Windows)'), 17);
+  assert.equal(g.aeMajorFromSavedBy('Adobe After Effects 2021 (Macintosh)'), 18);
+});
+
+test('aeMajorFromSavedBy maps CC-era and CS-era names', () => {
+  const g = loadCompat();
+  assert.equal(g.aeMajorFromSavedBy('Adobe After Effects CC 2019 (Windows)'), 16);
+  assert.equal(g.aeMajorFromSavedBy('Adobe After Effects CC 2018 (Macintosh)'), 15);
+  assert.equal(g.aeMajorFromSavedBy('Adobe After Effects CC 2015 (Windows)'), 13.5);
+  assert.equal(g.aeMajorFromSavedBy('Adobe After Effects CC (Windows)'), 12);
+  assert.equal(g.aeMajorFromSavedBy('Adobe After Effects CS6 (Windows)'), 11);
+  assert.equal(g.aeMajorFromSavedBy('Adobe After Effects CS5.5 (Macintosh)'), 10.5);
+});
+
+test('aeMajorFromSavedBy accepts plain numeric versions', () => {
+  const g = loadCompat();
+  assert.equal(g.aeMajorFromSavedBy('Adobe After Effects 22.6 (Windows)'), 22.6);
+  assert.equal(g.aeMajorFromSavedBy('Adobe After Effects 16.0 (Macintosh)'), 16);
+});
+
+test('aeMajorFromSavedBy returns null for unknown strings', () => {
+  const g = loadCompat();
+  assert.equal(g.aeMajorFromSavedBy('Adobe Premiere Pro 2024 (Windows)'), null);
+  assert.equal(g.aeMajorFromSavedBy('gibberish'), null);
+  assert.equal(g.aeMajorFromSavedBy(null), null);
+  assert.equal(g.aeMajorFromSavedBy(''), null);
+});
+
+// ---- XMP text scanning -----------------------------------------------------
+
+test('aepScanSavedBy picks the LAST softwareAgent (most recent save wins)', () => {
+  const g = loadCompat();
+  const text = xmpPacket({
+    creator: 'Adobe After Effects 2024 (Windows)',
+    agents: [
+      'Adobe After Effects 2024 (Windows)',
+      'Adobe After Effects 2026 (Macintosh)',
+    ],
+  });
+  const hit = g.aepScanSavedBy(text);
+  assert.equal(hit.agent, 'Adobe After Effects 2026 (Macintosh)');
+  assert.equal(hit.creator, 'Adobe After Effects 2024 (Windows)');
+});
+
+test('aepScanSavedBy reads attribute-form XMP serialization too', () => {
+  const g = loadCompat();
+  const text = '<rdf:li stEvt:action="saved" stEvt:softwareAgent="Adobe After Effects 2025 (Windows)"/>' +
+    '<rdf:Description xmp:CreatorTool="Adobe After Effects 2023 (Windows)"/>';
+  const hit = g.aepScanSavedBy(text);
+  assert.equal(hit.agent, 'Adobe After Effects 2025 (Windows)');
+  assert.equal(hit.creator, 'Adobe After Effects 2023 (Windows)');
+});
+
+test('aepScanSavedBy ignores non-After-Effects agents', () => {
+  const g = loadCompat();
+  const hit = g.aepScanSavedBy('<stEvt:softwareAgent>Adobe Media Encoder 2024</stEvt:softwareAgent>');
+  assert.equal(hit.agent, null);
+});
+
+// ---- chunked binary file scan ----------------------------------------------
+
+test('aepReadSavedBy finds the last save agent in a multi-megabyte file', () => {
+  const buffers = {
+    '/lib/item/proj.aep': makeAepBuffer({
+      creator: 'Adobe After Effects 2024 (Windows)',
+      agents: ['Adobe After Effects 2024 (Windows)', 'Adobe After Effects 2026 (Macintosh)'],
+    }),
+  };
+  const g = loadCompat({ buffers });
+  assert.equal(g.aepReadSavedBy('/lib/item/proj.aep'), 'Adobe After Effects 2026 (Macintosh)');
+});
+
+test('aepReadSavedBy falls back to CreatorTool when no save history exists', () => {
+  const buffers = {
+    '/lib/item/proj.aep': makeAepBuffer({ creator: 'Adobe After Effects 2024 (Windows)', agents: [] }),
+  };
+  const g = loadCompat({ buffers });
+  assert.equal(g.aepReadSavedBy('/lib/item/proj.aep'), 'Adobe After Effects 2024 (Windows)');
+});
+
+test('aepReadSavedBy returns null when the file has no XMP markers', () => {
+  const buffers = { '/x.aep': makeAepBuffer({ agents: [] }) };
+  const g = loadCompat({ buffers });
+  assert.equal(g.aepReadSavedBy('/x.aep'), null);
+});
+
+test('aepReadSavedBy stops after one read when the XMP sits near EOF', () => {
+  // the whole point of the backward scan: big files cost one chunk read, not
+  // a full traversal - a regression here freezes AE on large templates
+  const readCounter = { n: 0 };
+  const buffers = {
+    '/big.aep': makeAepBuffer({
+      creator: 'Adobe After Effects 2024 (Windows)',
+      agents: [],
+      size: 8 * 1024 * 1024,
+    }),
+  };
+  const g = loadCompat({ buffers, readCounter });
+  assert.equal(g.aepReadSavedBy('/big.aep'), 'Adobe After Effects 2024 (Windows)');
+  assert.ok(readCounter.n <= 2, `expected <=2 chunk reads, got ${readCounter.n}`);
+});
+
+test('aepReadSavedBy gives up after the scan cap instead of walking a marker-less giant', () => {
+  // XMP marker placed at the START of a 40MB file - beyond the 32MB
+  // backward-scan cap - so the scan returns null (unknown, let AE try)
+  const size = 40 * 1024 * 1024;
+  const buf = Buffer.alloc(size, 0x20);
+  buf.write('RIFX\x00\x00\x00\x00Egg!', 0, 'latin1');
+  buf.write(xmpPacket({ agents: ['Adobe After Effects 2024 (Windows)'] }), 16, 'latin1');
+  const g = loadCompat({ buffers: { '/giant.aep': buf } });
+  assert.equal(g.aepReadSavedBy('/giant.aep'), null);
+});
+
+// ---- preflight verdicts ----------------------------------------------------
+
+test('aepPreflight blocks a project saved by a NEWER After Effects', () => {
+  const buffers = {
+    '/new.aep': makeAepBuffer({ agents: ['Adobe After Effects 2027 (Windows)'] }),
+  };
+  const g = loadCompat({ buffers, appVersion: '26.0x11' });
+  const pf = g.aepPreflight('/new.aep');
+  assert.equal(pf.ok, false);
+  assert.equal(pf.reason, 'newer');
+  assert.match(pf.message, /Adobe After Effects 2027 \(Windows\)/);
+  assert.match(pf.message, /newer/i);
+  assert.match(pf.message, /Save a Copy As|update After Effects/i);
+});
+
+test('aepPreflight allows same-version and older projects', () => {
+  const buffers = {
+    '/same.aep': makeAepBuffer({ agents: ['Adobe After Effects 2026 (Macintosh)'] }),
+    '/old.aep': makeAepBuffer({ agents: ['Adobe After Effects 2024 (Windows)'] }),
+    '/ancient.aep': makeAepBuffer({ agents: ['Adobe After Effects CS6 (Windows)'] }),
+  };
+  const g = loadCompat({ buffers, appVersion: '26.0x11' });
+  assert.equal(g.aepPreflight('/same.aep').ok, true);
+  assert.equal(g.aepPreflight('/old.aep').ok, true);
+  assert.equal(g.aepPreflight('/ancient.aep').ok, true);
+});
+
+test('aepPreflight allows files whose version cannot be parsed (best effort)', () => {
+  const buffers = { '/mystery.aep': makeAepBuffer({ agents: [] }) };
+  const g = loadCompat({ buffers });
+  const pf = g.aepPreflight('/mystery.aep');
+  assert.equal(pf.ok, true);
+  assert.equal(pf.fileMajor, null);
+});
+
+test('aepPreflight rejects files that are not RIFX containers', () => {
+  const bogus = Buffer.alloc(4096, 0x20);
+  bogus.write('PK\x03\x04', 0, 'latin1'); // a zip pretending to be an aep
+  const g = loadCompat({ buffers: { '/fake.aep': bogus } });
+  const pf = g.aepPreflight('/fake.aep');
+  assert.equal(pf.ok, false);
+  assert.equal(pf.reason, 'not-aep');
+  assert.match(pf.message, /valid After Effects project/i);
+});
+
+test('aepPreflight rejects little-endian RIFF media renamed to .aep', () => {
+  // .aep/.aet are always big-endian RIFX; 'RIFF' means wav/avi/webp - exactly
+  // the renamed-media case this gate exists to catch
+  const wav = makeAepBuffer({ agents: [], size: 4096, magic: 'RIFF' });
+  const g = loadCompat({ buffers: { '/song.aep': wav } });
+  const pf = g.aepPreflight('/song.aep');
+  assert.equal(pf.ok, false);
+  assert.equal(pf.reason, 'not-aep');
+});
+
+test('aepImportFailureMessage reuses a provided preflight instead of rescanning', () => {
+  const g = loadCompat(); // no buffers: any file access would return nothing
+  const newer = {
+    reason: 'newer',
+    savedBy: 'Adobe After Effects 2027 (Windows)',
+    message: 'This project was saved by a newer After Effects.',
+  };
+  assert.equal(g.aepImportFailureMessage('/x.aep', 'AE err', newer), newer.message);
+  const unknown = { reason: null, savedBy: 'Adobe After Effects 2024 (Windows)' };
+  const msg = g.aepImportFailureMessage('/x.aep', 'AE err', unknown);
+  assert.match(msg, /Adobe After Effects 2024 \(Windows\)/);
+  assert.match(msg, /AE err/);
+});
+
+test('aepPreflight reports a missing file', () => {
+  const g = loadCompat();
+  const pf = g.aepPreflight('/nope.aep');
+  assert.equal(pf.ok, false);
+  assert.equal(pf.reason, 'missing');
+});
+
+// ---- hostscript integration (source-order assertions, house style) ----------
+
+function sectionBetween(src, startNeedle, endNeedle) {
+  const start = src.indexOf(startNeedle);
+  assert.notEqual(start, -1, `${startNeedle} missing`);
+  const end = src.indexOf(endNeedle, start);
+  assert.notEqual(end, -1, `${endNeedle} missing after ${startNeedle}`);
+  return src.slice(start, end);
+}
+
+test('addExternalAep preflights the source BEFORE copying it into the library', () => {
+  const body = sectionBetween(captureSrc, 'function addExternalAep', 'function generateThumbForItem');
+  const preflightIdx = body.indexOf('aepPreflight');
+  const copyIdx = body.indexOf('src.copy(destAep)');
+  assert.notEqual(preflightIdx, -1, 'addExternalAep must preflight the source aep');
+  assert.notEqual(copyIdx, -1, 'addExternalAep should still copy the project');
+  assert.ok(preflightIdx < copyIdx, 'preflight must run before the copy so nothing is left behind');
+});
+
+test('addExternalAep removes the copied folder when the import itself failed', () => {
+  const body = sectionBetween(captureSrc, 'function addExternalAep', 'function generateThumbForItem');
+  assert.match(body, /importFailed/, 'addExternalAep must check the importFailed flag from captureCompInfo');
+  assert.match(body, /removeFolderRecursive\(compFolder\)/, 'unimportable projects must not leave a broken library item');
+});
+
+test('the newer-version verdict is advisory - only definitive junk blocks the flow', () => {
+  // hard-blocking on \'newer\' would reject files down-saved for older AEs
+  // (the save STAMP is the newer app even when the FORMAT targets an older
+  // one), so AE itself must stay the arbiter of what it can open
+  const addBody = sectionBetween(captureSrc, 'function addExternalAep', 'function generateThumbForItem');
+  const importBody = sectionBetween(hostSrc, 'function importComp', '// ---------- thumbnails ----------');
+  for (const [name, body] of [['addExternalAep', addBody], ['importComp', importBody]]) {
+    assert.match(body, /'missing'/, `${name} should fail fast on a missing file`);
+    assert.match(body, /'not-aep'/, `${name} should fail fast on a non-RIFX file`);
+    assert.doesNotMatch(body, /!pf\.ok\)\s*return/, `${name} must not hard-block on the ok flag (newer verdict is advisory)`);
+  }
+});
+
+test('importComp preflights the aep before importing', () => {
+  const body = sectionBetween(hostSrc, 'function importComp', '// ---------- thumbnails ----------');
+  const preflightIdx = body.indexOf('aepPreflight');
+  const importIdx = body.indexOf('app.project.importFile');
+  assert.notEqual(preflightIdx, -1, 'importComp must preflight the aep');
+  assert.ok(preflightIdx < importIdx, 'preflight must run before the import');
+});
+
+test('pickAepFile accepts .aet templates as well as .aep projects', () => {
+  const body = sectionBetween(captureSrc, 'function pickAepFile', 'function addExternalAep');
+  assert.match(body, /aep\|aet/, 'pickAepFile must accept .aep and .aet');
+});

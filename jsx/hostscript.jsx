@@ -1,12 +1,13 @@
 // DropComp 2.0 host script (ExtendScript, ES3 only)
-// TODO: split by concern (index/stash/import/thumbs are separable modules)
+// TODO: split by concern (index/stash/thumbs are separable modules)
 
-// relink helpers live in relink.jsx (keeps both files under the 800-line limit).
+// relink helpers live in relink.jsx, aep version preflight in aep-compat.jsx,
+// external-aep capture in import-capture.jsx (keeps files under the 800-line limit).
 // $.fileName is NOT set when CEP evaluates this file, so the panel must call
 // loadHostModules(extensionRoot) once at boot before any relink-dependent call.
 var DC_MODULES_LOADED = false;
-var DC_MODULE_FILES = ['relink.jsx', 'assets.jsx', 'tools.jsx', 'tools-timing.jsx', 'scripts.jsx', 'library-move.jsx'];
-var DC_MODULE_MARKERS = ['collectMissingFootage', 'getAssets', 'tlCreateLayer', 'tlAdjustTiming', 'scRunFile', 'moveStashedComp'];
+var DC_MODULE_FILES = ['relink.jsx', 'assets.jsx', 'tools.jsx', 'tools-timing.jsx', 'scripts.jsx', 'library-move.jsx', 'aep-compat.jsx', 'import-capture.jsx'];
+var DC_MODULE_MARKERS = ['collectMissingFootage', 'getAssets', 'tlCreateLayer', 'tlAdjustTiming', 'scRunFile', 'moveStashedComp', 'aepPreflight', 'addExternalAep'];
 
 function loadHostModules(extPath) {
     try {
@@ -136,8 +137,20 @@ function getIndexFile(libraryPath) {
     return new File(libraryPath + '/.dropcomp_index.json');
 }
 
+// library items hold one AE project: .aep, or .aet for marketplace templates
+function aeProjectFilesIn(folder) {
+    var files = folder.getFiles('*.aep');
+    var aets = folder.getFiles('*.aet');
+    for (var i = 0; i < aets.length; i++) files.push(aets[i]);
+    return files;
+}
+
+function aeProjectExt(fileName) {
+    return /\.aet$/i.test(String(fileName)) ? '.aet' : '.aep';
+}
+
 function entryFromFolder(categoryName, compFolder) {
-    var aeps = compFolder.getFiles('*.aep');
+    var aeps = aeProjectFilesIn(compFolder);
     if (aeps.length === 0) return null;
     var thumb = new File(compFolder.fsName + '/comp.png');
     var meta = readJson(new File(compFolder.fsName + '/metadata.json')) || {};
@@ -286,11 +299,21 @@ function importComp(aepPath) {
         var meta = readJson(metadataFile) || {};
         var compName = meta.displayName || 'Imported Comp';
 
+        // preflight is ADVISORY (see import-capture.jsx): block definitive
+        // junk only, and keep the verdict to explain a failed import
+        var pf = null;
+        var imported = false;
+        if (ensureHostModules()) {
+            pf = aepPreflight(fileToImport.fsName);
+            if (pf.reason === 'missing' || pf.reason === 'not-aep') return 'Error: ' + pf.message;
+        }
+
         app.beginSuppressDialogs();
         suppressing = true;
         // AE project import can corrupt the undo stack inside an explicit group.
         // Import first, then group DropComp's relink/timeline edits.
         var importedFolder = app.project.importFile(new ImportOptions(fileToImport));
+        imported = true;
         app.beginUndoGroup('DropComp Import');
         undoing = true;
         importedFolder.name = compName + ' [DropComp]';
@@ -366,6 +389,10 @@ function importComp(aepPath) {
     } catch (e) {
         try { if (undoing) app.endUndoGroup(); } catch (e2) { }
         try { if (suppressing) app.endSuppressDialogs(false); } catch (e3) { }
+        // only dress up failures of the import itself, not post-import edits
+        if (!imported && typeof $.global.aepImportFailureMessage === 'function') {
+            return 'Error: ' + aepImportFailureMessage(aepPath, e.toString(), pf);
+        }
         return 'Error: ' + e.toString();
     }
 }
@@ -529,170 +556,6 @@ function stashSelectedComp(libraryPath, categoryName) {
     }
 }
 
-// ---------- silent import-and-capture engine ----------
-function captureCompInfo(aepPath, targetPngPath, preferredName) {
-    var importedFolder = null;
-    var suppressing = false;
-    try {
-        if (!app.project) return { ok: false, error: 'Open a project first.' };
-        var f = new File(aepPath);
-        if (!f.exists) return { ok: false, error: 'AEP not found: ' + aepPath };
-        app.beginSuppressDialogs();
-        suppressing = true;
-        app.beginUndoGroup('DropComp Capture');
-        importedFolder = app.project.importFile(new ImportOptions(f));
-        var comps = [];
-        collectComps(importedFolder, comps);
-        var main = pickMainComp(comps, preferredName);
-        if (!main) {
-            importedFolder.remove();
-            app.endUndoGroup();
-            app.endSuppressDialogs(false);
-            return { ok: false, error: 'No composition found in this project.' };
-        }
-        var info = compInfo(main);
-        info.ok = true;
-        info.thumbOk = targetPngPath ? saveVerifiedThumb(main, new File(targetPngPath)) : false;
-        importedFolder.remove();
-        importedFolder = null;
-        app.endUndoGroup();
-        app.endSuppressDialogs(false);
-        return info;
-    } catch (e) {
-        try { if (importedFolder) importedFolder.remove(); } catch (e2) { }
-        try { app.endUndoGroup(); } catch (e3) { }
-        try { if (suppressing) app.endSuppressDialogs(false); } catch (e4) { }
-        return { ok: false, error: e.toString() };
-    }
-}
-
-function pickAepFile() {
-    var f = File.openDialog('Select an After Effects project (.aep)');
-    if (!f) return '{"ok":false,"cancelled":true}';
-    if (!/\.aep$/i.test(f.name)) return jerr('Please choose an .aep file.');
-    return '{"ok":true,"path":"' + jsonEscape(f.fsName) + '"}';
-}
-
-function addExternalAep(libraryPath, categoryName, sourceAepPath) {
-    try {
-        if (isReservedCategory(categoryName)) return jerr('"Assets" is reserved for the Assets tab.');
-        var src = new File(sourceAepPath);
-        if (!src.exists) return jerr('Source file not found.');
-        var displayName = decodeURI(src.name).replace(/\.aep$/i, '');
-        var safe = safeNameJsx(displayName);
-        var catFolder = new Folder(libraryPath + '/' + categoryName);
-        if (!catFolder.exists) catFolder.create();
-        var ts = new Date().getTime();
-        var folderName = safe + '_' + ts;
-        var compFolder = new Folder(catFolder.fsName + '/' + folderName);
-        if (!compFolder.create()) return jerr('Could not create the library folder.');
-        var destAep = new File(compFolder.fsName + '/' + safe + '.aep');
-        if (!src.copy(destAep)) {
-            compFolder.remove();
-            return jerr('Could not copy the project into the library.');
-        }
-        var thumbPath = compFolder.fsName + '/comp.png';
-        var info = captureCompInfo(destAep.fsName, thumbPath, displayName);
-        writeJson(new File(compFolder.fsName + '/metadata.json'), {
-            displayName: displayName,
-            mainCompId: null,
-            mainCompName: info.ok ? info.compName : null,
-            width: info.ok ? info.width : null,
-            height: info.ok ? info.height : null,
-            duration: info.ok ? info.duration : null,
-            frameRate: info.ok ? info.frameRate : null,
-            addedAt: ts,
-            source: 'external'
-        });
-        var thumbFile = new File(thumbPath);
-        updateIndexAddComp(libraryPath, {
-            name: displayName,
-            category: categoryName,
-            uniqueId: folderName,
-            aepPath: destAep.fsName,
-            thumbPath: thumbFile.exists ? thumbFile.fsName : null,
-            mainCompId: null,
-            width: info.ok ? info.width : null,
-            height: info.ok ? info.height : null,
-            duration: info.ok ? info.duration : null,
-            frameRate: info.ok ? info.frameRate : null,
-            addedAt: ts
-        });
-        return '{"ok":true,"name":"' + jsonEscape(displayName) + '","thumbOk":' +
-            ((info.ok && info.thumbOk) ? 'true' : 'false') + '}';
-    } catch (e) {
-        return jerr(e.toString());
-    }
-}
-
-function generateThumbForItem(libraryPath, category, uniqueId) {
-    try {
-        var compFolder = new Folder(libraryPath + '/' + category + '/' + uniqueId);
-        if (!compFolder.exists) return jerr('Item folder not found.');
-        var aeps = compFolder.getFiles('*.aep');
-        if (aeps.length === 0) return jerr('No .aep found in this item.');
-        var metaFile = new File(compFolder.fsName + '/metadata.json');
-        var meta = readJson(metaFile) || {};
-        var preferred = meta.mainCompName || meta.displayName || null;
-        var thumbPath = compFolder.fsName + '/comp.png';
-        var info = captureCompInfo(aeps[0].fsName, thumbPath, preferred);
-        if (!info.ok) return jerr(info.error);
-        meta.mainCompName = info.compName;
-        meta.width = info.width;
-        meta.height = info.height;
-        meta.duration = info.duration;
-        meta.frameRate = info.frameRate;
-        if (!meta.addedAt) {
-            var m = /_(\d{10,})$/.exec(uniqueId);
-            if (m) meta.addedAt = parseInt(m[1], 10);
-        }
-        writeJson(metaFile, meta);
-        var thumbFile = new File(thumbPath);
-        updateIndexPatchComp(libraryPath, category, uniqueId, {
-            thumbPath: thumbFile.exists ? thumbFile.fsName : null,
-            width: info.width,
-            height: info.height,
-            duration: info.duration,
-            frameRate: info.frameRate
-        });
-        return '{"ok":true,"thumbOk":' + (info.thumbOk ? 'true' : 'false') + '}';
-    } catch (e) {
-        return jerr(e.toString());
-    }
-}
-
-function setThumbFromActiveComp(libraryPath, category, uniqueId) {
-    try {
-        var comp = app.project ? app.project.activeItem : null;
-        if (!comp || !(comp instanceof CompItem)) {
-            return jerr('Open a composition in the viewer first.');
-        }
-        var compFolder = new Folder(libraryPath + '/' + category + '/' + uniqueId);
-        if (!compFolder.exists) return jerr('Item folder not found.');
-        var png = new File(compFolder.fsName + '/comp.png');
-        if (png.exists) png.remove();
-        comp.saveFrameToPng(comp.time, png);
-        if (!waitForFile(png, 2500, 1)) return jerr('Could not save the frame.');
-        var metaFile = new File(compFolder.fsName + '/metadata.json');
-        var meta = readJson(metaFile) || {};
-        meta.width = comp.width;
-        meta.height = comp.height;
-        meta.duration = comp.duration;
-        meta.frameRate = comp.frameRate;
-        writeJson(metaFile, meta);
-        updateIndexPatchComp(libraryPath, category, uniqueId, {
-            thumbPath: png.fsName,
-            width: comp.width,
-            height: comp.height,
-            duration: comp.duration,
-            frameRate: comp.frameRate
-        });
-        return '{"ok":true}';
-    } catch (e) {
-        return jerr(e.toString());
-    }
-}
-
 // ---------- transactional rename ----------
 function renameStashedComp(libraryPath, category, uniqueId, newName) {
     try {
@@ -721,10 +584,11 @@ function renameStashedComp(libraryPath, category, uniqueId, newName) {
         }
         var folder = new Folder(catPath + '/' + newUniqueId);
 
-        var aeps = folder.getFiles('*.aep');
+        var aeps = aeProjectFilesIn(folder);
         var oldAepName = aeps.length ? aeps[0].name : null;
-        if (aeps.length && aeps[0].name !== safe + '.aep') {
-            if (!aeps[0].rename(safe + '.aep')) {
+        var projExt = aeps.length ? aeProjectExt(aeps[0].name) : '.aep';
+        if (aeps.length && aeps[0].name !== safe + projExt) {
+            if (!aeps[0].rename(safe + projExt)) {
                 if (newUniqueId !== uniqueId) folder.rename(uniqueId);
                 return jerr('Could not rename the project file.');
             }
@@ -734,13 +598,13 @@ function renameStashedComp(libraryPath, category, uniqueId, newName) {
         var meta = readJson(metaFile) || {};
         meta.displayName = newName;
         if (!writeJson(metaFile, meta)) {
-            var back = folder.getFiles('*.aep');
+            var back = aeProjectFilesIn(folder);
             if (back.length && oldAepName) back[0].rename(oldAepName);
             if (newUniqueId !== uniqueId) folder.rename(uniqueId);
             return jerr('Could not update metadata.');
         }
 
-        var aepNow = folder.getFiles('*.aep');
+        var aepNow = aeProjectFilesIn(folder);
         var thumb = new File(folder.fsName + '/comp.png');
         var patched = updateIndexPatchComp(libraryPath, category, uniqueId, {
             name: newName,

@@ -51,7 +51,7 @@ function moveStashedComp(libraryPath, category, uniqueId, targetCategory) {
 
         removeFolderRecursive(oldFolder);
 
-        var aeps = movedFolder.getFiles('*.aep');
+        var aeps = aeProjectFilesIn(movedFolder);
         var thumb = new File(movedFolder.fsName + '/comp.png');
         var patched = updateIndexPatchComp(libraryPath, category, uniqueId, {
             category: targetCategory,
