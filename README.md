@@ -29,8 +29,9 @@ installer again; your library folder, favorites, and settings are untouched.
 
 ## Library format
 
-`<Library>/<Category>/<safeName>_<timestamp>/` containing `<safeName>.aep`,
-`comp.png`, `metadata.json`, `(Footage)/`. Index cache: `<Library>/.dropcomp_index.json`
+`<Library>/<Category>/<safeName>_<timestamp>/` containing `<safeName>.aep`
+(or `.aet` for external templates), `comp.png`, `metadata.json`, `(Footage)/`.
+Index cache: `<Library>/.dropcomp_index.json`
 (version 2). Settings: `~/Documents/DropComp/library_path.txt`.
 
 Assets live at `<Library>/Assets/<Category>/<file>` - plain image files, no
@@ -40,8 +41,11 @@ sidecars (the top-level `Assets` folder name is reserved). Index cache:
 ## Features
 
 - Stash the selected comp (project must be saved once) - self-contained AEP + footage copy
-- Add any external `.aep` from disk: copied into the library, thumbnail + resolution/
-  duration/fps captured silently inside the current project (never closes your project)
+- Add any external `.aep`/`.aet` from disk (e.g. Envato/marketplace templates): copied
+  into the library, thumbnail + resolution/duration/fps captured silently inside the
+  current project (never closes your project). Files saved by a NEWER After Effects
+  than the one running are rejected up front with a clear message (the version that
+  last saved the file is read from the project's embedded XMP metadata)
 - Generate chip on thumbnail-less items; "Set thumbnail from current frame" per card
 - Rename keeps folder, AEP, metadata, and index in sync (transactional)
 - Relink button (chain icon): finds missing footage in the open project by filename

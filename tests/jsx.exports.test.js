@@ -10,8 +10,8 @@ const hostSrc = read('hostscript.jsx');
 // eval semantics, declarations land in that function's local scope and vanish
 // when it returns - so every top-level function must be exported to $.global
 // explicitly or it is undefined at call time (the collectMissingFootage bug).
-const LOADED_MODULES = ['relink.jsx', 'assets.jsx', 'tools.jsx', 'tools-timing.jsx', 'scripts.jsx', 'library-move.jsx'];
-const MARKERS = ['collectMissingFootage', 'getAssets', 'tlCreateLayer', 'tlAdjustTiming', 'scRunFile', 'moveStashedComp'];
+const LOADED_MODULES = ['relink.jsx', 'assets.jsx', 'tools.jsx', 'tools-timing.jsx', 'scripts.jsx', 'library-move.jsx', 'aep-compat.jsx', 'import-capture.jsx'];
+const MARKERS = ['collectMissingFootage', 'getAssets', 'tlCreateLayer', 'tlAdjustTiming', 'scRunFile', 'moveStashedComp', 'aepPreflight', 'addExternalAep'];
 
 for (const mod of LOADED_MODULES) {
   test(`every top-level function in ${mod} is exported to $.global`, () => {

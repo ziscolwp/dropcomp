@@ -107,7 +107,7 @@ var DCLibrary = (function () {
       if (r.cancelled) return;
       if (!r.ok) { DCUI.toast(r.error, true); return; }
       pendingAepPath = r.path;
-      DCUI.openCategoryModal('addAep', 'Add .aep to Library', categories());
+      DCUI.openCategoryModal('addAep', 'Add AE Project to Library', categories());
     });
   }
 
@@ -134,7 +134,10 @@ var DCLibrary = (function () {
         DCBridge.release();
         var r = DCBridge.parseJson(result);
         if (r && r.ok) {
-          DCUI.toast("'" + r.name + "' added" + (r.thumbOk ? '.' : ' (thumbnail failed - use Generate).'), false);
+          // r.warning: item landed but the capture import failed (host keeps
+          // it because thumbnails/metadata can be regenerated later)
+          if (r.warning) DCUI.toast("'" + r.name + "' added, but: " + r.warning, true);
+          else DCUI.toast("'" + r.name + "' added" + (r.thumbOk ? '.' : ' (thumbnail failed - use Generate).'), false);
           load();
         } else {
           DCUI.toast((r && r.error) || result, true);

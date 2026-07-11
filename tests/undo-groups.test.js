@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const hostSrc = fs.readFileSync(path.join(__dirname, '..', 'jsx', 'hostscript.jsx'), 'utf8');
+const captureSrc = fs.readFileSync(path.join(__dirname, '..', 'jsx', 'import-capture.jsx'), 'utf8');
 
 function sectionBetween(src, startNeedle, endNeedle) {
   const start = src.indexOf(startNeedle);
@@ -35,5 +36,31 @@ test('importComp keeps project import outside the explicit undo group', () => {
   assert.ok(
     importIndex < undoIndex,
     'AE project import must happen before DropComp opens its explicit undo group'
+  );
+});
+
+// Field report: "Undo group mismatch, will attempt to fix" on every external
+// aep add. captureCompInfo (the add-external-aep capture path) still imported
+// INSIDE its undo group after importComp got the fix.
+test('captureCompInfo keeps project import outside the explicit undo group', () => {
+  const body = sectionBetween(captureSrc, 'function captureCompInfo', 'function pickAepFile');
+  const importIndex = body.indexOf('app.project.importFile(new ImportOptions(f))');
+  const undoIndex = body.indexOf("app.beginUndoGroup('DropComp Capture')");
+
+  assert.notEqual(importIndex, -1, 'captureCompInfo should import the AEP project');
+  assert.notEqual(undoIndex, -1, 'captureCompInfo should still group its cleanup edits');
+  assert.ok(
+    importIndex < undoIndex,
+    'AE project import must happen before DropComp opens its explicit undo group'
+  );
+});
+
+test('captureCompInfo closes the undo group only when it actually opened one', () => {
+  const body = sectionBetween(captureSrc, 'function captureCompInfo', 'function pickAepFile');
+  const catchBody = body.slice(body.indexOf('} catch (e) {'));
+  assert.match(
+    catchBody,
+    /if \(undoing\) app\.endUndoGroup\(\)/,
+    'captureCompInfo catch path must guard endUndoGroup with the undoing flag'
   );
 });
