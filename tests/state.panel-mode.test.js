@@ -61,6 +61,25 @@ test('savePrefsForMode in a standalone mode preserves the stored activeTab', () 
   assert.equal(saved.sort, 'name', 'the real change must still persist');
 });
 
+test('savePrefsForMode never un-pins the live prefs object in standalone mode', () => {
+  const storage = fakeStorage();
+  // the main panel remembered the Library tab
+  const mainPrefs = DCState.defaultPrefs();
+  mainPrefs.activeTab = 'library';
+  DCState.savePrefs(storage, mainPrefs);
+
+  // the standalone Assets panel has its tab pinned and persists a sort change
+  const prefs = DCState.defaultPrefs();
+  prefs.activeTab = 'assets';
+  prefs.sort = 'name';
+  DCState.savePrefsForMode(storage, prefs, 'assets');
+
+  // storage keeps the main panel's tab, but the live object MUST stay pinned -
+  // activeModule()/viewKey()/render guards all read prefs.activeTab
+  assert.equal(JSON.parse(storage.dump().dropcomp_prefs).activeTab, 'library');
+  assert.equal(prefs.activeTab, 'assets', 'live prefs must keep the pinned tab');
+});
+
 test('savePrefsForMode in a standalone mode with empty storage keeps the default tab', () => {
   const storage = fakeStorage();
   const prefs = DCState.defaultPrefs();

@@ -218,10 +218,15 @@ var DCState = (function () {
 
   // Standalone panels share localStorage with the main panel; when they save
   // prefs they must not overwrite the main panel's remembered tab with the
-  // stale value they booted with.
+  // stale value they booted with. The swap happens on a copy - the caller's
+  // live prefs object must keep its pinned activeTab (activeModule(), viewKey()
+  // and the module render guards all read it).
   function savePrefsForMode(storage, prefs, mode) {
-    if (mode !== 'full') prefs.activeTab = loadPrefs(storage).activeTab;
-    savePrefs(storage, prefs);
+    if (mode === 'full') { savePrefs(storage, prefs); return; }
+    var out = {};
+    Object.keys(prefs).forEach(function (k) { out[k] = prefs[k]; });
+    out.activeTab = loadPrefs(storage).activeTab;
+    savePrefs(storage, out);
   }
 
   return {
