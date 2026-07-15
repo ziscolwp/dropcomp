@@ -1,3 +1,4 @@
+// TODO: split by concern (add-flows / drop-target / card-actions are separable)
 var DCAssets = (function () {
   'use strict';
 

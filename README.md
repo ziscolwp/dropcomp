@@ -55,6 +55,12 @@ sidecars (the top-level `Assets` folder name is reserved). Index cache:
   multi-add from disk (png/jpg/gif/bmp/tif/tga/psd/ai/eps), the file itself is the
   thumbnail, import drops into the active comp at the playhead and reuses footage
   already in the project (one `Assets [DropComp]` bin, no duplicates)
+- **Shape assets** - select shape layers in a comp and click the shapes button
+  (Assets tab) to save them as a reusable asset with a rendered thumbnail.
+  Importing pastes them back into the active comp at the playhead as fully
+  editable shape layers (paths, keyframes, expressions intact). Requires the
+  project to be saved once; the capture briefly saves and reopens your project,
+  exactly like stashing a comp to the Library
 - **Tools tab** - common AE layer utilities one click away: anchor-point 3×3 grid
   (scale-compensated), Null/Adjustment/Solid/Camera creators, align & distribute,
   Num/Step sequence-in-time, and pre-comp tools (PreComp, Decompose [AE 2022+],
