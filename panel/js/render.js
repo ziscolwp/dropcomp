@@ -20,12 +20,17 @@ var DCRender = (function () {
     return b;
   }
 
+  // shape assets are .aep files - the badge should say what they ARE
+  function assetBadgeText(ext) {
+    return ext === 'aep' ? 'SHAPE' : String(ext || '?').toUpperCase();
+  }
+
   // On a broken thumbnail, swap in a placeholder instead of vanishing: the
   // asset's extension badge when we know it, else the photo-off glyph.
   function showThumbFallback(img, ext) {
     if (!img.parentNode) return;
     var ph = el('div', 'thumb-placeholder');
-    if (ext) ph.appendChild(el('span', 'ext-badge', String(ext).toUpperCase()));
+    if (ext) ph.appendChild(el('span', 'ext-badge', assetBadgeText(ext)));
     else ph.innerHTML = ICONS.photoOff;
     img.parentNode.replaceChild(ph, img);
   }
@@ -97,6 +102,13 @@ var DCRender = (function () {
   // an extension badge. svg renders natively (vector, so it stays crisp).
   var RENDERABLE_EXTS = { png: 1, jpg: 1, jpeg: 1, gif: 1, bmp: 1, svg: 1 };
 
+  // aep shape assets render their PNG sidecar; images render themselves
+  function assetThumbSrc(asset) {
+    if (RENDERABLE_EXTS[asset.ext]) return asset.filePath;
+    if (asset.ext === 'aep' && asset.thumbPath) return asset.thumbPath;
+    return null;
+  }
+
   function buildAssetCard(asset, usage, prefs) {
     var card = el('article', 'card card--asset' + (usage.isFavorite ? ' has-fav' : ''));
     card.dataset.uniqueId = asset.uniqueId;
@@ -104,17 +116,18 @@ var DCRender = (function () {
     card.title = asset.name + '\nDouble-click to import';
 
     var thumbWrap = el('div', 'card-thumb');
-    if (RENDERABLE_EXTS[asset.ext]) {
+    var src = assetThumbSrc(asset);
+    if (src) {
       var img = document.createElement('img');
       img.loading = 'lazy';
       img.alt = '';
       // addedAt changes when the same filename is re-added, busting the stale cache
-      img.src = thumbUrl(asset.filePath, asset.addedAt || null);
+      img.src = thumbUrl(src, asset.addedAt || null);
       img.onerror = function () { showThumbFallback(img, asset.ext); };
       thumbWrap.appendChild(img);
     } else {
       var ph = el('div', 'thumb-placeholder');
-      ph.appendChild(el('span', 'ext-badge', String(asset.ext || '?').toUpperCase()));
+      ph.appendChild(el('span', 'ext-badge', assetBadgeText(asset.ext)));
       thumbWrap.appendChild(ph);
     }
 
@@ -158,18 +171,17 @@ var DCRender = (function () {
     card.title = item.name + '\nDouble-click to import';
 
     var thumbWrap = el('div', 'card-thumb');
-    var renderable = isAsset ? RENDERABLE_EXTS[item.ext] : item.thumbPath;
+    var renderable = isAsset ? assetThumbSrc(item) : item.thumbPath;
     if (renderable) {
       var img = document.createElement('img');
       img.loading = 'lazy';
       img.alt = '';
-      img.src = thumbUrl(isAsset ? item.filePath : item.thumbPath,
-        isAsset ? (item.addedAt || null) : bust);
+      img.src = thumbUrl(renderable, isAsset ? (item.addedAt || null) : bust);
       img.onerror = function () { showThumbFallback(img, isAsset ? item.ext : null); };
       thumbWrap.appendChild(img);
     } else {
       var ph = el('div', 'thumb-placeholder');
-      if (isAsset) ph.appendChild(el('span', 'ext-badge', String(item.ext || '?').toUpperCase()));
+      if (isAsset) ph.appendChild(el('span', 'ext-badge', assetBadgeText(item.ext)));
       else ph.innerHTML = ICONS.photoOff;
       thumbWrap.appendChild(ph);
     }

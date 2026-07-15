@@ -146,3 +146,62 @@ test('svg assets render an <img> preview in list view too', () => {
   assert.equal(badges.length, 1, 'list-row fallback shows the extension badge');
   assert.equal(badges[0].textContent, 'SVG');
 });
+
+test('aep shape assets render their thumbnail sidecar when present', () => {
+  const container = makeNode('main');
+  const asset = {
+    uniqueId: 'Shapes/Star.aep', category: 'Shapes', name: 'Star', ext: 'aep',
+    filePath: '/L/Assets/Shapes/Star.aep',
+    thumbPath: '/L/Assets/Shapes/.thumb_Star.aep.png', addedAt: 42,
+  };
+  DCRender.render(container, assetGroups(asset), prefs(), {}, {}, 'empty', 'asset');
+
+  const imgs = findByTag(container, 'IMG');
+  assert.equal(imgs.length, 1, 'shape asset card must render its sidecar thumbnail');
+  assert.match(imgs[0].src, /\.thumb_Star\.aep\.png\?t=42$/, 'img points at the sidecar with a cache-bust');
+});
+
+test('aep shape assets without a thumbnail show a SHAPE badge', () => {
+  const container = makeNode('main');
+  const asset = {
+    uniqueId: 'Shapes/Star.aep', category: 'Shapes', name: 'Star', ext: 'aep',
+    filePath: '/L/Assets/Shapes/Star.aep',
+  };
+  DCRender.render(container, assetGroups(asset), prefs(), {}, {}, 'empty', 'asset');
+
+  assert.equal(findByTag(container, 'IMG').length, 0, 'no img without a sidecar');
+  const badges = findByClass(container, 'ext-badge');
+  assert.equal(badges.length, 1);
+  assert.equal(badges[0].textContent, 'SHAPE', 'badge says SHAPE, not AEP');
+});
+
+test('a broken shape thumbnail falls back to the SHAPE badge', () => {
+  const container = makeNode('main');
+  const asset = {
+    uniqueId: 'Shapes/Star.aep', category: 'Shapes', name: 'Star', ext: 'aep',
+    filePath: '/L/Assets/Shapes/Star.aep',
+    thumbPath: '/L/Assets/Shapes/.thumb_Star.aep.png',
+  };
+  DCRender.render(container, assetGroups(asset), prefs(), {}, {}, 'empty', 'asset');
+
+  const img = findByTag(container, 'IMG')[0];
+  assert.ok(img, 'shape asset starts as an img preview');
+  img.onerror();
+  const badges = findByClass(container, 'ext-badge');
+  assert.equal(badges.length, 1);
+  assert.equal(badges[0].textContent, 'SHAPE');
+});
+
+test('aep shape assets render their thumbnail in list view too', () => {
+  const container = makeNode('main');
+  const asset = {
+    uniqueId: 'Shapes/Star.aep', category: 'Shapes', name: 'Star', ext: 'aep',
+    filePath: '/L/Assets/Shapes/Star.aep',
+    thumbPath: '/L/Assets/Shapes/.thumb_Star.aep.png', addedAt: 7,
+  };
+  DCRender.render(container, assetGroups(asset), prefs({ viewModeAssets: 'list' }), {}, {}, 'empty', 'asset');
+
+  const imgs = findByTag(container, 'IMG');
+  assert.equal(imgs.length, 1);
+  assert.match(imgs[0].src, /\.thumb_Star\.aep\.png\?t=7$/);
+});

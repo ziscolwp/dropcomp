@@ -33,7 +33,7 @@ var DCState = (function () {
 
   function formatAssetMetaLine(asset) {
     var parts = [];
-    if (asset && asset.ext) parts.push(String(asset.ext).toUpperCase());
+    if (asset && asset.ext) parts.push(asset.ext === 'aep' ? 'SHAPE' : String(asset.ext).toUpperCase());
     var size = formatBytes(asset && asset.sizeBytes);
     if (size) parts.push(size);
     return parts.join(' · ');

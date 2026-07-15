@@ -64,3 +64,8 @@ test('sort/filter/cleanup work on asset-shaped items (uniqueId with slash, added
   assert.equal(cleaned.removed, 1);
   assert.ok(cleaned.usageMeta['Icons/a-mouse.png']);
 });
+
+test('formatAssetMetaLine labels aep assets as SHAPE', () => {
+  assert.match(DCState.formatAssetMetaLine({ ext: 'aep', sizeBytes: 2048 }), /^SHAPE · /);
+  assert.doesNotMatch(DCState.formatAssetMetaLine({ ext: 'aep', sizeBytes: 2048 }), /AEP/);
+});
