@@ -4,21 +4,42 @@ var DCShell = (function () {
   var els = null;
   var prefs = null;
   var libraryPath = null;
+  var panelMode = 'full';
 
   function hasAssets() { return typeof DCAssets !== 'undefined'; }
   function hasTools() { return typeof DCTools !== 'undefined'; }
   function hasScripts() { return typeof DCScripts !== 'undefined'; }
+  function hasSync() { return typeof DCSync !== 'undefined'; }
 
-  function init(elements) {
-    els = elements;
+  // Prefs live in localStorage shared by every DropComp panel. A standalone
+  // panel pins its own activeTab after every (re)load so a tab remembered by
+  // the main panel can never leak into it.
+  function reloadPrefs() {
     prefs = DCState.loadPrefs(localStorage);
+    if (panelMode !== 'full') prefs.activeTab = panelMode;
+  }
+
+  function init(elements, mode) {
+    els = elements;
+    panelMode = mode || 'full';
+    reloadPrefs();
     applyPrefsToControls();
   }
+
+  function getMode() { return panelMode; }
 
   function getEls() { return els; }
   function getPrefs() { return prefs; }
   function getLibraryPath() { return libraryPath; }
-  function persistPrefs() { DCState.savePrefs(localStorage, prefs); }
+  // The thumb-size slider persists on every input event while dragging, so the
+  // cross-panel prefs broadcast is trailing-debounced instead of per-call.
+  var prefsBroadcastTimer = null;
+  function persistPrefs() {
+    DCState.savePrefsForMode(localStorage, prefs, panelMode);
+    if (!hasSync()) return;
+    clearTimeout(prefsBroadcastTimer);
+    prefsBroadcastTimer = setTimeout(function () { DCSync.broadcast('prefs'); }, 200);
+  }
 
   function activeModule() {
     return (prefs.activeTab === 'assets' && hasAssets()) ? DCAssets : DCLibrary;
@@ -80,6 +101,13 @@ var DCShell = (function () {
   }
 
   function boot() {
+    if (panelMode === 'tools') {
+      // tools never touch the library; boot straight to a usable panel even
+      // with no library configured or the drive missing
+      DCUI.show('app');
+      setActiveTab('tools', true);
+      return;
+    }
     DCBridge.call('getLibraryPath', [], function (savedPath) {
       if (savedPath && savedPath !== 'null') {
         libraryPath = savedPath;
@@ -107,6 +135,7 @@ var DCShell = (function () {
   }
 
   function setActiveTab(tab, skipPersist) {
+    if (panelMode !== 'full') { tab = panelMode; skipPersist = true; }
     prefs.activeTab = DCState.resolveActiveTab(tab, hasAssets(), hasTools(), hasScripts());
     if (!skipPersist) persistPrefs();
     var isAssets = prefs.activeTab === 'assets';
@@ -133,6 +162,7 @@ var DCShell = (function () {
       if (path && path !== 'null') {
         libraryPath = path;
         verifyAndLoad();
+        if (hasSync()) DCSync.broadcast('path');
       }
     });
   }
@@ -223,6 +253,33 @@ var DCShell = (function () {
     persistPrefs();
   }
 
+  function appVisible() { return els && els.app && !els.app.classList.contains('hidden'); }
+
+  // Another DropComp panel changed shared state. Visible sections re-read the
+  // disk now; hidden sections are only marked stale and re-read on next visit.
+  // Never broadcast from in here - that would echo between panels forever.
+  function onRemoteChange(kind) {
+    if (kind === 'path') { boot(); return; }
+    if (kind === 'prefs') {
+      reloadPrefs();
+      applyPrefsToControls();
+      if (appVisible() && (prefs.activeTab === 'library' || prefs.activeTab === 'assets')) {
+        activeModule().rerender();
+      }
+      return;
+    }
+    if (kind === 'library') {
+      DCLibrary.resetLoaded();
+      if (appVisible() && prefs.activeTab === 'library') DCLibrary.ensureLoaded();
+    } else if (kind === 'assets' && hasAssets()) {
+      DCAssets.resetLoaded();
+      if (appVisible() && prefs.activeTab === 'assets') DCAssets.ensureLoaded();
+    } else if (kind === 'scripts' && hasScripts()) {
+      if (appVisible() && prefs.activeTab === 'scripts') DCScripts.refresh();
+      else DCScripts.resetLoaded();
+    }
+  }
+
   function onCardAction(action, uniqueId, category) {
     activeModule().onCardAction(action, uniqueId, category);
   }
@@ -233,6 +290,7 @@ var DCShell = (function () {
 
   return {
     init: init, boot: boot, verifyAndLoad: verifyAndLoad,
+    getMode: getMode, onRemoteChange: onRemoteChange,
     getEls: getEls, getPrefs: getPrefs, getLibraryPath: getLibraryPath, persistPrefs: persistPrefs,
     setActiveTab: setActiveTab, selectLibraryFolder: selectLibraryFolder,
     openSettings: openSettings, openLibraryInFinder: openLibraryInFinder,
