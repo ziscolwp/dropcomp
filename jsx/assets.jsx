@@ -23,6 +23,12 @@ function getAssetsIndexFile(libraryPath) {
     return new File(libraryPath + '/Assets/.dropcomp_assets_index.json');
 }
 
+// Shape assets (.aep) carry a rendered PNG thumbnail as a dot-file sidecar.
+// Dot-files are skipped by assetEntryFromFile, so sidecars are never indexed.
+function shapeThumbSidecarName(aepFileName) {
+    return '.thumb_' + aepFileName + '.png';
+}
+
 function assetEntryFromFile(categoryName, file) {
     var fileName = decodeURI(file.name);
     if (fileName.charAt(0) === '.') return null;
@@ -335,6 +341,7 @@ $.global.assetExt = assetExt;
 $.global.isSupportedAsset = isSupportedAsset;
 $.global.assetsRoot = assetsRoot;
 $.global.getAssetsIndexFile = getAssetsIndexFile;
+$.global.shapeThumbSidecarName = shapeThumbSidecarName;
 $.global.assetEntryFromFile = assetEntryFromFile;
 $.global.loadAssetsIndex = loadAssetsIndex;
 $.global.saveAssetsIndex = saveAssetsIndex;
