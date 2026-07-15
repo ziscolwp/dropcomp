@@ -4,7 +4,7 @@
 // $.global explicitly or it is undefined at call time.
 // Uses hostscript globals: jerr, jsonEscape, readJson, writeJson, safeNameJsx,
 // isReservedCategory, removeFolderRecursive, updateIndexAddComp,
-// updateIndexPatchComp, collectComps, pickMainComp, compInfo, waitForFile,
+// updateIndexPatchComp, collectComps, pickMainComp, compInfo, watchPngWrite,
 // saveVerifiedThumb, aeProjectFilesIn, aeProjectExt.
 // Uses aep-compat globals directly (no ensureHostModules guard needed:
 // aep-compat.jsx loads BEFORE this file in DC_MODULE_FILES, so if these
@@ -120,7 +120,9 @@ function addExternalAep(libraryPath, categoryName, sourceAepPath) {
             category: categoryName,
             uniqueId: folderName,
             aepPath: destAep.fsName,
-            thumbPath: thumbFile.exists ? thumbFile.fsName : null,
+            // gate on the capture verdict: a file merely existing can be a
+            // partial png from a write that was still in flight
+            thumbPath: (info.ok && info.thumbOk && thumbFile.exists) ? thumbFile.fsName : null,
             mainCompId: null,
             width: info.ok ? info.width : null,
             height: info.ok ? info.height : null,
@@ -162,7 +164,7 @@ function generateThumbForItem(libraryPath, category, uniqueId) {
         writeJson(metaFile, meta);
         var thumbFile = new File(thumbPath);
         updateIndexPatchComp(libraryPath, category, uniqueId, {
-            thumbPath: thumbFile.exists ? thumbFile.fsName : null,
+            thumbPath: (info.thumbOk && thumbFile.exists) ? thumbFile.fsName : null,
             width: info.width,
             height: info.height,
             duration: info.duration,
@@ -183,9 +185,14 @@ function setThumbFromActiveComp(libraryPath, category, uniqueId) {
         var compFolder = new Folder(libraryPath + '/' + category + '/' + uniqueId);
         if (!compFolder.exists) return jerr('Item folder not found.');
         var png = new File(compFolder.fsName + '/comp.png');
-        if (png.exists) png.remove();
+        if (png.exists && !png.remove()) return jerr('Could not replace the existing thumbnail.');
         comp.saveFrameToPng(comp.time, png);
-        if (!waitForFile(png, 2500, 1)) return jerr('Could not save the frame.');
+        var w = watchPngWrite(png, 8000);
+        if (w.state !== 'complete') {
+            // scrub a dead partial so the panel never shows a truncated png
+            if (w.state === 'dead') { try { if (png.exists) png.remove(); } catch (eScrub) { } }
+            return jerr('Could not save the frame.');
+        }
         var metaFile = new File(compFolder.fsName + '/metadata.json');
         var meta = readJson(metaFile) || {};
         meta.width = comp.width;
