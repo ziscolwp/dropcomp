@@ -158,8 +158,94 @@ function addShapeFromSelection(libraryPath, categoryName) {
     }
 }
 
+// Pastes a saved shape asset's layers into the active comp as editable shape
+// layers, then removes the imported project items (shape layers carry no
+// external footage, so removal is safe). Text protocol mirrors importAsset.
+function importShapeAsset(filePath) {
+    var suppressing = false;
+    var undoing = false;
+    var importedFolder = null;
+    try {
+        if (!app.project) return 'Error: Please open a project first.';
+        var activeComp = app.project.activeItem;
+        if (!activeComp || !(activeComp instanceof CompItem)) {
+            return 'Error: Open a composition first to import a shape.';
+        }
+        var f = new File(filePath);
+        if (!f.exists) return 'Error: Asset file not found.';
+        // advisory preflight: block definitive junk, explain version mismatches
+        var pf = aepPreflight(f.fsName);
+        if (pf.reason === 'missing' || pf.reason === 'not-aep') return 'Error: ' + pf.message;
+
+        app.beginSuppressDialogs();
+        suppressing = true;
+        // AE project import can corrupt the undo stack inside an explicit
+        // group - import first, then group DropComp's edits (mirrors importComp)
+        importedFolder = app.project.importFile(new ImportOptions(f));
+        app.beginUndoGroup('DropComp Import Shape');
+        undoing = true;
+
+        var comps = [];
+        collectComps(importedFolder, comps);
+        var srcComp = comps.length ? comps[0] : null;
+        var copied = 0;
+        var skipped = 0;
+        if (srcComp) {
+            // copyToComp inserts at the TOP: walk bottom-up so stacking survives
+            for (var i = srcComp.numLayers; i >= 1; i--) {
+                if (isShapeLayer(srcComp.layer(i))) {
+                    srcComp.layer(i).copyToComp(activeComp);
+                    copied++;
+                } else {
+                    skipped++;
+                }
+            }
+        }
+        if (!copied) {
+            importedFolder.remove();
+            importedFolder = null;
+            app.endUndoGroup();
+            undoing = false;
+            app.endSuppressDialogs(false);
+            suppressing = false;
+            return 'Error: No shape layers found in this asset.';
+        }
+
+        // the copied layers occupy indices 1..copied (each insert lands on top)
+        var minStart = null;
+        for (i = 1; i <= copied; i++) {
+            var st = activeComp.layer(i).startTime;
+            if (minStart === null || st < minStart) minStart = st;
+        }
+        var shift = activeComp.time - minStart;
+        for (i = 1; i <= copied; i++) {
+            activeComp.layer(i).startTime = activeComp.layer(i).startTime + shift;
+        }
+        for (i = 1; i <= activeComp.numLayers; i++) {
+            activeComp.layer(i).selected = (i <= copied);
+        }
+
+        importedFolder.remove();
+        importedFolder = null;
+        app.endUndoGroup();
+        undoing = false;
+        app.endSuppressDialogs(false);
+        suppressing = false;
+
+        var assetName = decodeURI(f.name).replace(/\.aep$/i, '');
+        return "Success: '" + assetName + "' added to '" + activeComp.name + "'." +
+            (skipped ? ' Skipped ' + skipped + ' non-shape layer' + (skipped === 1 ? '' : 's') + '.' : '');
+    } catch (e) {
+        try { if (importedFolder) importedFolder.remove(); } catch (e2) { }
+        try { if (undoing) app.endUndoGroup(); } catch (e3) { }
+        try { if (suppressing) app.endSuppressDialogs(false); } catch (e4) { }
+        return 'Error: ' + e.toString();
+    }
+}
+
 // ---- exports (see header comment) ----
 $.global.isShapeLayer = isShapeLayer;
 $.global.selectedShapeLayers = selectedShapeLayers;
 $.global.getShapeSelectionInfo = getShapeSelectionInfo;
 $.global.addShapeFromSelection = addShapeFromSelection;
+$.global.importShapeAsset = importShapeAsset;

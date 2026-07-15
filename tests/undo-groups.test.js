@@ -64,3 +64,29 @@ test('captureCompInfo closes the undo group only when it actually opened one', (
     'captureCompInfo catch path must guard endUndoGroup with the undoing flag'
   );
 });
+
+// Shape assets import the saved .aep the same way - same undo-corruption trap.
+const shapesSrc = fs.readFileSync(path.join(__dirname, '..', 'jsx', 'shapes.jsx'), 'utf8');
+
+test('importShapeAsset keeps project import outside the explicit undo group', () => {
+  const body = sectionBetween(shapesSrc, 'function importShapeAsset', '// ---- exports');
+  const importIndex = body.indexOf('app.project.importFile(new ImportOptions(f))');
+  const undoIndex = body.indexOf("app.beginUndoGroup('DropComp Import Shape')");
+
+  assert.notEqual(importIndex, -1, 'importShapeAsset should import the AEP project');
+  assert.notEqual(undoIndex, -1, 'importShapeAsset should group its edits');
+  assert.ok(
+    importIndex < undoIndex,
+    'AE project import must happen before DropComp opens its explicit undo group'
+  );
+});
+
+test('importShapeAsset closes the undo group only when it actually opened one', () => {
+  const body = sectionBetween(shapesSrc, 'function importShapeAsset', '// ---- exports');
+  const catchBody = body.slice(body.lastIndexOf('} catch (e) {'));
+  assert.match(
+    catchBody,
+    /if \(undoing\) app\.endUndoGroup\(\)/,
+    'importShapeAsset catch path must guard endUndoGroup with the undoing flag'
+  );
+});

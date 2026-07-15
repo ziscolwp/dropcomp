@@ -242,6 +242,8 @@ function fitLayerToComp(layer, footage, comp) {
 
 // Text protocol (Success:/Error:) to mirror importComp exactly.
 function importAsset(filePath) {
+    // shape assets (.aep) paste editable layers instead of importing footage
+    if (assetExt(filePath) === 'aep') return importShapeAsset(filePath);
     var suppressing = false;
     try {
         if (!app.project) return 'Error: Please open a project first.';

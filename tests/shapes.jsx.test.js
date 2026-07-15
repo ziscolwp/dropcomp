@@ -250,3 +250,109 @@ test('addShapeFromSelection reopens the original project even when capture throw
   assert.equal(r.ok, false);
   assert.deepEqual(world.reopened, ['/proj/my.aep'], 'finally must reopen the original');
 });
+
+// ---- importShapeAsset -------------------------------------------------------
+
+function makeImportWorld(opts) {
+  const calls = [];
+  const activeLayers = []; // index 1 = top
+  const activeComp = new CompItem();
+  Object.assign(activeComp, {
+    name: 'Main', time: 4,
+    layer(i) { return activeLayers[i - 1]; },
+  });
+  Object.defineProperty(activeComp, 'numLayers', { get: () => activeLayers.length });
+
+  const srcLayers = (opts && opts.srcLayers) || [
+    shapeLayer('Star', { startTime: 0, outPoint: 3 }),
+    shapeLayer('Blob', { startTime: 1, outPoint: 4 }),
+  ];
+  srcLayers.forEach((l) => {
+    l.copyToComp = function () {
+      activeLayers.unshift(Object.assign({}, this, { selected: false })); // inserts at TOP
+      calls.push('copy:' + this.name);
+    };
+  });
+  const srcComp = new CompItem();
+  Object.assign(srcComp, {
+    name: 'Star',
+    layer(i) { return srcLayers[i - 1]; },
+  });
+  Object.defineProperty(srcComp, 'numLayers', { get: () => srcLayers.length });
+
+  const importedFolder = new FolderItem();
+  importedFolder.remove = () => { calls.push('removeImported'); };
+
+  const project = {
+    activeItem: activeComp,
+    importFile() { calls.push('importFile'); return importedFolder; },
+  };
+  const world = { calls, activeComp, activeLayers, srcComp, project };
+  world.load = () => loadShapesJsx(project, (context) => {
+    context.app = {
+      project,
+      beginSuppressDialogs() { calls.push('suppressOn'); },
+      endSuppressDialogs() { calls.push('suppressOff'); },
+      beginUndoGroup() { calls.push('beginUndo'); },
+      endUndoGroup() { calls.push('endUndo'); },
+    };
+    context.File = function File(p) {
+      this.fsName = String(p);
+      this.name = String(p).slice(String(p).lastIndexOf('/') + 1);
+      this.exists = true;
+    };
+    context.collectComps = (folder, out) => { out.push(world.srcComp); };
+    context.aepPreflight = () => ({ reason: 'ok', message: '' });
+  });
+  return world;
+}
+
+test('importShapeAsset copies shapes to the active comp at the playhead', () => {
+  const world = makeImportWorld();
+  const g = world.load();
+  const result = g.importShapeAsset('/Library/Assets/Shapes/Star.aep');
+  assert.match(result, /^Success:/, result);
+  assert.equal(world.activeLayers.length, 2);
+  // bottom-to-top copy preserves stacking: Star on top
+  assert.equal(world.activeLayers[0].name, 'Star');
+  // earliest startTime (0) lands at the playhead (4); offsets preserved
+  const starts = world.activeLayers.map((l) => l.startTime).sort((a, b) => a - b);
+  assert.deepEqual(starts, [4, 5]);
+  // copied layers are selected
+  assert.equal(world.activeLayers.every((l) => l.selected), true);
+  // imported project items are cleaned out of the bin
+  assert.ok(world.calls.includes('removeImported'));
+});
+
+test('importShapeAsset imports OUTSIDE the undo group', () => {
+  const world = makeImportWorld();
+  const g = world.load();
+  g.importShapeAsset('/x/Star.aep');
+  assert.ok(world.calls.indexOf('importFile') < world.calls.indexOf('beginUndo'),
+    'project import must precede beginUndoGroup');
+});
+
+test('importShapeAsset requires an active comp', () => {
+  const world = makeImportWorld();
+  world.project.activeItem = null;
+  const g = world.load();
+  assert.match(g.importShapeAsset('/x/Star.aep'), /^Error: Open a composition/);
+});
+
+test('importShapeAsset skips non-shape layers and reports the count', () => {
+  const world = makeImportWorld({
+    srcLayers: [shapeLayer('Star', { startTime: 0, outPoint: 3 }), textLayer('Note')],
+  });
+  const g = world.load();
+  const result = g.importShapeAsset('/x/Star.aep');
+  assert.match(result, /^Success:/);
+  assert.match(result, /Skipped 1 non-shape layer/);
+  assert.equal(world.activeLayers.length, 1);
+});
+
+test('importShapeAsset errors when the asset holds no shape layers', () => {
+  const world = makeImportWorld({ srcLayers: [textLayer('Note')] });
+  const g = world.load();
+  assert.match(g.importShapeAsset('/x/Star.aep'), /^Error: No shape layers found/);
+  assert.ok(world.calls.includes('removeImported'), 'cleanup still runs');
+});
