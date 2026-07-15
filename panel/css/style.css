@@ -67,6 +67,8 @@ body {
 .app-version { font-size: 11px; color: var(--gold); }
 
 #tabs { display: flex; gap: 16px; padding: 8px 14px 0; border-bottom: 1px solid var(--border); }
+/* standalone panels are pinned to one section - no tab bar */
+body.mode-library #tabs, body.mode-assets #tabs, body.mode-tools #tabs, body.mode-scripts #tabs { display: none; }
 .tab {
   background: none; border: none; padding: 0 0 8px; cursor: pointer;
   font-size: 12px; color: var(--text-dim); border-bottom: 2px solid transparent;

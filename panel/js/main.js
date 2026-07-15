@@ -6,6 +6,12 @@
   // an undefined module function ('EvalScript error.')
   DCBridge.init(csInterface, csInterface.getSystemPath(SystemPath.EXTENSION));
 
+  // Five manifest entries share this page; the extension id picks which panel
+  // this instance is (full tabbed shell, or one section standalone).
+  var extensionId = csInterface.getExtensionID();
+  var panelMode = DCState.panelModeFromExtensionId(extensionId);
+  if (panelMode !== 'full') document.body.classList.add('mode-' + panelMode);
+
   function $(id) { return document.getElementById(id); }
 
   var els = {
@@ -49,7 +55,8 @@
   };
 
   DCUI.init(els);
-  DCShell.init(els);
+  DCShell.init(els, panelMode);
+  DCSync.init(csInterface, extensionId, DCShell.onRemoteChange);
   DCLibrary.init();
   if (typeof DCAssets !== 'undefined') DCAssets.init();
   if (typeof DCTools !== 'undefined') DCTools.init();
@@ -142,6 +149,7 @@
     }
   });
 
+  $('app-name').textContent = DCState.panelModeTitle(panelMode);
   // version labels come from the single DCUpdate.VERSION constant
   $('app-version').textContent = DCUpdate.VERSION.replace(/\.\d+$/, '');
   $('settings-version').textContent = 'DropComp ' + DCUpdate.VERSION;
@@ -173,11 +181,15 @@
   $('check-updates-btn').addEventListener('click', function () {
     checkForUpdates(true);
   });
-  checkForUpdates(false);
-  // a network blip at boot caches a short-lived error result; one quiet
-  // re-check after that window means the chip still appears this session
-  setTimeout(function () { checkForUpdates(false); }, 2 * DCUpdate.ERROR_RETRY_MS);
-  DCUpdater.onBoot();
+  // only the main panel runs boot-time update checks and post-update healing;
+  // standalone panels stay quiet (Settings > Check for Updates works anywhere)
+  if (panelMode === 'full') {
+    checkForUpdates(false);
+    // a network blip at boot caches a short-lived error result; one quiet
+    // re-check after that window means the chip still appears this session
+    setTimeout(function () { checkForUpdates(false); }, 2 * DCUpdate.ERROR_RETRY_MS);
+    DCUpdater.onBoot();
+  }
 
   // host modules must load before any relink/assets-dependent call
   DCBridge.call('loadHostModules', [csInterface.getSystemPath(SystemPath.EXTENSION)], function (r) {
