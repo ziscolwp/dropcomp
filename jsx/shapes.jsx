@@ -114,8 +114,10 @@ function addShapeFromSelection(libraryPath, categoryName) {
         }
         for (i = 1; i <= shapeComp.numLayers; i++) {
             var ly = shapeComp.layer(i);
+            // setting startTime DRAGS the layer: outPoint shifts with it, so
+            // the post-shift outPoint is already in rebased time
             ly.startTime = ly.startTime - minStart;
-            if (ly.outPoint - minStart > maxOut) maxOut = ly.outPoint - minStart;
+            if (ly.outPoint > maxOut) maxOut = ly.outPoint;
         }
         shapeComp.duration = maxOut;
 

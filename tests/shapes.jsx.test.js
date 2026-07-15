@@ -109,7 +109,20 @@ function makeCaptureWorld(opts) {
   Object.defineProperty(srcComp, 'numLayers', { get: () => srcLayers.length });
   srcLayers.forEach((l) => {
     l.copyToComp = function (target) {
-      target._copied.unshift(Object.assign({}, this)); // copyToComp inserts at TOP
+      const copy = Object.assign({}, this);
+      // model real AE: setting startTime DRAGS the layer - inPoint/outPoint
+      // shift by the same delta (a plain data property would miss this)
+      let start = copy.startTime;
+      let out = copy.outPoint;
+      Object.defineProperty(copy, 'startTime', {
+        get: () => start,
+        set: (v) => { out += v - start; start = v; },
+      });
+      Object.defineProperty(copy, 'outPoint', {
+        get: () => out,
+        set: (v) => { out = v; },
+      });
+      target._copied.unshift(copy); // copyToComp inserts at TOP
       calls.push('copy:' + this.name);
     };
   });
@@ -223,6 +236,16 @@ test('addShapeFromSelection rebases layer times so the earliest starts at 0', ()
   const starts = world.tempComp._copied.map((l) => l.startTime).sort((a, b) => a - b);
   assert.equal(starts[0], 0, 'earliest copied layer starts at 0');
   assert.equal(starts[1], 1, 'relative offset (3-2=1) is preserved');
+});
+
+test('addShapeFromSelection sizes the comp to the rebased layer content', () => {
+  // Star 2..5 and Blob 3..6 rebase to 0..3 and 1..4 -> duration must be 4.
+  // Regression: reading outPoint AFTER the startTime shift double-subtracted
+  // minStart (startTime drags outPoint in AE), truncating the comp.
+  const world = makeCaptureWorld();
+  const g = loadShapesForCapture(world);
+  g.addShapeFromSelection('/Library', 'Shapes');
+  assert.equal(world.tempComp.duration, 4);
 });
 
 test('addShapeFromSelection writes the thumbnail sidecar next to the aep', () => {
