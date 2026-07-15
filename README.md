@@ -60,6 +60,18 @@ sidecars (the top-level `Assets` folder name is reserved). Index cache:
   Num/Step sequence-in-time, and pre-comp tools (PreComp, Decompose [AE 2022+],
   Multi PreComp, Independent). Each action is a single undo step.
 
+## Multiple panels
+
+DropComp ships five panels (Window > Extensions): the classic all-in-one
+**DropComp** panel plus standalone **DropComp Library**, **DropComp Assets**,
+**DropComp Tools**, and **DropComp Scripts** panels. Open any combination and
+dock them anywhere — e.g. keep Tools next to the timeline while Library sits
+by the Project panel. All open panels share one library and stay in sync:
+adding, renaming, or deleting items in one panel updates the others
+immediately. New panels appear in the menu after restarting After Effects.
+Each open panel is a separate Chromium view (roughly 50 MB of RAM), so open
+only what you need.
+
 ## Scripts
 
 ### Make a script DropComp-driven (in-panel form)
