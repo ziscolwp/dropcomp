@@ -136,6 +136,23 @@ test('the Add Shape button exists and is wired up', () => {
   assert.match(css, /#app\.assets-active\s+#add-shape-btn/, 'shown on the Assets tab');
 });
 
+// Field report: icon-only toolbar buttons read as blank squares - every asset
+// toolbar action must carry a visible text label, not just a hover tooltip.
+test('asset toolbar buttons have visible text labels', () => {
+  const html = read('panel/index.html');
+  const css = read('panel/css/style.css');
+  const buttonMarkup = (id) => {
+    const start = html.indexOf(`id="${id}"`);
+    assert.notEqual(start, -1, `${id} exists`);
+    return html.slice(start, html.indexOf('</button>', start));
+  };
+  assert.match(buttonMarkup('add-selected-image-btn'), /<span[^>]*>Image<\/span>/, 'Image label visible');
+  assert.match(buttonMarkup('add-shape-btn'), /<span[^>]*>Shape<\/span>/, 'Shape label visible');
+  // narrow docked panels collapse back to icon-only (tooltips still explain)
+  assert.match(css, /@media[^{]*max-width[^{]*\{[^]*?#add-shape-btn span\s*\{\s*display:\s*none/,
+    'labels collapse on narrow panels');
+});
+
 test('shell routes the addShape modal mode to DCAssets', () => {
   const shellJs = read('panel/js/shell.js');
   assert.match(shellJs, /mode === 'addShape'/, 'shell recognises the addShape mode');

@@ -311,6 +311,16 @@ body.mode-library #tabs, body.mode-assets #tabs, body.mode-tools #tabs, body.mod
 #app.assets-active #add-assets-btn { display: inline-flex; }
 #app.assets-active #add-selected-image-btn { display: inline-flex; }
 #app.assets-active #add-shape-btn { display: inline-flex; }
+
+/* labeled toolbar actions: icon + short label, so the button explains itself
+   without hovering; compact padding keeps the row on one line */
+.toolbar-labeled { padding: 8px 10px; flex-shrink: 0; }
+/* narrow docked panels fall back to icon-only (data-tip still explains) */
+@media (max-width: 359px) {
+  #add-selected-image-btn span { display: none; }
+  #add-shape-btn span { display: none; }
+  .toolbar-labeled { width: 32px; padding: 0; }
+}
 #app.assets-active #add-comp-btn,
 #app.assets-active #add-aep-btn,
 #app.assets-active #relink-btn { display: none; }
