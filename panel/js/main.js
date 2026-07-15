@@ -37,6 +37,7 @@
     addAepBtn: $('add-aep-btn'),
     addAssetsBtn: $('add-assets-btn'),
     addSelectedImageBtn: $('add-selected-image-btn'),
+    addShapeBtn: $('add-shape-btn'),
     thumbSlider: $('thumb-slider'),
     viewSwitch: $('view-switch'),
     settingsBtn: $('settings-btn'),
@@ -90,6 +91,7 @@
   if (els.addAssetsBtn && typeof DCAssets !== 'undefined') {
     els.addAssetsBtn.addEventListener('click', DCAssets.addFlow);
     if (els.addSelectedImageBtn) els.addSelectedImageBtn.addEventListener('click', DCAssets.addSelectedFlow);
+    if (els.addShapeBtn) els.addShapeBtn.addEventListener('click', DCAssets.addShapeFlow);
     DCAssets.attachDropTarget(els.app);
   }
   DCLibrary.attachMoveTarget(els.library);

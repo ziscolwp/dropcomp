@@ -4,6 +4,7 @@ var DCAssets = (function () {
   var allAssets = [];
   var usageMeta = {};
   var pendingPaths = null;
+  var pendingShape = null;
   var renameTarget = null;
   var deleteTarget = null;
   var loadedOnce = false;
@@ -217,6 +218,39 @@ var DCAssets = (function () {
     });
   }
 
+  // Saves the selected AE shape layers as a reusable asset. The host validates
+  // the selection up front so the user gets a specific error before the modal.
+  function addShapeFlow() {
+    DCBridge.call('getShapeSelectionInfo', [], function (result) {
+      var r = DCBridge.parseJson(result);
+      if (!r) { DCUI.toast('Error: unexpected response.', true); return; }
+      if (!r.ok) { DCUI.toast(r.error, true, 6000); return; }
+      pendingShape = r;
+      DCUI.openCategoryModal('addShape', 'Save Shape to Assets', categories());
+    });
+  }
+
+  function confirmShapeCategory(categoryName) {
+    if (!pendingShape) { DCUI.closeModal(els().categoryModal); return; }
+    if (!DCBridge.acquire('saving shape')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return; }
+    DCUI.closeModal(els().categoryModal);
+    DCUI.spinner(true);
+    pendingShape = null;
+    DCBridge.call('addShapeFromSelection', [libPath(), categoryName], function (result) {
+      DCUI.spinner(false);
+      DCBridge.release();
+      var r = DCBridge.parseJson(result);
+      if (r && r.ok) {
+        var msg = '"' + r.name + '" saved (' + r.count + ' layer' + (r.count === 1 ? '' : 's') + ').';
+        if (r.skipped) msg += ' Skipped ' + r.skipped + ' non-shape layer' + (r.skipped === 1 ? '' : 's') + '.';
+        DCUI.toast(msg, false, r.skipped ? 6000 : 3000);
+        loadAndBroadcast();
+      } else {
+        DCUI.toast((r && r.error) || result, true);
+      }
+    });
+  }
+
   function confirmCategory(categoryName) {
     if (!pendingPaths || !pendingPaths.length) { DCUI.closeModal(els().categoryModal); return; }
     if (!DCBridge.acquire('adding assets')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return; }
@@ -368,12 +402,14 @@ var DCAssets = (function () {
     renameTarget = null;
     deleteTarget = null;
     pendingPaths = null;
+    pendingShape = null;
   }
 
   return {
     init: init, load: load, refresh: refresh, rerender: rerender,
     ensureLoaded: ensureLoaded, resetLoaded: resetLoaded,
     addFlow: addFlow, addSelectedFlow: addSelectedFlow,
+    addShapeFlow: addShapeFlow, confirmShapeCategory: confirmShapeCategory,
     addDroppedFiles: addDroppedFiles, attachDropTarget: attachDropTarget,
     confirmCategory: confirmCategory,
     importItem: importItem, confirmRename: confirmRename, confirmDelete: confirmDelete,

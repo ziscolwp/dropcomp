@@ -307,8 +307,10 @@ body.mode-library #tabs, body.mode-assets #tabs, body.mode-tools #tabs, body.mod
 /* ---- assets tab ---- */
 #add-assets-btn { display: none; }
 #add-selected-image-btn { display: none; }
+#add-shape-btn { display: none; }
 #app.assets-active #add-assets-btn { display: inline-flex; }
 #app.assets-active #add-selected-image-btn { display: inline-flex; }
+#app.assets-active #add-shape-btn { display: inline-flex; }
 #app.assets-active #add-comp-btn,
 #app.assets-active #add-aep-btn,
 #app.assets-active #relink-btn { display: none; }

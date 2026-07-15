@@ -195,11 +195,15 @@ var DCShell = (function () {
     var categoryName = els.newCategoryInput.value.trim() || els.existingCategorySelect.value;
     var v = DCValidate.validateName(categoryName, 'Category name');
     if (!v.valid) { DCUI.toast(v.error, true); return; }
-    if (mode !== 'addAssets' && v.name.toLowerCase() === 'assets') {
+    // asset-tab flows may reuse the name "assets"; only library categories
+    // collide with the reserved top-level Assets folder
+    var isAssetsFlow = mode === 'addAssets' || mode === 'addShape';
+    if (!isAssetsFlow && v.name.toLowerCase() === 'assets') {
       DCUI.toast('"Assets" is reserved for the Assets tab.', true);
       return;
     }
     if (mode === 'addAssets' && hasAssets()) DCAssets.confirmCategory(v.name);
+    else if (mode === 'addShape' && hasAssets()) DCAssets.confirmShapeCategory(v.name);
     else DCLibrary.confirmCategory(mode, v.name);
   }
 
