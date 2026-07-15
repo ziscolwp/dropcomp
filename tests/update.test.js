@@ -23,6 +23,14 @@ test('isNewer compares major/minor/patch numerically', () => {
   assert.equal(DCUpdate.isNewer('v2.2.0', 'garbage'), false);
 });
 
+const PANEL_EXTENSION_IDS = [
+  'com.DropComp.ext',
+  'com.DropComp.library',
+  'com.DropComp.assets',
+  'com.DropComp.tools',
+  'com.DropComp.scripts',
+];
+
 test('VERSION constant matches package.json and the CSXS manifest', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
   assert.equal(DCUpdate.VERSION, pkg.version, 'update.js VERSION out of sync with package.json');
@@ -31,10 +39,16 @@ test('VERSION constant matches package.json and the CSXS manifest', () => {
     manifest.includes(`ExtensionBundleVersion="${pkg.version}"`),
     'manifest ExtensionBundleVersion out of sync with package.json'
   );
-  assert.ok(
-    manifest.includes(`<Extension Id="com.DropComp.ext" Version="${pkg.version}"`),
-    'manifest Extension element Version out of sync with package.json'
-  );
+  for (const id of PANEL_EXTENSION_IDS) {
+    assert.ok(
+      manifest.includes(`<Extension Id="${id}" Version="${pkg.version}"`),
+      `manifest ExtensionList missing <Extension Id="${id}"> at version ${pkg.version}`
+    );
+    assert.ok(
+      manifest.includes(`<Extension Id="${id}">`),
+      `manifest DispatchInfoList missing an entry for ${id}`
+    );
+  }
 });
 
 test('check fetches once, caches the result, and throttles failures too', () => {
