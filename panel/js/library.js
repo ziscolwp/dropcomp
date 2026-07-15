@@ -44,6 +44,13 @@ var DCLibrary = (function () {
     });
   }
 
+  // Reload after a disk mutation and tell other open DropComp panels.
+  // Plain loads/refreshes must never broadcast (echo loop between panels).
+  function loadAndBroadcast() {
+    if (typeof DCSync !== 'undefined') DCSync.broadcast('library');
+    load();
+  }
+
   function refresh() {
     if (!DCBridge.acquire('refreshing')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return; }
     DCUI.spinner(true);
@@ -123,7 +130,7 @@ var DCLibrary = (function () {
         els().addCompBtn.disabled = false;
         DCUI.toast(result, DCUI.isError(result));
         DCBridge.release();
-        if (!DCUI.isError(result)) load();
+        if (!DCUI.isError(result)) loadAndBroadcast();
       });
     } else {
       if (!DCBridge.acquire('adding aep')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return; }
@@ -138,7 +145,7 @@ var DCLibrary = (function () {
           // it because thumbnails/metadata can be regenerated later)
           if (r.warning) DCUI.toast("'" + r.name + "' added, but: " + r.warning, true);
           else DCUI.toast("'" + r.name + "' added" + (r.thumbOk ? '.' : ' (thumbnail failed - use Generate).'), false);
-          load();
+          loadAndBroadcast();
         } else {
           DCUI.toast((r && r.error) || result, true);
         }
@@ -216,7 +223,7 @@ var DCLibrary = (function () {
         var ci = prefs.collapsed.indexOf(oldName);
         if (ci !== -1) { prefs.collapsed.splice(ci, 1, v.name); DCShell.persistPrefs(); }
         DCUI.toast('Folder renamed to "' + v.name + '".', false);
-        load();
+        loadAndBroadcast();
       } else {
         DCUI.toast((r && r.error) || result, true);
       }
@@ -247,7 +254,7 @@ var DCLibrary = (function () {
         DCState.migrateMetadataKey(usageMeta, t.uniqueId, r.newUniqueId);
         persistUsage();
         DCUI.toast('Renamed.', false);
-        load();
+        loadAndBroadcast();
       } else {
         DCUI.toast((r && r.error) || result, true);
       }
@@ -273,7 +280,7 @@ var DCLibrary = (function () {
       DCBridge.release();
       if (result === 'Success') {
         DCUI.toast('Deleted.', false);
-        load();
+        loadAndBroadcast();
       } else {
         DCUI.toast(result, true);
       }
@@ -290,7 +297,7 @@ var DCLibrary = (function () {
       if (r && r.ok) {
         busts[uniqueId] = Date.now();
         DCUI.toast(r.thumbOk ? 'Thumbnail generated.' : 'Info updated, but the frame render failed.', !r.thumbOk);
-        load();
+        loadAndBroadcast();
       } else {
         DCUI.toast((r && r.error) || result, true);
       }
@@ -307,7 +314,7 @@ var DCLibrary = (function () {
       if (r && r.ok) {
         busts[uniqueId] = Date.now();
         DCUI.toast('Thumbnail set from current frame.', false);
-        load();
+        loadAndBroadcast();
       } else {
         DCUI.toast((r && r.error) || result, true);
       }
@@ -332,7 +339,7 @@ var DCLibrary = (function () {
       var r = DCBridge.parseJson(result);
       if (r && r.ok) {
         DCUI.toast('Moved to ' + targetCategory + '.', false);
-        load();
+        loadAndBroadcast();
       } else {
         DCUI.toast((r && r.error) || result, true);
       }

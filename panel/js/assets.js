@@ -41,6 +41,13 @@ var DCAssets = (function () {
     });
   }
 
+  // Reload after a disk mutation and tell other open DropComp panels.
+  // Plain loads/refreshes must never broadcast (echo loop between panels).
+  function loadAndBroadcast() {
+    if (typeof DCSync !== 'undefined') DCSync.broadcast('assets');
+    load();
+  }
+
   function refresh() {
     if (!DCBridge.acquire('refreshing assets')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return; }
     DCUI.spinner(true);
@@ -232,7 +239,7 @@ var DCAssets = (function () {
             (r.skipped.length > 3 ? ' +' + (r.skipped.length - 3) + ' more' : '');
         }
         DCUI.toast(msg, false, r.skipped && r.skipped.length ? 6000 : 3000);
-        load();
+        loadAndBroadcast();
       } else {
         DCUI.toast((r && r.error) || result, true);
       }
@@ -300,7 +307,7 @@ var DCAssets = (function () {
         DCState.migrateMetadataKey(usageMeta, t.uniqueId, r.newUniqueId);
         persistUsage();
         DCUI.toast('Renamed.', false);
-        load();
+        loadAndBroadcast();
       } else {
         DCUI.toast((r && r.error) || result, true);
       }
@@ -327,7 +334,7 @@ var DCAssets = (function () {
       var r = DCBridge.parseJson(result);
       if (r && r.ok) {
         DCUI.toast('Deleted.', false);
-        load();
+        loadAndBroadcast();
       } else {
         DCUI.toast((r && r.error) || result, true);
       }

@@ -422,7 +422,7 @@ var DCScripts = (function () {
     if (!beginWrite()) return;
     var entry = DCScriptsCore.makeEntry(input, Date.now());
     scripts = DCScriptsCore.upsert(scripts, entry);
-    persistLocked(function () { closeModal(); render(); DCUI.toast('Saved "' + entry.name + '".', false); });
+    persistLocked(function () { closeModal(); render(); DCUI.toast('Saved "' + entry.name + '".', false); if (typeof DCSync !== 'undefined') DCSync.broadcast('scripts'); });
   }
 
   function reveal(s) {
@@ -441,7 +441,7 @@ var DCScripts = (function () {
     scripts = DCScriptsCore.removeById(scripts, pendingDelete.uniqueId);
     var name = pendingDelete.name;
     pendingDelete = null;
-    persistLocked(function () { DCUI.closeAllModals(); render(); DCUI.toast('Removed "' + name + '".', false); });
+    persistLocked(function () { DCUI.closeAllModals(); render(); DCUI.toast('Removed "' + name + '".', false); if (typeof DCSync !== 'undefined') DCSync.broadcast('scripts'); });
   }
 
   function clearPending() { pendingDelete = null; }
