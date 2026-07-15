@@ -4,7 +4,7 @@
 // $.global explicitly or it is undefined at call time.
 // Uses hostscript globals: readJson, writeJson, jerr, jsonEscape.
 
-var DC_ASSET_EXTS = { png: 1, jpg: 1, jpeg: 1, gif: 1, bmp: 1, tif: 1, tiff: 1, tga: 1, psd: 1, ai: 1, eps: 1, svg: 1 };
+var DC_ASSET_EXTS = { png: 1, jpg: 1, jpeg: 1, gif: 1, bmp: 1, tif: 1, tiff: 1, tga: 1, psd: 1, ai: 1, eps: 1, svg: 1, aep: 1 };
 
 function assetExt(fileName) {
     var m = /\.([a-z0-9]+)$/i.exec(String(fileName));
@@ -33,7 +33,7 @@ function assetEntryFromFile(categoryName, file) {
     var fileName = decodeURI(file.name);
     if (fileName.charAt(0) === '.') return null;
     if (!isSupportedAsset(fileName)) return null;
-    return {
+    var entry = {
         name: fileName.replace(/\.[a-z0-9]+$/i, ''),
         category: categoryName,
         uniqueId: categoryName + '/' + fileName,
@@ -42,6 +42,13 @@ function assetEntryFromFile(categoryName, file) {
         sizeBytes: file.length,
         addedAt: file.modified ? file.modified.getTime() : 0
     };
+    // shape assets render their sidecar thumbnail; probing here means the
+    // association survives full index rebuilds
+    if (entry.ext === 'aep') {
+        var thumb = new File(file.parent.fsName + '/' + shapeThumbSidecarName(fileName));
+        if (thumb.exists) entry.thumbPath = thumb.fsName;
+    }
+    return entry;
 }
 
 function loadAssetsIndex(libraryPath) {
@@ -171,6 +178,11 @@ function renameAsset(libraryPath, category, fileName, newName) {
                 return jerr('An asset with that name already exists in this category.');
             }
             if (!file.rename(newFileName)) return jerr('Could not rename the file on disk.');
+            // shape assets carry a thumbnail sidecar that must follow the rename
+            if (ext === 'aep') {
+                var oldThumb = new File(catFolder.fsName + '/' + shapeThumbSidecarName(fileName));
+                if (oldThumb.exists) oldThumb.rename(shapeThumbSidecarName(newFileName));
+            }
         }
         var assets = loadAssetsIndex(libraryPath) || [];
         var oldId = category + '/' + fileName;
@@ -180,6 +192,9 @@ function renameAsset(libraryPath, category, fileName, newName) {
                 assets[i].name = newName;
                 assets[i].uniqueId = category + '/' + newFileName;
                 assets[i].filePath = new File(catFolder.fsName + '/' + newFileName).fsName;
+                var newThumb = new File(catFolder.fsName + '/' + shapeThumbSidecarName(newFileName));
+                if (newThumb.exists) assets[i].thumbPath = newThumb.fsName;
+                else delete assets[i].thumbPath;
                 patched = true;
                 break;
             }
@@ -197,6 +212,9 @@ function deleteAsset(libraryPath, category, fileName) {
         var file = new File(libraryPath + '/Assets/' + category + '/' + fileName);
         // file already gone: still drop the index entry so the ghost card disappears
         if (file.exists && !file.remove()) return jerr('Could not delete the file.');
+        // shape assets: the thumbnail sidecar goes with the asset
+        var sidecar = new File(libraryPath + '/Assets/' + category + '/' + shapeThumbSidecarName(fileName));
+        if (sidecar.exists) sidecar.remove();
         var assets = loadAssetsIndex(libraryPath) || [];
         var out = [];
         var id = category + '/' + fileName;
