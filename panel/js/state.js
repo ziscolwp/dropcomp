@@ -192,6 +192,38 @@ var DCState = (function () {
     return usageMeta;
   }
 
+  var PANEL_MODE_BY_EXTENSION_ID = {
+    'com.DropComp.library': 'library',
+    'com.DropComp.assets': 'assets',
+    'com.DropComp.tools': 'tools',
+    'com.DropComp.scripts': 'scripts'
+  };
+
+  var PANEL_MODE_TITLES = {
+    library: 'DropComp Library',
+    assets: 'DropComp Assets',
+    tools: 'DropComp Tools',
+    scripts: 'DropComp Scripts'
+  };
+
+  // Unknown/legacy ids (including the main com.DropComp.ext) fall back to the
+  // full tabbed shell so a manifest/runtime mismatch can never brick a panel.
+  function panelModeFromExtensionId(id) {
+    return PANEL_MODE_BY_EXTENSION_ID[id] || 'full';
+  }
+
+  function panelModeTitle(mode) {
+    return PANEL_MODE_TITLES[mode] || 'DropComp';
+  }
+
+  // Standalone panels share localStorage with the main panel; when they save
+  // prefs they must not overwrite the main panel's remembered tab with the
+  // stale value they booted with.
+  function savePrefsForMode(storage, prefs, mode) {
+    if (mode !== 'full') prefs.activeTab = loadPrefs(storage).activeTab;
+    savePrefs(storage, prefs);
+  }
+
   return {
     defaultPrefs: defaultPrefs,
     loadPrefs: loadPrefs,
@@ -201,6 +233,9 @@ var DCState = (function () {
     cleanupStaleMetadata: cleanupStaleMetadata,
     migrateMetadataKey: migrateMetadataKey,
     resolveActiveTab: resolveActiveTab,
+    panelModeFromExtensionId: panelModeFromExtensionId,
+    panelModeTitle: panelModeTitle,
+    savePrefsForMode: savePrefsForMode,
     getUsage: getUsage,
     sortComps: sortComps,
     filterComps: filterComps,
