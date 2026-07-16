@@ -134,6 +134,17 @@ var DCShell = (function () {
     });
   }
 
+  // Rail tabs are ARIA tabs: the visual active state, aria-selected and the
+  // roving tabindex all move together, whoever triggered the change.
+  function syncRailTab(btn, on) {
+    if (!btn) return;
+    btn.classList.toggle('active', on);
+    if (btn.setAttribute) {
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      btn.setAttribute('tabindex', on ? '0' : '-1');
+    }
+  }
+
   function setActiveTab(tab, skipPersist) {
     if (panelMode !== 'full') { tab = panelMode; skipPersist = true; }
     prefs.activeTab = DCState.resolveActiveTab(tab, hasAssets(), hasTools(), hasScripts());
@@ -141,10 +152,10 @@ var DCShell = (function () {
     var isAssets = prefs.activeTab === 'assets';
     var isTools = prefs.activeTab === 'tools';
     var isScripts = prefs.activeTab === 'scripts';
-    els.tabLibrary.classList.toggle('active', prefs.activeTab === 'library');
-    els.tabAssets.classList.toggle('active', isAssets);
-    if (els.tabTools) els.tabTools.classList.toggle('active', isTools);
-    if (els.tabScripts) els.tabScripts.classList.toggle('active', isScripts);
+    syncRailTab(els.tabLibrary, prefs.activeTab === 'library');
+    syncRailTab(els.tabAssets, isAssets);
+    syncRailTab(els.tabTools, isTools);
+    syncRailTab(els.tabScripts, isScripts);
     els.app.classList.toggle('assets-active', isAssets);
     els.app.classList.toggle('tools-active', isTools);
     els.app.classList.toggle('scripts-active', isScripts);
@@ -307,3 +318,4 @@ var DCShell = (function () {
     renameCategory: renameCategory
   };
 }());
+if (typeof module !== 'undefined' && module.exports) { module.exports = DCShell; }

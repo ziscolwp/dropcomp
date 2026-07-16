@@ -25,23 +25,37 @@
 </div>
 
 <div id="app" class="hidden">
+  <nav id="rail" aria-label="Primary">
+    <div id="rail-tabs" role="tablist" aria-orientation="vertical" aria-label="Panel sections">
+      <button class="rail-btn active" id="tab-library" role="tab" aria-selected="true" aria-controls="library" tabindex="0" data-tip="Library" aria-label="Library">
+        <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"></rect><rect x="13" y="4" width="7" height="7" rx="1.5"></rect><rect x="4" y="13" width="7" height="7" rx="1.5"></rect><rect x="13" y="13" width="7" height="7" rx="1.5"></rect></svg>
+      </button>
+      <button class="rail-btn" id="tab-assets" role="tab" aria-selected="false" aria-controls="library" tabindex="-1" data-tip="Assets" aria-label="Assets">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+      </button>
+      <button class="rail-btn" id="tab-tools" role="tab" aria-selected="false" aria-controls="tools" tabindex="-1" data-tip="Tools" aria-label="Tools">
+        <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><circle cx="5" cy="5" r="1.9"></circle><circle cx="12" cy="5" r="1.9"></circle><circle cx="19" cy="5" r="1.9"></circle><circle cx="5" cy="12" r="1.9"></circle><circle cx="12" cy="12" r="1.9"></circle><circle cx="19" cy="12" r="1.9"></circle><circle cx="5" cy="19" r="1.9"></circle><circle cx="12" cy="19" r="1.9"></circle><circle cx="19" cy="19" r="1.9"></circle></svg>
+      </button>
+      <button class="rail-btn" id="tab-scripts" role="tab" aria-selected="false" aria-controls="scripts" tabindex="-1" data-tip="Scripts" aria-label="Scripts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+      </button>
+    </div>
+    <button class="rail-btn rail-settings" id="settings-btn" data-tip="Settings" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    </button>
+  </nav>
+
+  <div id="main">
   <header id="app-header">
     <div class="logo-glyph" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
     <span class="app-name" id="app-name">DropComp</span>
     <span class="app-version" id="app-version">2.1</span>
     <button id="update-chip" class="update-chip hidden" data-tip="A newer version is available - click to download" aria-label="A newer version is available - click to download">Update</button>
     <div class="spacer"></div>
-    <button id="settings-btn" class="icon-btn" data-tip="Settings" aria-label="Settings">
+    <button id="header-settings-btn" class="icon-btn" data-tip="Settings" aria-label="Settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
     </button>
   </header>
-
-  <nav id="tabs">
-    <button class="tab active" id="tab-library">Library</button>
-    <button class="tab" id="tab-assets">Assets</button>
-    <button class="tab" id="tab-tools">Tools</button>
-    <button class="tab" id="tab-scripts">Scripts</button>
-  </nav>
 
   <div id="toolbar">
     <div class="row gap">
@@ -216,6 +230,7 @@
     </div>
     <div id="scripts-list"></div>
   </section>
+  </div>
 </div>
 
 <div id="script-modal" class="modal-overlay hidden">
@@ -351,6 +366,7 @@
 <script src="js/icons.js"></script>
 <script src="js/render.js"></script>
 <script src="js/tooltip.js"></script>
+<script src="js/rail.js"></script>
 <script src="js/update.js"></script>
 <script src="js/updater-fs.js"></script>
 <script src="js/updater.js"></script>

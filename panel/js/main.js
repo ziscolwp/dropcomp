@@ -63,6 +63,7 @@
   if (typeof DCTools !== 'undefined') DCTools.init();
   if (typeof DCScripts !== 'undefined') DCScripts.init();
   if (typeof DCTooltip !== 'undefined') DCTooltip.init();
+  if (typeof DCRail !== 'undefined') DCRail.init($('rail-tabs'));
 
   $('welcome-browse-btn').addEventListener('click', DCShell.selectLibraryFolder);
   $('retry-library-btn').addEventListener('click', DCShell.verifyAndLoad);
@@ -96,6 +97,9 @@
   }
   DCLibrary.attachMoveTarget(els.library);
   els.settingsBtn.addEventListener('click', DCShell.openSettings);
+  // standalone panels hide the rail, so they keep a header settings button
+  var headerSettingsBtn = $('header-settings-btn');
+  if (headerSettingsBtn) headerSettingsBtn.addEventListener('click', DCShell.openSettings);
 
   els.displayBtn.addEventListener('click', function (e) {
     e.stopPropagation();

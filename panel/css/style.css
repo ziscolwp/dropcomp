@@ -19,6 +19,10 @@
   --scrim: rgba(17, 17, 17, 0.88);
   --radius: 8px;
   --thumb-min: 130px;
+  --rail-bg: #181818;
+  --rail-tile: #252525;
+  --rail-tile-hover: #222222;
+  --rail-tile-pressed: #1e1e1e;
 }
 
 * { box-sizing: border-box; }
@@ -46,7 +50,10 @@ body {
 .mono { font-size: 11px; color: var(--text-mid); word-break: break-all; background: var(--bg-inset); padding: 8px; border-radius: 6px; text-align: left; }
 .hint { font-size: 11px; color: var(--text-dim); margin: 8px 0 0; }
 
-#app { display: flex; flex-direction: column; height: 100vh; }
+/* app shell: fixed nav rail on the left, everything else in a flexible
+   column; only the section containers inside #main ever scroll */
+#app { display: flex; height: 100vh; }
+#main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
 .screen {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -66,15 +73,57 @@ body {
 .app-name { font-size: 14px; font-weight: 600; }
 .app-version { font-size: 11px; color: var(--gold); }
 
-#tabs { display: flex; gap: 16px; padding: 8px 14px 0; border-bottom: 1px solid var(--border); }
-/* standalone panels are pinned to one section - no tab bar */
-body.mode-library #tabs, body.mode-assets #tabs, body.mode-tools #tabs, body.mode-scripts #tabs { display: none; }
-.tab {
-  background: none; border: none; padding: 0 0 8px; cursor: pointer;
-  font-size: 12px; color: var(--text-dim); border-bottom: 2px solid transparent;
+/* ---- nav rail ---- */
+/* 40px including the right divider; Settings anchors to the bottom */
+#rail {
+  flex: 0 0 40px; width: 40px;
+  display: flex; flex-direction: column;
+  background: var(--rail-bg); border-right: 1px solid var(--border);
+  padding: 4px 0 6px;
 }
-.tab.active { color: var(--gold); border-bottom-color: var(--gold); }
-.tab:disabled { cursor: default; }
+/* standalone panels are pinned to one section - no rail */
+body.mode-library #rail, body.mode-assets #rail, body.mode-tools #rail, body.mode-scripts #rail { display: none; }
+#rail-tabs { display: flex; flex-direction: column; gap: 2px; }
+.rail-btn {
+  position: relative; width: 100%; height: 36px; padding: 0;
+  background: none; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-mid);
+  transition: color 0.12s ease;
+}
+/* the ~32px graphite tile lives on a pseudo-element so the hit target stays 36px */
+.rail-btn::before {
+  content: ""; position: absolute; top: 50%; left: 50%;
+  width: 32px; height: 32px; margin: -16px 0 0 -16px;
+  border-radius: 6px; background: transparent;
+  transition: background-color 0.12s ease;
+}
+.rail-btn svg { position: relative; width: 17px; height: 17px; transition: transform 0.12s ease; }
+/* filled glyphs (brand four-square, dot grid) read heavier - pull in 1px */
+#tab-library svg, #tab-tools svg { width: 16px; height: 16px; }
+.rail-btn:hover { color: var(--text); }
+.rail-btn:hover::before { background: var(--rail-tile-hover); }
+.rail-btn:active::before { background: var(--rail-tile-pressed); }
+.rail-btn:active svg { transform: scale(0.94); }
+.rail-btn.active { color: var(--text); }
+.rail-btn.active::before { background: var(--rail-tile); }
+/* gold edge marker - the color-independent "you are here" signal */
+.rail-btn.active::after {
+  content: ""; position: absolute; left: 0; top: 50%; margin-top: -9px;
+  width: 2px; height: 18px; background: var(--gold); border-radius: 0 1px 1px 0;
+}
+/* ring drawn inward so it stays fully visible against the divider */
+.rail-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; border-radius: 8px; }
+.rail-settings { margin-top: auto; }
+
+/* the rail's four-square Library tile is the brand mark; the header only
+   repeats it (and Settings) in standalone panels, which have no rail */
+#app-header .logo-glyph { display: none; }
+#header-settings-btn { display: none; }
+body.mode-library #app-header .logo-glyph, body.mode-assets #app-header .logo-glyph,
+body.mode-tools #app-header .logo-glyph, body.mode-scripts #app-header .logo-glyph { display: grid; }
+body.mode-library #header-settings-btn, body.mode-assets #header-settings-btn,
+body.mode-tools #header-settings-btn, body.mode-scripts #header-settings-btn { display: inline-flex; }
 
 #toolbar { padding: 10px 14px 12px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
 
