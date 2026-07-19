@@ -186,8 +186,16 @@ function setThumbFromActiveComp(libraryPath, category, uniqueId) {
         if (!compFolder.exists) return jerr('Item folder not found.');
         var png = new File(compFolder.fsName + '/comp.png');
         if (png.exists && !png.remove()) return jerr('Could not replace the existing thumbnail.');
-        comp.saveFrameToPng(comp.time, png);
-        var w = watchPngWrite(png, 8000);
+        // capture the user's chosen frame, but never at a reduced viewer resolution
+        var prevRes = null;
+        try { prevRes = comp.resolutionFactor; comp.resolutionFactor = [1, 1]; } catch (eRes) { prevRes = null; }
+        var w;
+        try {
+            comp.saveFrameToPng(comp.time, png);
+            w = watchPngWrite(png, 8000);
+        } finally {
+            try { if (prevRes) comp.resolutionFactor = prevRes; } catch (eRestore) { }
+        }
         if (w.state !== 'complete') {
             // scrub a dead partial so the panel never shows a truncated png
             if (w.state === 'dead') { try { if (png.exists) png.remove(); } catch (eScrub) { } }

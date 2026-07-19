@@ -79,6 +79,7 @@ var DCRender = (function () {
       actions.appendChild(iconBtn('addToSection', 'Add to Section…', ICONS.bookmark));
     }
     actions.appendChild(iconBtn('rename', 'Rename', ICONS.pencil));
+    actions.appendChild(iconBtn('generate', 'Regenerate thumbnail', ICONS.refresh));
     actions.appendChild(iconBtn('setThumb', 'Set thumbnail from current frame', ICONS.camera));
     actions.appendChild(iconBtn('reveal', 'Reveal in Finder', ICONS.folder));
     actions.appendChild(iconBtn('delete', 'Delete', ICONS.trash));
@@ -213,6 +214,7 @@ var DCRender = (function () {
       }
     }
     actions.appendChild(iconBtn('rename', 'Rename', ICONS.pencil));
+    if (!isAsset) actions.appendChild(iconBtn('generate', 'Regenerate thumbnail', ICONS.refresh));
     if (!isAsset) actions.appendChild(iconBtn('setThumb', 'Set thumbnail from current frame', ICONS.camera));
     actions.appendChild(iconBtn('reveal', 'Reveal in Finder', ICONS.folder));
     actions.appendChild(iconBtn('delete', 'Delete', ICONS.trash));

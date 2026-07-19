@@ -467,32 +467,40 @@ function saveVerifiedThumb(comp, pngFile) {
     // a stale file at the target path is indistinguishable from our render's
     // output - clear it up front, or bail rather than verify the wrong file
     try { if (pngFile.exists && !pngFile.remove()) return false; } catch (e0) { return false; }
-    var budget = 24000; // hard cap - evalScript blocks AE's UI thread
-    for (var i = 0; i < times.length; i++) {
-        var launched = false;
-        try {
-            comp.saveFrameToPng(times[i], pngFile);
-            launched = true;
-        } catch (e1) { }
-        if (launched) {
-            var w = watchPngWrite(pngFile, Math.min(budget, i === 0 ? 9000 : 4000));
-            budget -= w.waited;
-            while (w.state === 'pending' && budget > 0) {
-                // still rendering or writing: never delete or re-render over
-                // a live writer - two writers on one path is what produced
-                // the corrupt thumbnails
-                w = watchPngWrite(pngFile, Math.min(budget, 3000));
+    // saveFrameToPng renders at the comp's current resolution - a comp left at
+    // Half/Third bakes a soft thumbnail, so force Full and restore after
+    var prevRes = null;
+    try { prevRes = comp.resolutionFactor; comp.resolutionFactor = [1, 1]; } catch (eRes) { prevRes = null; }
+    try {
+        var budget = 24000; // hard cap - evalScript blocks AE's UI thread
+        for (var i = 0; i < times.length; i++) {
+            var launched = false;
+            try {
+                comp.saveFrameToPng(times[i], pngFile);
+                launched = true;
+            } catch (e1) { }
+            if (launched) {
+                var w = watchPngWrite(pngFile, Math.min(budget, i === 0 ? 9000 : 4000));
                 budget -= w.waited;
+                while (w.state === 'pending' && budget > 0) {
+                    // still rendering or writing: never delete or re-render over
+                    // a live writer - two writers on one path is what produced
+                    // the corrupt thumbnails
+                    w = watchPngWrite(pngFile, Math.min(budget, 3000));
+                    budget -= w.waited;
+                }
+                if (w.state === 'complete') return true;
+                if (w.state === 'pending') return false; // budget spent, writer may be alive: hands off
             }
-            if (w.state === 'complete') return true;
-            if (w.state === 'pending') return false; // budget spent, writer may be alive: hands off
+            // the render call threw, or the write died: scrub any partial file so
+            // the index/panel never picks up a truncated png, then try another frame
+            try { if (pngFile.exists && !pngFile.remove()) return false; } catch (e2) { return false; }
+            if (budget <= 0) return false;
         }
-        // the render call threw, or the write died: scrub any partial file so
-        // the index/panel never picks up a truncated png, then try another frame
-        try { if (pngFile.exists && !pngFile.remove()) return false; } catch (e2) { return false; }
-        if (budget <= 0) return false;
+        return false;
+    } finally {
+        try { if (prevRes) comp.resolutionFactor = prevRes; } catch (eRestore) { }
     }
-    return false;
 }
 
 // ---------- stash ----------
