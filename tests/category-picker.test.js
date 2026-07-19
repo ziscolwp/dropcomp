@@ -148,3 +148,47 @@ test('pushRecentCategory repairs a malformed recentCategories object', () => {
   DCState.pushRecentCategory(prefs, 'assets', 'Logos');
   assert.deepEqual(prefs.recentCategories.assets, ['Logos']);
 });
+
+// ---- markup + css wiring ----
+
+const fs = require('node:fs');
+const path = require('node:path');
+
+const html = fs.readFileSync(path.join(__dirname, '..', 'panel', 'index.html'), 'utf8');
+const css = fs.readFileSync(path.join(__dirname, '..', 'panel', 'css', 'style.css'), 'utf8');
+
+test('the old two-field category controls are gone', () => {
+  assert.ok(!html.includes('existing-category-select'));
+  assert.ok(!html.includes('new-category-input'));
+});
+
+test('the category modal has the picker input and always-visible list', () => {
+  assert.match(html, /<input type="text" id="category-picker-input"[^>]*autocomplete="off"/);
+  assert.match(html, /<ul id="category-picker-list" role="listbox"/);
+  const modal = html.slice(html.indexOf('id="category-modal"'), html.indexOf('id="rename-modal"'));
+  assert.ok(modal.includes('category-picker-input'), 'input must live inside the category modal');
+  assert.ok(modal.includes('category-picker-list'), 'list must live inside the category modal');
+});
+
+test('category-picker.js loads before ui.js', () => {
+  const picker = html.indexOf('js/category-picker.js');
+  const ui = html.indexOf('js/ui.js');
+  assert.ok(picker !== -1, 'category-picker.js script tag missing');
+  assert.ok(picker < ui, 'category-picker.js must load before ui.js');
+});
+
+test('the picker list is height-capped and scrolls internally', () => {
+  const block = css.match(/#category-picker-list\s*\{([^}]*)\}/);
+  assert.ok(block, '#category-picker-list rule missing');
+  assert.match(block[1], /max-height:\s*160px/);
+  assert.match(block[1], /overflow-y:\s*auto/);
+});
+
+test('highlight and create rows use the gold accent', () => {
+  const hl = css.match(/#category-picker-list li\.highlight\s*\{([^}]*)\}/);
+  assert.ok(hl, 'highlight rule missing');
+  assert.match(hl[1], /var\(--gold/);
+  const create = css.match(/#category-picker-list li\.cp-create\s*\{([^}]*)\}/);
+  assert.ok(create, 'create-row rule missing');
+  assert.match(create[1], /var\(--gold\)/);
+});
