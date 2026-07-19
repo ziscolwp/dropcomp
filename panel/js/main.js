@@ -43,8 +43,8 @@
     settingsBtn: $('settings-btn'),
     categoryModal: $('category-modal'),
     categoryModalTitle: $('category-modal-title'),
-    existingCategorySelect: $('existing-category-select'),
-    newCategoryInput: $('new-category-input'),
+    categoryPickerInput: $('category-picker-input'),
+    categoryPickerList: $('category-picker-list'),
     renameModal: $('rename-modal'),
     newNameInput: $('new-name-input'),
     deleteModal: $('delete-modal'),
@@ -57,6 +57,7 @@
 
   DCUI.init(els);
   DCShell.init(els, panelMode);
+  DCCategoryPicker.init(els, { onConfirm: DCShell.confirmCategoryModal, getRecents: DCShell.recentCategories });
   DCSync.init(csInterface, extensionId, DCShell.onRemoteChange);
   DCLibrary.init();
   if (typeof DCAssets !== 'undefined') DCAssets.init();
