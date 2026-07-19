@@ -128,16 +128,25 @@
     if (!actionEl) return;
     var action = actionEl.dataset.action;
     if (action === 'toggleSection') {
-      DCShell.toggleSection(actionEl.closest('.category').dataset.category);
+      var sec = actionEl.closest('.category');
+      DCShell.toggleSection(sec.dataset.category || DCSections.collapseKey(sec.dataset.section));
       return;
     }
     if (action === 'renameCategory') {
       DCShell.renameCategory(actionEl.closest('.category').dataset.category);
       return;
     }
+    if (action === 'renameSection') {
+      DCShell.renameSection(actionEl.closest('.category').dataset.section);
+      return;
+    }
+    if (action === 'deleteSection') {
+      DCShell.deleteSection(actionEl.closest('.category').dataset.section);
+      return;
+    }
     var card = actionEl.closest('.card');
     if (!card) return;
-    DCShell.onCardAction(action, card.dataset.uniqueId, card.dataset.category);
+    DCShell.onCardAction(action, card.dataset.uniqueId, card.dataset.category, card.dataset.section);
   });
 
   els.library.addEventListener('dblclick', function (e) {
