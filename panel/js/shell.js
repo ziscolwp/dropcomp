@@ -218,6 +218,7 @@ var DCShell = (function () {
     persistPrefs();
     if (mode === 'addAssets' && hasAssets()) DCAssets.confirmCategory(v.name);
     else if (mode === 'addShape' && hasAssets()) DCAssets.confirmShapeCategory(v.name);
+    else if (mode === 'section') DCLibrary.confirmAddToSection(v.name);
     else DCLibrary.confirmCategory(mode, v.name);
   }
 
@@ -298,13 +299,16 @@ var DCShell = (function () {
     }
   }
 
-  function onCardAction(action, uniqueId, category) {
-    activeModule().onCardAction(action, uniqueId, category);
+  function onCardAction(action, uniqueId, category, section) {
+    activeModule().onCardAction(action, uniqueId, category, section);
   }
   function onCardDblClick(uniqueId) { activeModule().importItem(uniqueId); }
   function toggleSection(category) { activeModule().toggleSection(category); }
   // the rename affordance only renders on Library section headers
   function renameCategory(category) { DCLibrary.renameCategoryFlow(category); }
+  // virtual section header affordances only render on Library virtual sections
+  function renameSection(name) { DCLibrary.renameSectionFlow(name); }
+  function deleteSection(name) { DCLibrary.deleteSectionFlow(name); }
 
   return {
     init: init, boot: boot, verifyAndLoad: verifyAndLoad,
@@ -319,7 +323,8 @@ var DCShell = (function () {
     onSearch: onSearch, onSortChange: onSortChange, onFavoritesToggle: onFavoritesToggle,
     onDisplayChange: onDisplayChange, onSlider: onSlider, onViewChange: onViewChange,
     onCardAction: onCardAction, onCardDblClick: onCardDblClick, toggleSection: toggleSection,
-    renameCategory: renameCategory
+    renameCategory: renameCategory,
+    renameSection: renameSection, deleteSection: deleteSection
   };
 }());
 if (typeof module !== 'undefined' && module.exports) { module.exports = DCShell; }

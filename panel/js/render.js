@@ -42,7 +42,7 @@ var DCRender = (function () {
     return 'file:///' + encoded + (bust ? '?t=' + bust : '');
   }
 
-  function buildCard(comp, usage, prefs, bust) {
+  function buildCard(comp, usage, prefs, bust, sectionName) {
     var card = el('article', 'card' + (usage.isFavorite ? ' has-fav' : ''));
     card.dataset.uniqueId = comp.uniqueId;
     card.dataset.category = comp.category;
@@ -72,6 +72,12 @@ var DCRender = (function () {
     actions.appendChild(iconBtn('favorite', 'Favorite',
       usage.isFavorite ? ICONS.starFilled : ICONS.star,
       usage.isFavorite ? 'fav-on' : ''));
+    if (sectionName) {
+      card.dataset.section = sectionName;
+      actions.appendChild(iconBtn('removeFromSection', 'Remove from Section', ICONS.bookmarkFilled, 'in-section'));
+    } else {
+      actions.appendChild(iconBtn('addToSection', 'Add to Section…', ICONS.bookmark));
+    }
     actions.appendChild(iconBtn('rename', 'Rename', ICONS.pencil));
     actions.appendChild(iconBtn('setThumb', 'Set thumbnail from current frame', ICONS.camera));
     actions.appendChild(iconBtn('reveal', 'Reveal in Finder', ICONS.folder));
@@ -159,7 +165,7 @@ var DCRender = (function () {
     return card;
   }
 
-  function buildRow(item, usage, prefs, kind, bust) {
+  function buildRow(item, usage, prefs, kind, bust, sectionName) {
     var isAsset = kind === 'asset';
     var card = el('article', 'card card--row' + (usage.isFavorite ? ' has-fav' : ''));
     card.dataset.uniqueId = item.uniqueId;
@@ -198,6 +204,14 @@ var DCRender = (function () {
     actions.appendChild(iconBtn('favorite', 'Favorite',
       usage.isFavorite ? ICONS.starFilled : ICONS.star,
       usage.isFavorite ? 'fav-on' : ''));
+    if (!isAsset) {
+      if (sectionName) {
+        card.dataset.section = sectionName;
+        actions.appendChild(iconBtn('removeFromSection', 'Remove from Section', ICONS.bookmarkFilled, 'in-section'));
+      } else {
+        actions.appendChild(iconBtn('addToSection', 'Add to Section…', ICONS.bookmark));
+      }
+    }
     actions.appendChild(iconBtn('rename', 'Rename', ICONS.pencil));
     if (!isAsset) actions.appendChild(iconBtn('setThumb', 'Set thumbnail from current frame', ICONS.camera));
     actions.appendChild(iconBtn('reveal', 'Reveal in Finder', ICONS.folder));
@@ -207,17 +221,38 @@ var DCRender = (function () {
   }
 
   function buildSection(group, prefs, usageMeta, busts, kind, viewMode) {
+    var isVirtual = group.virtual === true;
+    var collapseId = isVirtual ? DCSections.collapseKey(group.category) : group.category;
     var collapsedList = kind === 'asset' ? prefs.collapsedAssets : prefs.collapsed;
-    var collapsed = collapsedList.indexOf(group.category) !== -1;
-    var section = el('section', 'category' + (collapsed ? ' collapsed' : ''));
-    section.dataset.category = group.category;
+    var collapsed = collapsedList.indexOf(collapseId) !== -1;
+    var section = el('section', 'category' + (isVirtual ? ' category--virtual' : '') + (collapsed ? ' collapsed' : ''));
+    if (isVirtual) section.dataset.section = group.category;
+    else section.dataset.category = group.category;
 
     var header = el('header', 'category-header');
     header.dataset.action = 'toggleSection';
     header.innerHTML = ICONS.chevron;
+    if (isVirtual) {
+      var badge = el('span', 'section-badge');
+      badge.innerHTML = ICONS.bookmarkFilled;
+      header.appendChild(badge);
+    }
     header.appendChild(el('span', 'category-name', group.category));
     header.appendChild(el('span', 'category-count', String(group.items.length)));
-    if (kind !== 'asset') {
+    if (isVirtual) {
+      var renameSecBtn = el('button', 'category-rename');
+      renameSecBtn.dataset.action = 'renameSection';
+      renameSecBtn.title = 'Rename section';
+      renameSecBtn.setAttribute('aria-label', 'Rename section "' + group.category + '"');
+      renameSecBtn.innerHTML = ICONS.pencil;
+      header.appendChild(renameSecBtn);
+      var deleteSecBtn = el('button', 'category-rename category-delete');
+      deleteSecBtn.dataset.action = 'deleteSection';
+      deleteSecBtn.title = 'Delete section (comps stay)';
+      deleteSecBtn.setAttribute('aria-label', 'Delete section "' + group.category + '"');
+      deleteSecBtn.innerHTML = ICONS.trash;
+      header.appendChild(deleteSecBtn);
+    } else if (kind !== 'asset') {
       // library folders are plain disk folders and can be renamed in place;
       // asset categories keep index-coupled ids, so they stay rename-free here
       var renameBtn = el('button', 'category-rename');
@@ -230,15 +265,19 @@ var DCRender = (function () {
     section.appendChild(header);
 
     var isList = viewMode === 'list';
+    var sectionName = isVirtual ? group.category : null;
     var container = el('div', isList ? 'list' : 'grid');
+    if (isVirtual && group.items.length === 0) {
+      container.appendChild(el('div', 'section-empty', 'No items — use "Add to Section…" on any comp.'));
+    }
     group.items.forEach(function (item) {
       var usage = DCState.getUsage(usageMeta, item.uniqueId);
       if (isList) {
-        container.appendChild(buildRow(item, usage, prefs, kind, busts[item.uniqueId]));
+        container.appendChild(buildRow(item, usage, prefs, kind, busts[item.uniqueId], sectionName));
       } else {
         container.appendChild(kind === 'asset'
           ? buildAssetCard(item, usage, prefs)
-          : buildCard(item, usage, prefs, busts[item.uniqueId]));
+          : buildCard(item, usage, prefs, busts[item.uniqueId], sectionName));
       }
     });
     section.appendChild(container);

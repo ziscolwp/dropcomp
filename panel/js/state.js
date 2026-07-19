@@ -231,7 +231,11 @@ var DCState = (function () {
   }
 
   function categoryScope(mode) {
-    return (mode === 'addAssets' || mode === 'addShape') ? 'assets' : 'library';
+    if (mode === 'addAssets' || mode === 'addShape') return 'assets';
+    // virtual library sections keep their own recents - client names must not
+    // pollute stash-folder suggestions (and vice versa)
+    if (mode === 'section') return 'section';
+    return 'library';
   }
 
   function recentCategories(prefs, scope) {

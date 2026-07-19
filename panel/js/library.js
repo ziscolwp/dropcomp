@@ -12,12 +12,40 @@ var DCLibrary = (function () {
   var dragCard = null;
   var loadedOnce = false;
   var DRAG_MIME = 'application/x-dropcomp-library-card';
+  var sectionsModel = DCSections.emptyModel();
+  var pendingSectionAdd = null;
+  var renameSectionTarget = null;
+  var deleteSectionTarget = null;
 
   function init() { usageMeta = DCState.loadUsageMeta(localStorage); }
 
   function els() { return DCShell.getEls(); }
   function libPath() { return DCShell.getLibraryPath(); }
   function persistUsage() { DCState.saveUsageMeta(localStorage, usageMeta); }
+
+  // Section mutations are pure JSON writes - no host call, so no bridge lock.
+  // Broadcast only on user mutations; load-time prunes stay silent (every
+  // panel prunes itself on its own load - broadcasting would echo).
+  function persistSections(broadcast) {
+    var r = DCSections.save(libPath(), sectionsModel);
+    if (!r.ok) { DCUI.toast(r.error, true); return false; }
+    if (broadcast && typeof DCSync !== 'undefined') DCSync.broadcast('library');
+    return true;
+  }
+
+  function reloadSections() {
+    var sec = DCSections.load(libPath());
+    sectionsModel = sec.model;
+    if (sec.corrupt) {
+      DCUI.toast('Sections file was unreadable and has been quarantined; starting fresh.', true);
+    }
+  }
+
+  function pruneSections() {
+    if (DCSections.prune(sectionsModel, allComps.map(function (c) { return c.uniqueId; }))) {
+      persistSections(false);
+    }
+  }
 
   function ensureLoaded() {
     if (loadedOnce) rerender();
@@ -30,10 +58,12 @@ var DCLibrary = (function () {
     DCUI.spinner(true);
     DCBridge.call('getStashedComps', [libPath()], function (result) {
       try {
+        reloadSections();
         allComps = (result && result !== '[]') ? JSON.parse(result) : [];
         loadedOnce = true;
         var r = DCState.cleanupStaleMetadata(usageMeta, allComps);
         if (r.removed > 0) { usageMeta = r.usageMeta; persistUsage(); }
+        pruneSections();
         rerender();
       } catch (e) {
         DCUI.toast('Error loading library.', true);
@@ -56,8 +86,10 @@ var DCLibrary = (function () {
     DCUI.spinner(true);
     DCBridge.call('rebuildLibraryIndex', [libPath()], function (result) {
       try {
+        reloadSections();
         allComps = (result && result !== '[]') ? JSON.parse(result) : [];
         loadedOnce = true;
+        pruneSections();
         rerender();
         DCUI.toast('Library refreshed.', false);
       } catch (e) {
@@ -78,9 +110,12 @@ var DCLibrary = (function () {
       favoritesOnly: prefs.favoritesOnly,
       usageMeta: usageMeta
     });
-    var groups = DCState.groupByCategory(filtered).map(function (g) {
-      return { category: g.category, items: DCState.sortComps(g.items, prefs.sort, usageMeta) };
-    });
+    var groups = DCSections.buildGroups(sectionsModel, filtered, function (items) {
+      return DCState.sortComps(items, prefs.sort, usageMeta);
+    }, !!(els().search.value || prefs.favoritesOnly)).concat(
+      DCState.groupByCategory(filtered).map(function (g) {
+        return { category: g.category, items: DCState.sortComps(g.items, prefs.sort, usageMeta) };
+      }));
     var msg = allComps.length === 0
       ? 'Your library is empty. Stash a comp or add an .aep.'
       : 'No items match.';
@@ -183,6 +218,72 @@ var DCLibrary = (function () {
     rerender();
   }
 
+  function addToSectionFlow(uniqueId) {
+    pendingSectionAdd = uniqueId;
+    DCUI.openCategoryModal('section', 'Add to Section', DCSections.sectionNames(sectionsModel));
+  }
+
+  function confirmAddToSection(name) {
+    var uniqueId = pendingSectionAdd;
+    pendingSectionAdd = null;
+    DCUI.closeModal(els().categoryModal);
+    if (!uniqueId || !findComp(uniqueId)) return;
+    if (!DCSections.add(sectionsModel, name, uniqueId)) {
+      DCUI.toast('Already in "' + name + '".', false);
+      return;
+    }
+    if (persistSections(true)) DCUI.toast('Added to "' + name + '".', false);
+    rerender();
+  }
+
+  function removeFromSection(sectionName, uniqueId) {
+    if (!sectionName || !DCSections.remove(sectionsModel, sectionName, uniqueId)) return;
+    persistSections(true);
+    rerender();
+  }
+
+  function renameSectionFlow(name) {
+    if (!name) return;
+    renameTarget = null;
+    renameCategoryTarget = null;
+    renameSectionTarget = name;
+    DCUI.openRenameModal('library', name);
+  }
+
+  function confirmSectionRename() {
+    var oldName = renameSectionTarget;
+    renameSectionTarget = null;
+    var newName = els().newNameInput.value.trim();
+    DCUI.closeModal(els().renameModal);
+    if (!newName || newName === oldName) return;
+    var v = DCValidate.validateName(newName, 'Section name');
+    if (!v.valid) { DCUI.toast(v.error, true); return; }
+    var r = DCSections.renameSection(sectionsModel, oldName, v.name);
+    if (!r.ok) { DCUI.toast(r.error, true); return; }
+    // keep the section's collapsed state under its new key
+    var prefs = DCShell.getPrefs();
+    var ci = prefs.collapsed.indexOf(DCSections.collapseKey(oldName));
+    if (ci !== -1) { prefs.collapsed.splice(ci, 1, DCSections.collapseKey(v.name)); DCShell.persistPrefs(); }
+    if (persistSections(true)) DCUI.toast('Section renamed to "' + v.name + '".', false);
+    rerender();
+  }
+
+  function deleteSectionFlow(name) {
+    if (!name) return;
+    deleteTarget = null;
+    deleteSectionTarget = name;
+    DCUI.openDeleteModal('library', name + ' (section only - comps stay)');
+  }
+
+  function confirmSectionDelete() {
+    var name = deleteSectionTarget;
+    deleteSectionTarget = null;
+    DCUI.closeModal(els().deleteModal);
+    if (!name || !DCSections.deleteSection(sectionsModel, name)) return;
+    if (persistSections(true)) DCUI.toast('Section deleted.', false);
+    rerender();
+  }
+
   function renameFlow(uniqueId, category) {
     var comp = findComp(uniqueId);
     if (!comp) return;
@@ -231,6 +332,7 @@ var DCLibrary = (function () {
   }
 
   function confirmRename() {
+    if (renameSectionTarget) { confirmSectionRename(); return; }
     if (renameCategoryTarget) { confirmCategoryRename(); return; }
     if (!renameTarget) return;
     var newName = els().newNameInput.value.trim();
@@ -253,6 +355,7 @@ var DCLibrary = (function () {
       if (r && r.ok) {
         DCState.migrateMetadataKey(usageMeta, t.uniqueId, r.newUniqueId);
         persistUsage();
+        if (DCSections.migrateId(sectionsModel, t.uniqueId, r.newUniqueId)) persistSections(false);
         DCUI.toast('Renamed.', false);
         loadAndBroadcast();
       } else {
@@ -269,6 +372,7 @@ var DCLibrary = (function () {
   }
 
   function confirmDelete() {
+    if (deleteSectionTarget) { confirmSectionDelete(); return; }
     if (!deleteTarget) return;
     if (!DCBridge.acquire('deleting')) { DCUI.toast('Busy: ' + DCBridge.busyWith(), true); return; }
     DCUI.closeModal(els().deleteModal);
@@ -279,6 +383,8 @@ var DCLibrary = (function () {
       DCUI.spinner(false);
       DCBridge.release();
       if (result === 'Success') {
+        // loadAndBroadcast already fires the 'library' broadcast
+        if (DCSections.removeEverywhere(sectionsModel, t.uniqueId)) persistSections(false);
         DCUI.toast('Deleted.', false);
         loadAndBroadcast();
       } else {
@@ -459,9 +565,11 @@ var DCLibrary = (function () {
     rerender();
   }
 
-  function onCardAction(action, uniqueId, category) {
+  function onCardAction(action, uniqueId, category, section) {
     if (action === 'import') importItem(uniqueId);
     else if (action === 'favorite') toggleFavorite(uniqueId);
+    else if (action === 'addToSection') addToSectionFlow(uniqueId);
+    else if (action === 'removeFromSection') removeFromSection(section, uniqueId);
     else if (action === 'rename') renameFlow(uniqueId, category);
     else if (action === 'delete') deleteFlow(uniqueId, category);
     else if (action === 'generate') generateThumb(uniqueId, category);
@@ -473,6 +581,9 @@ var DCLibrary = (function () {
     renameTarget = null;
     renameCategoryTarget = null;
     deleteTarget = null;
+    pendingSectionAdd = null;
+    renameSectionTarget = null;
+    deleteSectionTarget = null;
     dragCard = null;
     clearAllDropTargets();
   }
@@ -484,6 +595,8 @@ var DCLibrary = (function () {
     stashFlow: stashFlow, addAepFlow: addAepFlow, confirmCategory: confirmCategory,
     importItem: importItem, confirmRename: confirmRename, confirmDelete: confirmDelete,
     renameCategoryFlow: renameCategoryFlow,
+    confirmAddToSection: confirmAddToSection,
+    renameSectionFlow: renameSectionFlow, deleteSectionFlow: deleteSectionFlow,
     relinkMissing: relinkMissing, toggleSection: toggleSection,
     onCardAction: onCardAction, clearPending: clearPending
   };

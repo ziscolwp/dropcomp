@@ -28,6 +28,7 @@ function makeContext(calls) {
   ];
   return {
     localStorage: { getItem() { return null; }, setItem() {} },
+    DCSections: require('../panel/js/sections.js'),
     DCShell: {
       getLibraryPath() { return '/Library'; },
       getPrefs() {
