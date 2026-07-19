@@ -192,3 +192,39 @@ test('highlight and create rows use the gold accent', () => {
   assert.ok(create, 'create-row rule missing');
   assert.match(create[1], /var\(--gold\)/);
 });
+
+// ---- integration wiring ----
+
+const uiSrc = fs.readFileSync(path.join(__dirname, '..', 'panel', 'js', 'ui.js'), 'utf8');
+const shellSrc = fs.readFileSync(path.join(__dirname, '..', 'panel', 'js', 'shell.js'), 'utf8');
+const mainSrc = fs.readFileSync(path.join(__dirname, '..', 'panel', 'js', 'main.js'), 'utf8');
+const pickerSrc = fs.readFileSync(path.join(__dirname, '..', 'panel', 'js', 'category-picker.js'), 'utf8');
+
+test('ui.js delegates the category modal to the picker', () => {
+  assert.match(uiSrc, /DCCategoryPicker\.open\(categories,\s*DCState\.categoryScope\(mode\)\)/);
+  assert.ok(!uiSrc.includes('existingCategorySelect'));
+  assert.ok(!uiSrc.includes('newCategoryInput'));
+});
+
+test('shell.js reads the picker value and records the recent', () => {
+  assert.match(shellSrc, /DCCategoryPicker\.value\(\)/);
+  assert.match(shellSrc, /DCState\.pushRecentCategory\(prefs,\s*DCState\.categoryScope\(mode\),\s*v\.name\)/);
+  assert.ok(!shellSrc.includes('newCategoryInput'));
+});
+
+test('main.js wires the picker with confirm and recents hooks', () => {
+  assert.match(mainSrc, /DCCategoryPicker\.init\(els,\s*\{\s*onConfirm:\s*DCShell\.confirmCategoryModal,\s*getRecents:\s*DCShell\.recentCategories\s*\}\)/);
+  assert.match(mainSrc, /categoryPickerInput:\s*\$\('category-picker-input'\)/);
+  assert.match(mainSrc, /categoryPickerList:\s*\$\('category-picker-list'\)/);
+  assert.ok(!mainSrc.includes('existing-category-select'));
+  assert.ok(!mainSrc.includes('new-category-input'));
+});
+
+test('the picker module never handles Enter (global handler owns it)', () => {
+  assert.ok(!pickerSrc.includes("'Enter'"), 'Enter in the picker would double-confirm via main.js keydown');
+});
+
+test('the picker renders rows with textContent, never innerHTML', () => {
+  assert.ok(!pickerSrc.includes('innerHTML +='));
+  assert.ok(!/innerHTML\s*=\s*[^'"]/.test(pickerSrc.replace(/innerHTML = ''/g, '')));
+});

@@ -32,24 +32,8 @@ var DCUI = (function () {
   function openCategoryModal(mode, title, categories) {
     catMode = mode;
     els.categoryModalTitle.textContent = title;
-    els.existingCategorySelect.innerHTML = '';
-    if (categories.length === 0) {
-      var opt0 = document.createElement('option');
-      opt0.value = '';
-      opt0.textContent = 'No existing categories';
-      els.existingCategorySelect.appendChild(opt0);
-      els.existingCategorySelect.disabled = true;
-    } else {
-      els.existingCategorySelect.disabled = false;
-      categories.forEach(function (cat) {
-        var opt = document.createElement('option');
-        opt.value = cat;
-        opt.textContent = cat;
-        els.existingCategorySelect.appendChild(opt);
-      });
-    }
-    els.newCategoryInput.value = '';
     els.categoryModal.classList.remove('hidden');
+    DCCategoryPicker.open(categories, DCState.categoryScope(mode));
   }
   function categoryModalMode() { return catMode; }
 
