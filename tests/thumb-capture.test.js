@@ -29,7 +29,7 @@ function makePngContent(totalBytes) {
 function loadThumbEngine() {
   const disk = new Map(); // path -> current content string
   const jobs = []; // { path, content, written, rate }
-  const state = { raceDetected: false, saveCalls: 0 };
+  const state = { raceDetected: false, saveCalls: 0, resDuringSave: [] };
 
   function advance(ms) {
     for (const job of jobs) {
@@ -88,20 +88,23 @@ function loadThumbEngine() {
 
   function makeComp(renderPlan) {
     // renderPlan: (time, file) -> { content, rate } for the fake writer
-    return {
+    const comp = {
       workAreaStart: 0,
       workAreaDuration: 10,
-      saveFrameToPng(time, file) {
-        state.saveCalls += 1;
-        const inFlight = jobs.some(
-          (j) => j.path === file.fsName && j.written < j.content.length
-        );
-        if (inFlight) state.raceDetected = true;
-        const plan = renderPlan(time, file);
-        disk.set(file.fsName, '');
-        jobs.push({ path: file.fsName, content: plan.content, written: 0, rate: plan.rate });
-      },
+      resolutionFactor: [3, 3],
     };
+    comp.saveFrameToPng = function (time, file) {
+      state.saveCalls += 1;
+      state.resDuringSave.push(comp.resolutionFactor.join('x'));
+      const inFlight = jobs.some(
+        (j) => j.path === file.fsName && j.written < j.content.length
+      );
+      if (inFlight) state.raceDetected = true;
+      const plan = renderPlan(time, file);
+      disk.set(file.fsName, '');
+      jobs.push({ path: file.fsName, content: plan.content, written: 0, rate: plan.rate });
+    };
+    return comp;
   }
 
   return { context, disk, state, makeComp, FakeFile };
@@ -195,4 +198,32 @@ test('index entries only record a thumbPath the capture actually verified', () =
     /thumbPath:\s*\(?\s*thumbOk/,
     'stashSelectedComp must gate thumbPath on the capture verdict'
   );
+});
+
+test('saveVerifiedThumb renders at full resolution and restores the original', () => {
+  const engine = loadThumbEngine();
+  const full = makePngContent(200000);
+  const comp = engine.makeComp(() => ({ content: full, rate: 40 }));
+  const png = new engine.FakeFile('/lib/cat/item/comp.png');
+
+  const ok = engine.context.saveVerifiedThumb(comp, png);
+
+  assert.equal(ok, true);
+  assert.ok(engine.state.resDuringSave.length > 0, 'at least one render must have run');
+  engine.state.resDuringSave.forEach((res) =>
+    assert.equal(res, '1x1', 'every saveFrameToPng must run at Full resolution')
+  );
+  assert.deepEqual(comp.resolutionFactor, [3, 3], 'original resolution must be restored');
+});
+
+test('saveVerifiedThumb restores resolution even when the writer dies', () => {
+  const engine = loadThumbEngine();
+  const truncated = makePngContent(100000).slice(0, 500);
+  const comp = engine.makeComp(() => ({ content: truncated, rate: 40 }));
+  const png = new engine.FakeFile('/lib/cat/item/comp.png');
+
+  const ok = engine.context.saveVerifiedThumb(comp, png);
+
+  assert.equal(ok, false);
+  assert.deepEqual(comp.resolutionFactor, [3, 3], 'restore must happen on the failure path too');
 });
