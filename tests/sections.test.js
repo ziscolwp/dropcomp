@@ -109,3 +109,59 @@ test('buildGroups keeps empty sections visible unless hideEmpty', () => {
 test('collapseKey prefixes to avoid category name clashes', () => {
   assert.equal(DCSections.collapseKey('Client X'), 'sec:Client X');
 });
+
+function stubFs(files) {
+  const calls = { writes: [], renames: [] };
+  return {
+    calls,
+    existsSync: (p) => Object.prototype.hasOwnProperty.call(files, p),
+    readFileSync: (p) => {
+      if (!Object.prototype.hasOwnProperty.call(files, p)) throw new Error('ENOENT');
+      return files[p];
+    },
+    writeFileSync: (p, data) => { files[p] = data; calls.writes.push(p); },
+    renameSync: (from, to) => {
+      files[to] = files[from];
+      delete files[from];
+      calls.renames.push({ from, to });
+    },
+  };
+}
+
+test('load returns an empty model when the file is missing', () => {
+  const fs = stubFs({});
+  assert.deepEqual(DCSections.load('/lib', fs), { model: model(), corrupt: false });
+});
+
+test('load parses an existing sections file', () => {
+  const fs = stubFs({ '/lib/.dropcomp_sections.json': '{"version":1,"sections":{"C":["a_1"]}}' });
+  assert.deepEqual(DCSections.load('/lib', fs), { model: model({ C: ['a_1'] }), corrupt: false });
+});
+
+test('load quarantines a corrupt file instead of leaving it to be overwritten', () => {
+  const fs = stubFs({ '/lib/.dropcomp_sections.json': '{broken' });
+  const r = DCSections.load('/lib', fs);
+  assert.equal(r.corrupt, true);
+  assert.deepEqual(r.model, model());
+  assert.equal(fs.calls.renames.length, 1);
+  assert.equal(fs.calls.renames[0].from, '/lib/.dropcomp_sections.json');
+  assert.match(fs.calls.renames[0].to, /\/lib\/\.dropcomp_sections\.corrupt-\d+\.json$/);
+});
+
+test('save writes serialized json and reports write failures', () => {
+  const fs = stubFs({});
+  const m = model({ C: ['a_1'] });
+  assert.deepEqual(DCSections.save('/lib', m, fs), { ok: true, persisted: true });
+  assert.deepEqual(DCSections.parse(fs.readFileSync('/lib/.dropcomp_sections.json')).model, m);
+
+  const failing = stubFs({});
+  failing.writeFileSync = () => { throw new Error('disk full'); };
+  const r = DCSections.save('/lib', m, failing);
+  assert.equal(r.ok, false);
+  assert.match(r.error, /disk full/);
+});
+
+test('load and save degrade to in-memory when fs is unavailable', () => {
+  assert.deepEqual(DCSections.load('/lib', null), { model: model(), corrupt: false });
+  assert.deepEqual(DCSections.save('/lib', model(), null), { ok: true, persisted: false });
+});

@@ -122,12 +122,55 @@ var DCSections = (function () {
     return groups;
   }
 
+  var FILE_NAME = '.dropcomp_sections.json';
+
+  function filePath(libPath) { return libPath + '/' + FILE_NAME; }
+
+  // _fs: injectable for tests (updater-fs.js pattern). null = explicitly
+  // unavailable; undefined = use Node's fs when the runtime has it.
+  function nodeFs(_fs) {
+    if (_fs !== undefined) return _fs;
+    if (typeof require === 'undefined') return null;
+    try { return require('fs'); } catch (e) { return null; }
+  }
+
+  function load(libPath, _fs) {
+    var fs = nodeFs(_fs);
+    if (!fs || !libPath) return { model: emptyModel(), corrupt: false };
+    var p = filePath(libPath);
+    var raw;
+    try {
+      if (!fs.existsSync(p)) return { model: emptyModel(), corrupt: false };
+      raw = fs.readFileSync(p, 'utf8');
+    } catch (e) {
+      return { model: emptyModel(), corrupt: false };
+    }
+    var r = parse(String(raw));
+    if (r.corrupt) {
+      // quarantine - never leave a file the next save would overwrite
+      try { fs.renameSync(p, libPath + '/' + '.dropcomp_sections.corrupt-' + Date.now() + '.json'); } catch (e2) { }
+    }
+    return r;
+  }
+
+  function save(libPath, model, _fs) {
+    var fs = nodeFs(_fs);
+    if (!fs || !libPath) return { ok: true, persisted: false };
+    try {
+      fs.writeFileSync(filePath(libPath), serialize(model), 'utf8');
+      return { ok: true, persisted: true };
+    } catch (e) {
+      return { ok: false, error: 'Could not save sections: ' + e.message };
+    }
+  }
+
   return {
     emptyModel: emptyModel, parse: parse, serialize: serialize,
     sectionNames: sectionNames, add: add, remove: remove,
     removeEverywhere: removeEverywhere, renameSection: renameSection,
     deleteSection: deleteSection, migrateId: migrateId, prune: prune,
-    collapseKey: collapseKey, buildGroups: buildGroups
+    collapseKey: collapseKey, buildGroups: buildGroups,
+    filePath: filePath, load: load, save: save
   };
 }());
 if (typeof module !== 'undefined' && module.exports) { module.exports = DCSections; }
