@@ -31,6 +31,7 @@ var DCShell = (function () {
   function getEls() { return els; }
   function getPrefs() { return prefs; }
   function getLibraryPath() { return libraryPath; }
+  function recentCategories(scope) { return DCState.recentCategories(prefs, scope); }
   // The thumb-size slider persists on every input event while dragging, so the
   // cross-panel prefs broadcast is trailing-debounced instead of per-call.
   var prefsBroadcastTimer = null;
@@ -203,7 +204,7 @@ var DCShell = (function () {
 
   function confirmCategoryModal() {
     var mode = DCUI.categoryModalMode();
-    var categoryName = els.newCategoryInput.value.trim() || els.existingCategorySelect.value;
+    var categoryName = DCCategoryPicker.value();
     var v = DCValidate.validateName(categoryName, 'Category name');
     if (!v.valid) { DCUI.toast(v.error, true); return; }
     // asset-tab flows may reuse the name "assets"; only library categories
@@ -213,6 +214,8 @@ var DCShell = (function () {
       DCUI.toast('"Assets" is reserved for the Assets tab.', true);
       return;
     }
+    DCState.pushRecentCategory(prefs, DCState.categoryScope(mode), v.name);
+    persistPrefs();
     if (mode === 'addAssets' && hasAssets()) DCAssets.confirmCategory(v.name);
     else if (mode === 'addShape' && hasAssets()) DCAssets.confirmShapeCategory(v.name);
     else if (mode === 'section') DCLibrary.confirmAddToSection(v.name);
@@ -311,6 +314,7 @@ var DCShell = (function () {
     init: init, boot: boot, verifyAndLoad: verifyAndLoad,
     getMode: getMode, onRemoteChange: onRemoteChange,
     getEls: getEls, getPrefs: getPrefs, getLibraryPath: getLibraryPath, persistPrefs: persistPrefs,
+    recentCategories: recentCategories,
     setActiveTab: setActiveTab, selectLibraryFolder: selectLibraryFolder,
     openSettings: openSettings, openLibraryInFinder: openLibraryInFinder,
     changeFolder: changeFolder, refreshActive: refreshActive,

@@ -277,12 +277,9 @@
   <div class="modal-box">
     <h3 id="category-modal-title">Add Composition</h3>
     <div class="form-group">
-      <label for="existing-category-select">Existing category:</label>
-      <select id="existing-category-select"></select>
-    </div>
-    <div class="form-group">
-      <label for="new-category-input">Or create new:</label>
-      <input type="text" id="new-category-input" placeholder="e.g. Titles, Lower Thirds...">
+      <label for="category-picker-input">Category</label>
+      <input type="text" id="category-picker-input" placeholder="Search or create..." autocomplete="off" spellcheck="false">
+      <ul id="category-picker-list" role="listbox" aria-label="Categories"></ul>
     </div>
     <div class="modal-buttons">
       <button class="btn-dark" id="cancel-category-btn">Cancel</button>
@@ -371,6 +368,7 @@
 <script src="js/update.js"></script>
 <script src="js/updater-fs.js"></script>
 <script src="js/updater.js"></script>
+<script src="js/category-picker.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/shell.js"></script>
 <script src="js/library.js"></script>

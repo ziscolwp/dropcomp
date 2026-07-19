@@ -137,7 +137,8 @@ var DCState = (function () {
     return { thumbMin: 130, sort: 'recent', showNames: true, showMeta: true,
       favoritesOnly: false, collapsed: [], activeTab: 'library', collapsedAssets: [],
       viewMode: 'comfortable', viewModeAssets: 'comfortable',
-      folderLayout: 'columns', folderLayoutVersion: FOLDER_LAYOUT_VERSION, folderColumns: true };
+      folderLayout: 'columns', folderLayoutVersion: FOLDER_LAYOUT_VERSION, folderColumns: true,
+      recentCategories: { library: [], assets: [] } };
   }
 
   function loadPrefs(storage) {
@@ -229,6 +230,27 @@ var DCState = (function () {
     savePrefs(storage, out);
   }
 
+  function categoryScope(mode) {
+    return (mode === 'addAssets' || mode === 'addShape') ? 'assets' : 'library';
+  }
+
+  function recentCategories(prefs, scope) {
+    var rc = prefs && prefs.recentCategories;
+    return (rc && Array.isArray(rc[scope])) ? rc[scope] : [];
+  }
+
+  function pushRecentCategory(prefs, scope, name) {
+    var list = recentCategories(prefs, scope).filter(function (n) {
+      return n.toLowerCase() !== name.toLowerCase();
+    });
+    list.unshift(name);
+    if (!prefs.recentCategories || typeof prefs.recentCategories !== 'object') {
+      prefs.recentCategories = { library: [], assets: [] };
+    }
+    prefs.recentCategories[scope] = list.slice(0, 4);
+    return prefs;
+  }
+
   return {
     defaultPrefs: defaultPrefs,
     loadPrefs: loadPrefs,
@@ -241,6 +263,9 @@ var DCState = (function () {
     panelModeFromExtensionId: panelModeFromExtensionId,
     panelModeTitle: panelModeTitle,
     savePrefsForMode: savePrefsForMode,
+    categoryScope: categoryScope,
+    recentCategories: recentCategories,
+    pushRecentCategory: pushRecentCategory,
     getUsage: getUsage,
     sortComps: sortComps,
     filterComps: filterComps,
