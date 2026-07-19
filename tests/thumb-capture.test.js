@@ -227,3 +227,17 @@ test('saveVerifiedThumb restores resolution even when the writer dies', () => {
   assert.equal(ok, false);
   assert.deepEqual(comp.resolutionFactor, [3, 3], 'restore must happen on the failure path too');
 });
+
+test('setThumbFromActiveComp forces Full resolution and restores it', () => {
+  const body = sectionBetween(captureSrc, 'function setThumbFromActiveComp', '// ---- exports');
+  assert.match(
+    body,
+    /resolutionFactor\s*=\s*\[1,\s*1\]/,
+    'must force Full resolution before saveFrameToPng'
+  );
+  assert.match(
+    body,
+    /finally\s*\{[\s\S]*?resolutionFactor/,
+    'must restore the original resolution in a finally'
+  );
+});
