@@ -126,6 +126,10 @@ test('categoryScope maps asset flows to assets and the rest to library', () => {
   assert.equal(DCState.categoryScope('addAep'), 'library');
 });
 
+test('categoryScope keeps virtual section recents isolated from folders', () => {
+  assert.equal(DCState.categoryScope('section'), 'section');
+});
+
 test('recentCategories tolerates prefs saved before the key existed', () => {
   assert.deepEqual(DCState.recentCategories({}, 'library'), []);
   assert.deepEqual(DCState.recentCategories({ recentCategories: { library: ['A'] } }, 'assets'), []);
