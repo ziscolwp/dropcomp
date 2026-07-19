@@ -257,7 +257,7 @@ body.mode-tools #header-settings-btn, body.mode-scripts #header-settings-btn { d
 .card:hover { border-color: var(--gold); }
 
 .card-thumb { position: relative; aspect-ratio: 16 / 9; background: var(--bg-inset); }
-.card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.card-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
 .thumb-placeholder {
   width: 100%; height: 100%; display: flex; flex-direction: column;
@@ -632,7 +632,7 @@ body.mode-tools #header-settings-btn, body.mode-scripts #header-settings-btn { d
 #library.view-list .list { display: flex; flex-direction: column; gap: 4px; }
 #library.view-list .card--row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; }
 #library.view-list .card--row .card-thumb { flex: 0 0 auto; width: 52px; aspect-ratio: 16 / 9; border-radius: 4px; }
-#library.view-list .card--row .card-thumb img { object-fit: cover; padding: 0; }
+#library.view-list .card--row .card-thumb img { object-fit: contain; padding: 0; }
 #library.view-list .card--row .row-main { flex: 1; min-width: 0; }
 #library.view-list .card--row .card-name { font-size: 12px; }
 #library.view-list .card--row .card-meta { font-size: 11px; margin-top: 1px; }
