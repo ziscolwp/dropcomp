@@ -110,3 +110,41 @@ test('moveHighlight clamps at both ends and handles empty lists', () => {
   assert.equal(DCCategoryPicker.moveHighlight(-1, 1, 3), 0);
   assert.equal(DCCategoryPicker.moveHighlight(0, 1, 0), -1);
 });
+
+// ---- recents prefs helpers (state.js) ----
+
+const DCState = require('../panel/js/state.js');
+
+test('defaultPrefs whitelists recentCategories for both scopes', () => {
+  assert.deepEqual(DCState.defaultPrefs().recentCategories, { library: [], assets: [] });
+});
+
+test('categoryScope maps asset flows to assets and the rest to library', () => {
+  assert.equal(DCState.categoryScope('addAssets'), 'assets');
+  assert.equal(DCState.categoryScope('addShape'), 'assets');
+  assert.equal(DCState.categoryScope('stash'), 'library');
+  assert.equal(DCState.categoryScope('addAep'), 'library');
+});
+
+test('recentCategories tolerates prefs saved before the key existed', () => {
+  assert.deepEqual(DCState.recentCategories({}, 'library'), []);
+  assert.deepEqual(DCState.recentCategories({ recentCategories: { library: ['A'] } }, 'assets'), []);
+  assert.deepEqual(DCState.recentCategories({ recentCategories: { library: ['A'] } }, 'library'), ['A']);
+});
+
+test('pushRecentCategory unshifts, dedupes case-insensitively, caps at 4', () => {
+  const prefs = DCState.defaultPrefs();
+  ['A', 'B', 'C', 'D'].forEach((n) => DCState.pushRecentCategory(prefs, 'library', n));
+  assert.deepEqual(prefs.recentCategories.library, ['D', 'C', 'B', 'A']);
+  DCState.pushRecentCategory(prefs, 'library', 'a');
+  assert.deepEqual(prefs.recentCategories.library, ['a', 'D', 'C', 'B']);
+  DCState.pushRecentCategory(prefs, 'library', 'E');
+  assert.deepEqual(prefs.recentCategories.library, ['E', 'a', 'D', 'C']);
+  assert.deepEqual(prefs.recentCategories.assets, []);
+});
+
+test('pushRecentCategory repairs a malformed recentCategories object', () => {
+  const prefs = { recentCategories: null };
+  DCState.pushRecentCategory(prefs, 'assets', 'Logos');
+  assert.deepEqual(prefs.recentCategories.assets, ['Logos']);
+});
