@@ -211,6 +211,17 @@ body.mode-tools #header-settings-btn, body.mode-scripts #header-settings-btn { d
 .category-header:hover .category-rename { visibility: visible; }
 .category-rename:hover { color: var(--gold); }
 .category-rename svg { width: 11px; height: 11px; }
+/* ---- virtual sections (client groups) ---- */
+.category--virtual > .category-header .category-name { color: var(--gold); }
+.section-badge { display: inline-flex; align-items: center; color: var(--gold); }
+.section-badge svg { width: 11px; height: 11px; }
+.category-delete:hover { color: var(--danger); }
+.section-empty {
+  padding: 10px 12px;
+  font-size: 11px;
+  color: var(--text-mid);
+}
+.card-action.in-section { opacity: 1; color: var(--gold); }
 .category.collapsed .grid, .category.collapsed .list { display: none; }
 .category.drop-target .category-header { color: var(--gold); }
 .category.drop-target .category-name { color: var(--gold); }
