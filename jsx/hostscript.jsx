@@ -408,30 +408,91 @@ function compInfo(comp) {
     };
 }
 
-// saveFrameToPng writes asynchronously in recent AE versions - poll until the file lands
-function waitForFile(file, timeoutMs, minBytes) {
-    var waited = 0;
-    while (waited <= timeoutMs) {
-        var probe = new File(file.fsName);
-        if (probe.exists && probe.length >= minBytes) return true;
-        $.sleep(100);
-        waited += 100;
+// saveFrameToPng renders and writes asynchronously in recent AE versions. A
+// thumbnail only counts once the file is a structurally complete png -
+// checking size alone accepts half-written files (the glitchy-thumbnail bug),
+// and rendering again over an in-flight write corrupts the file outright.
+function pngIsComplete(file) {
+    var probe = new File(file.fsName);
+    if (!probe.exists || probe.length < 64) return false;
+    var ok = false;
+    try {
+        probe.encoding = 'BINARY';
+        if (probe.open('r')) {
+            var head = probe.read(8);
+            probe.seek(8, 2);
+            var tail = probe.read(8);
+            ok = head.charCodeAt(0) === 0x89 && head.substr(1, 3) === 'PNG' &&
+                tail.substr(0, 4) === 'IEND';
+            probe.close();
+        }
+    } catch (e) {
+        try { probe.close(); } catch (e2) { }
+        ok = false;
     }
-    return false;
+    return ok;
+}
+
+// Poll an async png write until it reaches an outcome:
+//   complete - a valid png (signature + IEND trailer) is on disk
+//   dead     - the file stopped growing without ever becoming valid
+//   pending  - timeout expired while the render/write may still be going
+function watchPngWrite(pngFile, timeoutMs) {
+    var waited = 0;
+    var lastSize = -1;
+    var stableMs = 0;
+    while (waited <= timeoutMs) {
+        var probe = new File(pngFile.fsName);
+        var size = probe.exists ? probe.length : -1;
+        if (size > 0 && pngIsComplete(probe)) return { state: 'complete', waited: waited };
+        if (size >= 0 && size === lastSize) {
+            stableMs += 150;
+            // a finishing writer flushes IEND with its final bytes; a full
+            // second of silence without it means the write died partway
+            if (stableMs >= 1200) return { state: 'dead', waited: waited };
+        } else {
+            stableMs = 0;
+        }
+        lastSize = size;
+        $.sleep(150);
+        waited += 150;
+    }
+    return { state: 'pending', waited: waited };
 }
 
 function saveVerifiedThumb(comp, pngFile) {
     var start = comp.workAreaStart;
     var dur = comp.workAreaDuration;
     var times = [start + dur / 2, start, start + dur * 0.25];
+    // a stale file at the target path is indistinguishable from our render's
+    // output - clear it up front, or bail rather than verify the wrong file
+    try { if (pngFile.exists && !pngFile.remove()) return false; } catch (e0) { return false; }
+    var budget = 24000; // hard cap - evalScript blocks AE's UI thread
     for (var i = 0; i < times.length; i++) {
+        var launched = false;
         try {
-            if (pngFile.exists) pngFile.remove();
             comp.saveFrameToPng(times[i], pngFile);
-            if (waitForFile(pngFile, 2500, 1024)) return true;
-        } catch (e) { }
+            launched = true;
+        } catch (e1) { }
+        if (launched) {
+            var w = watchPngWrite(pngFile, Math.min(budget, i === 0 ? 9000 : 4000));
+            budget -= w.waited;
+            while (w.state === 'pending' && budget > 0) {
+                // still rendering or writing: never delete or re-render over
+                // a live writer - two writers on one path is what produced
+                // the corrupt thumbnails
+                w = watchPngWrite(pngFile, Math.min(budget, 3000));
+                budget -= w.waited;
+            }
+            if (w.state === 'complete') return true;
+            if (w.state === 'pending') return false; // budget spent, writer may be alive: hands off
+        }
+        // the render call threw, or the write died: scrub any partial file so
+        // the index/panel never picks up a truncated png, then try another frame
+        try { if (pngFile.exists && !pngFile.remove()) return false; } catch (e2) { return false; }
+        if (budget <= 0) return false;
     }
-    return waitForFile(pngFile, 1000, 1);
+    return false;
 }
 
 // ---------- stash ----------
@@ -475,7 +536,7 @@ function stashSelectedComp(libraryPath, categoryName) {
         if (!compFolder.create()) return 'Error: Could not create the item folder.';
 
         var thumbFile = new File(compFolder.fsName + '/comp.png');
-        saveVerifiedThumb(compToSave, thumbFile);
+        var thumbOk = saveVerifiedThumb(compToSave, thumbFile);
 
         writeJson(new File(compFolder.fsName + '/metadata.json'), {
             displayName: compToSaveName,
@@ -534,7 +595,7 @@ function stashSelectedComp(libraryPath, categoryName) {
             category: categoryName,
             uniqueId: compFolderName,
             aepPath: finalAEPFile.fsName,
-            thumbPath: thumbFile.exists ? thumbFile.fsName : null,
+            thumbPath: (thumbOk && thumbFile.exists) ? thumbFile.fsName : null,
             mainCompId: compToSaveID,
             width: info.width,
             height: info.height,
