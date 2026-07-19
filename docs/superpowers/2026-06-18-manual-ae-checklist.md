@@ -67,3 +67,18 @@ The panel wasn't open in AE during the run (no debug port), so the UI was verifi
 in the harness. On reload of the real panel, spot-check: open the **Scripts** tab,
 **Add File** a real `.jsx`, **Run** it (and a snippet), and click a couple of
 **Tools** align icons on a shape — all host paths are already AE-verified above.
+
+## Library Sections (2026-07-19, feature/library-sections — PENDING)
+
+- [ ] Card > bookmark icon > type "Client X" > comp appears pinned in a "Client X" section AND stays in its home folder
+- [ ] Bookmark a second comp into "Client X" via the select dropdown (no retype)
+- [ ] Import works from the section card; double-click too
+- [ ] "Remove from Section" on the section card unlinks it; home copy untouched
+- [ ] Section header rename > membership and collapse state survive
+- [ ] Section header delete > section gone, comps still in their folders
+- [ ] Delete a comp that is in a section > section entry disappears too
+- [ ] Rename a comp that is in a section > still listed in the section under the new name
+- [ ] Collapse "Client X", relaunch panel > still collapsed; a category with the same name collapses independently
+- [ ] Search hides empty sections; clearing search shows them again
+- [ ] Second panel open (Library standalone): add to a section in one > other converges
+- [ ] Quit AE, corrupt .dropcomp_sections.json by hand, relaunch > warning toast, file quarantined as .corrupt-*, library still loads
