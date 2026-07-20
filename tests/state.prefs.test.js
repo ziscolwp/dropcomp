@@ -18,6 +18,7 @@ test('defaultPrefs shape', () => {
     favoritesOnly: false, collapsed: [], activeTab: 'library', collapsedAssets: [],
     viewMode: 'comfortable', viewModeAssets: 'comfortable',
     folderLayout: 'columns', folderLayoutVersion: 1, folderColumns: true,
+    railSide: 'left',
     recentCategories: { library: [], assets: [] }
   });
 });

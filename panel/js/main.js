@@ -40,6 +40,7 @@
     addShapeBtn: $('add-shape-btn'),
     thumbSlider: $('thumb-slider'),
     viewSwitch: $('view-switch'),
+    railSideSwitch: $('rail-side-switch'),
     settingsBtn: $('settings-btn'),
     categoryModal: $('category-modal'),
     categoryModalTitle: $('category-modal-title'),
@@ -121,6 +122,12 @@
   $('cancel-delete-btn').addEventListener('click', function () { DCUI.closeModal(els.deleteModal); });
   $('confirm-delete-btn').addEventListener('click', DCShell.confirmDelete);
   $('close-settings-btn').addEventListener('click', function () { DCUI.closeModal(els.settingsModal); });
+  if (els.railSideSwitch) {
+    els.railSideSwitch.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-side]');
+      if (btn) DCShell.onRailSideChange(btn.dataset.side);
+    });
+  }
   $('open-finder-btn').addEventListener('click', DCShell.openLibraryInFinder);
   $('refresh-library-btn').addEventListener('click', DCShell.refreshActive);
   $('change-path-btn').addEventListener('click', DCShell.changeFolder);
