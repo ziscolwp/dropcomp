@@ -118,6 +118,10 @@ var DCState = (function () {
     return v === 'rows' ? 'rows' : 'columns';
   }
 
+  function normalizeRailSide(v) {
+    return v === 'right' ? 'right' : 'left';
+  }
+
   function migrateFolderLayout(prefs, saved) {
     if (saved && saved.folderLayout !== undefined) {
       prefs.folderLayout = normalizeFolderLayout(saved.folderLayout);
@@ -138,6 +142,7 @@ var DCState = (function () {
       favoritesOnly: false, collapsed: [], activeTab: 'library', collapsedAssets: [],
       viewMode: 'comfortable', viewModeAssets: 'comfortable',
       folderLayout: 'columns', folderLayoutVersion: FOLDER_LAYOUT_VERSION, folderColumns: true,
+      railSide: 'left',
       recentCategories: { library: [], assets: [] } };
   }
 
@@ -286,6 +291,7 @@ var DCState = (function () {
     normalizeViewMode: normalizeViewMode,
     viewClass: viewClass,
     normalizeFolderLayout: normalizeFolderLayout,
+    normalizeRailSide: normalizeRailSide,
     isFolderColumns: isFolderColumns,
     VIEW_MODES: VIEW_MODES
   };
