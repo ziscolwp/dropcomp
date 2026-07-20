@@ -65,6 +65,7 @@
   if (typeof DCScripts !== 'undefined') DCScripts.init();
   if (typeof DCTooltip !== 'undefined') DCTooltip.init();
   if (typeof DCRail !== 'undefined') DCRail.init($('rail-tabs'));
+  if (typeof DCDensity !== 'undefined') DCDensity.init();
 
   $('welcome-browse-btn').addEventListener('click', DCShell.selectLibraryFolder);
   $('retry-library-btn').addEventListener('click', DCShell.verifyAndLoad);

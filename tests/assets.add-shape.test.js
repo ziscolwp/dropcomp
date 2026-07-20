@@ -148,8 +148,9 @@ test('asset toolbar buttons have visible text labels', () => {
   };
   assert.match(buttonMarkup('add-selected-image-btn'), /<span[^>]*>Image<\/span>/, 'Image label visible');
   assert.match(buttonMarkup('add-shape-btn'), /<span[^>]*>Shape<\/span>/, 'Shape label visible');
-  // narrow docked panels collapse back to icon-only (tooltips still explain)
-  assert.match(css, /@media[^{]*max-width[^{]*\{[^]*?#add-shape-btn span\s*\{\s*display:\s*none/,
+  // narrow docked panels collapse back to icon-only (tooltips still explain);
+  // DCDensity sets body.dc-narrow from the panel's real content width
+  assert.match(css, /body\.dc-narrow #add-shape-btn span[^{]*\{\s*display:\s*none/,
     'labels collapse on narrow panels');
 });
 

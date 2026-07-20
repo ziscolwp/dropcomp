@@ -189,9 +189,9 @@ body.mode-tools #header-settings-btn, body.mode-scripts #header-settings-btn { d
   background: var(--gold); cursor: pointer;
 }
 
-#library { flex: 1; overflow-y: auto; padding: 4px 14px 14px; }
-#library::-webkit-scrollbar { width: 8px; }
-#library::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+#library { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 4px 14px 14px; }
+#library::-webkit-scrollbar, #tools::-webkit-scrollbar, #scripts::-webkit-scrollbar { width: 8px; }
+#library::-webkit-scrollbar-thumb, #tools::-webkit-scrollbar-thumb, #scripts::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
 
 .placeholder { text-align: center; color: var(--text-dim); margin-top: 48px; font-size: 13px; padding: 0 20px; }
 
@@ -246,7 +246,9 @@ body.mode-tools #header-settings-btn, body.mode-scripts #header-settings-btn { d
 
 .grid {
   display: grid; gap: 8px;
-  grid-template-columns: repeat(auto-fill, minmax(var(--thumb-min), 1fr));
+  /* min() caps the thumb floor at the container, so a panel narrower than
+     the slider setting reflows to one column instead of scrolling sideways */
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--thumb-min), 100%), 1fr));
 }
 
 .card {
@@ -393,11 +395,9 @@ body.mode-tools #header-settings-btn, body.mode-scripts #header-settings-btn { d
    without hovering; compact padding keeps the row on one line */
 .toolbar-labeled { padding: 8px 10px; flex-shrink: 0; }
 /* narrow docked panels fall back to icon-only (data-tip still explains) */
-@media (max-width: 359px) {
-  #add-selected-image-btn span { display: none; }
-  #add-shape-btn span { display: none; }
-  .toolbar-labeled { width: 32px; padding: 0; }
-}
+body.dc-narrow #add-selected-image-btn span { display: none; }
+body.dc-narrow #add-shape-btn span { display: none; }
+body.dc-narrow .toolbar-labeled { width: 32px; padding: 0; }
 #app.assets-active #add-comp-btn,
 #app.assets-active #add-aep-btn,
 #app.assets-active #relink-btn { display: none; }
@@ -425,12 +425,15 @@ body.mode-tools #header-settings-btn, body.mode-scripts #header-settings-btn { d
 .update-chip:hover { background: var(--gold-hover); }
 
 /* ---- tools tab ---- */
-#tools { display: none; flex: 1; overflow-y: auto; padding: 12px 14px; flex-direction: column; gap: 12px; }
+#tools { display: none; flex: 1; overflow-y: auto; overflow-x: hidden; padding: 12px 14px; flex-direction: column; gap: 12px; }
 #app.tools-active #toolbar, #app.tools-active #library { display: none; }
 #app.tools-active #tools { display: flex; }
 .tool-card { background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 12px; }
-.tool-row { display: flex; gap: 14px; align-items: flex-start; }
+.tool-row { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
 .tool-grow { flex: 1; }
+/* wrap floor: below this the create grid drops under the anchor grid instead
+   of crushing its buttons */
+.tool-row > .tool-grow { min-width: 150px; }
 .tool-label { font-size: 11px; color: var(--text-dim); letter-spacing: .05em; margin-bottom: 6px; }
 .tool-group-label { margin-left: 2px; }
 /* anchor grid reads as an anchor control: a framed 3x3 with an active cell */
@@ -442,7 +445,8 @@ body.mode-tools #header-settings-btn, body.mode-scripts #header-settings-btn { d
 .anchor-cell.on { background: var(--gold-bg); border-color: var(--gold-dim); }
 .anchor-cell.on span { background: var(--gold); width: 5px; height: 5px; }
 .tool-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.tool-btn { background: var(--bg-inset); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; padding: 9px 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.tool-btn { background: var(--bg-inset); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; padding: 9px 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; }
+.tool-btn span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tool-btn:hover { background: var(--bg-hover); border-color: var(--border-strong); }
 .tool-btn svg { width: 15px; height: 15px; color: var(--text-mid); flex: 0 0 auto; }
 .tool-btn:hover svg { color: var(--gold); }
@@ -469,8 +473,8 @@ body.mode-tools #header-settings-btn, body.mode-scripts #header-settings-btn { d
 /* de-golded: neutral icon buttons; gold reserved for hover/active/CTA */
 /* timing modes are 2x2 labeled buttons (.tool-grid-2); icon size follows .tool-btn */
 .time-mode-btns .tool-btn { padding: 8px 6px; }
-.tool-icons { display: flex; align-items: center; gap: 6px; }
-.tool-icon { flex: 1; height: 34px; background: var(--bg-inset); border: 1px solid var(--border); border-radius: 6px; color: var(--text-mid); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+.tool-icons { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tool-icon { flex: 1 0 28px; height: 34px; background: var(--bg-inset); border: 1px solid var(--border); border-radius: 6px; color: var(--text-mid); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
 .tool-icon svg { width: 18px; height: 18px; }
 .tool-icon:hover { background: var(--bg-hover); border-color: var(--border-strong); color: var(--gold); }
 .tool-icon:active { background: var(--gold-bg); border-color: var(--gold-dim); color: var(--gold); }
@@ -480,10 +484,10 @@ body.mode-tools #header-settings-btn, body.mode-scripts #header-settings-btn { d
 #tools.tool-busy { opacity: 0.55; pointer-events: none; }
 
 /* ---- scripts tab ---- */
-#scripts { display: none; flex: 1; overflow-y: auto; padding: 12px 14px; flex-direction: column; gap: 10px; }
+#scripts { display: none; flex: 1; overflow-y: auto; overflow-x: hidden; padding: 12px 14px; flex-direction: column; gap: 10px; }
 #app.scripts-active #toolbar, #app.scripts-active #library { display: none; }
 #app.scripts-active #scripts { display: flex; }
-#scripts-bar { display: flex; gap: 8px; align-items: center; }
+#scripts-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 #script-search { flex: 1; min-width: 60px; background: var(--bg-raised); border: 1px solid transparent; border-radius: var(--radius); color: var(--text); font-size: 12px; padding: 7px 10px; }
 #script-search::placeholder { color: var(--text-dim); }
 #script-search:focus { border-color: var(--gold); }
@@ -627,6 +631,23 @@ body.mode-tools #header-settings-btn, body.mode-scripts #header-settings-btn { d
 #library.view-compact .generate-chip { font-size: 9px; padding: 0 6px; }
 #library.view-compact .thumb-placeholder svg { width: 12px; height: 12px; }
 #library.view-compact .ext-badge { font-size: 9px; padding: 1px 5px; }
+
+/* ---- density (DCDensity sets these from #main's real content width; a
+   viewport media query is 40px wrong whenever the rail is showing) ---- */
+/* narrow: the AE panel tab already names the panel - drop the in-panel title
+   and tighten paddings so content gets the width back */
+body.dc-narrow #app-header { padding: 8px 10px 0; }
+body.dc-narrow .app-name { display: none; }
+body.dc-narrow #toolbar { padding: 8px 10px 10px; }
+body.dc-narrow #library { padding: 4px 10px 10px; }
+body.dc-narrow #tools, body.dc-narrow #scripts { padding: 10px; }
+body.dc-narrow .tool-card { padding: 10px; }
+body.dc-narrow .tool-row { gap: 10px; }
+/* tight: tool buttons go icon-only (data-tip still names every action) and
+   the 2-col grids repack by width, Motion-Tools style */
+body.dc-tight .tool-btn span { display: none; }
+body.dc-tight .tool-btn { padding: 8px 4px; }
+body.dc-tight .tool-grid-2 { grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); }
 
 /* ---- list view ---- */
 #library.view-list .list { display: flex; flex-direction: column; gap: 4px; }
