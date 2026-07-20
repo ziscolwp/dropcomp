@@ -57,6 +57,7 @@ var DCShell = (function () {
     applyGridSize();
     applyFolderColumns();
     applyView();
+    applyRailSide();
   }
 
   // Folder columns is a pure layout class on the shared #library element; it
@@ -71,6 +72,25 @@ var DCShell = (function () {
     ['grid--s', 'grid--m', 'grid--l'].forEach(function (c) {
       els.library.classList.toggle(c, c === cls);
     });
+  }
+
+  // Rail side is a pure layout class on #app; the CSS mirror does the rest.
+  function applyRailSide() {
+    var side = DCState.normalizeRailSide(prefs.railSide);
+    els.app.classList.toggle('rail-right', side === 'right');
+    if (!els.railSideSwitch) return;
+    var btns = els.railSideSwitch.querySelectorAll('[data-side]');
+    for (var i = 0; i < btns.length; i++) {
+      var on = btns[i].getAttribute('data-side') === side;
+      btns[i].classList.toggle('active', on);
+      btns[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+  }
+
+  function onRailSideChange(side) {
+    prefs.railSide = DCState.normalizeRailSide(side);
+    persistPrefs();
+    applyRailSide();
   }
 
   function viewKey() { return prefs.activeTab === 'assets' ? 'viewModeAssets' : 'viewMode'; }
@@ -322,6 +342,7 @@ var DCShell = (function () {
     closeAllModals: closeAllModals,
     onSearch: onSearch, onSortChange: onSortChange, onFavoritesToggle: onFavoritesToggle,
     onDisplayChange: onDisplayChange, onSlider: onSlider, onViewChange: onViewChange,
+    onRailSideChange: onRailSideChange,
     onCardAction: onCardAction, onCardDblClick: onCardDblClick, toggleSection: toggleSection,
     renameCategory: renameCategory,
     renameSection: renameSection, deleteSection: deleteSection
