@@ -643,11 +643,30 @@ body.dc-narrow #library { padding: 4px 10px 10px; }
 body.dc-narrow #tools, body.dc-narrow #scripts { padding: 10px; }
 body.dc-narrow .tool-card { padding: 10px; }
 body.dc-narrow .tool-row { gap: 10px; }
-/* tight: tool buttons go icon-only (data-tip still names every action) and
-   the 2-col grids repack by width, Motion-Tools style */
+/* tight: Motion-Tools density - fixed square icon tiles (data-tip still
+   names every action), compact anchor grid, halved chrome. The goal is a
+   packed control surface, not a stretched one, so tiles keep a fixed size
+   and rows pack left */
+body.dc-tight #app-header { padding: 6px 8px 0; }
+body.dc-tight #tools { padding: 8px; gap: 8px; }
+body.dc-tight .tool-card { padding: 8px; gap: 8px; }
+/* the nested inset frame is double chrome at this size - flatten it */
+body.dc-tight .tool-inset { padding: 0; border: none; background: transparent; gap: 10px; }
+body.dc-tight .tool-row { gap: 8px; }
+/* icon-only create fits beside the anchor far sooner than the labeled grid;
+   94px = two 44px tiles + gap */
+body.dc-tight .tool-row > .tool-grow { min-width: 94px; }
+body.dc-tight .anchor-grid { grid-template-columns: repeat(3, 24px); grid-template-rows: repeat(3, 24px); gap: 3px; padding: 4px; }
 body.dc-tight .tool-btn span { display: none; }
 body.dc-tight .tool-btn { padding: 8px 4px; }
-body.dc-tight .tool-grid-2 { grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); }
+body.dc-tight .tool-grid-2 { grid-template-columns: repeat(auto-fill, 44px); }
+body.dc-tight .tool-hint { display: none; }
+/* fixed tiles packed left - stretching rows read as broken, not adaptive */
+body.dc-tight .tool-icon { flex: 0 0 32px; height: 28px; }
+body.dc-tight .tool-icon svg { width: 16px; height: 16px; }
+body.dc-tight .stepper { height: 26px; }
+body.dc-tight .stepper .tool-num { width: 28px; }
+body.dc-tight .stepper-btn { width: 20px; }
 
 /* ---- list view ---- */
 #library.view-list .list { display: flex; flex-direction: column; gap: 4px; }

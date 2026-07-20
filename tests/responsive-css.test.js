@@ -51,6 +51,28 @@ test('narrow density drops the header title, tight goes icon-only', () => {
   assert.match(css, /body\.dc-narrow #app-header\s*\{[^}]*padding/, 'header padding tightens');
 });
 
+// Field report round 2: tight panels still scrolled forever - the anchor grid
+// kept full-size cells, create tiles stretched, and double paddings + the hint
+// line wasted a screen of vertical space. Pin the Motion-Tools-density pack.
+test('tight panels compress the tools stack', () => {
+  assert.match(css, /body\.dc-tight \.anchor-grid\s*\{[^}]*repeat\(3,\s*24px\)/,
+    'anchor cells shrink at tight');
+  assert.match(css, /body\.dc-tight \.tool-grid-2\s*\{[^}]*repeat\(auto-fill,\s*44px\)/,
+    'icon buttons become fixed square tiles');
+  assert.match(css, /body\.dc-tight \.tool-row\s*>\s*\.tool-grow\s*\{[^}]*min-width:\s*94px/,
+    'create grid sits beside the anchor when two tile columns fit');
+  assert.match(css, /body\.dc-tight \.tool-icon\s*\{[^}]*flex:\s*0 0/,
+    'align tiles stay fixed-size instead of stretching');
+  assert.match(css, /body\.dc-tight \.tool-inset\s*\{[^}]*border:\s*none/,
+    'nested inset frame flattens');
+  assert.match(css, /body\.dc-tight \.tool-hint\s*\{\s*display:\s*none/,
+    'hint line hidden (tooltips still explain)');
+  assert.match(css, /body\.dc-tight #tools\s*\{[^}]*padding:\s*8px/,
+    'section padding halves');
+  assert.match(css, /body\.dc-tight \.tool-card\s*\{[^}]*padding:\s*8px/,
+    'card padding halves');
+});
+
 test('density module is loaded and wired in both panel pages', () => {
   // _harness.html is gitignored (local dev file) - assert on it only when present
   const pages = ['panel/index.html'];
