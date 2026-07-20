@@ -163,7 +163,7 @@ test('reverse builds a reversed cascade anchored at the earliest start, not a ba
   assert.deepEqual(layers.map((layer) => layer.startTime), [3, 2.5, 2]);
 });
 
-test('repeated reverse presses are stable instead of shifting layers further each click', () => {
+test('repeated reverse presses keep flipping the cascade without drifting off the front', () => {
   const layers = [makeLayer(1, 0), makeLayer(2, 0), makeLayer(3, 0)];
   const comp = makeComp({ frameDuration: 0.1, selectedLayers: layers });
   const tools = loadTools({ comp });
@@ -172,9 +172,15 @@ test('repeated reverse presses are stable instead of shifting layers further eac
   const once = layers.map((layer) => layer.startTime);
   tools.tlAdjustTiming('1', '5', 'reverse');
   const twice = layers.map((layer) => layer.startTime);
+  tools.tlAdjustTiming('1', '5', 'reverse');
+  const thrice = layers.map((layer) => layer.startTime);
 
+  // Each press reverses the current order; nothing ever moves earlier than
+  // the group's earliest start (the b7a6834 drift regression stays fixed).
   assert.deepEqual(once, [1, 0.5, 0]);
-  assert.deepEqual(twice, once);
+  assert.deepEqual(twice, [0, 0.5, 1]);
+  assert.deepEqual(thrice, once);
+  assert.ok(Math.min(...once, ...twice, ...thrice) >= 0);
 });
 
 test('sequence then reverse flips the cascade order within the same time span', () => {
@@ -221,6 +227,83 @@ test('reverse on keyframe groups staggers later layers earlier without leaving t
   assert.deepEqual(secondProp.snapshot().map((k) => k.time), [2, 3]);
   // Layer bars themselves must not move when keyframes are the target.
   assert.deepEqual(layers.map((layer) => layer.startTime), [0, 0]);
+});
+
+test('pressing reverse twice on keyframe groups restores the original stagger', () => {
+  const firstProp = makeKeyProp(
+    [
+      { time: 2, value: [10], inType: 'LINEAR', outType: 'LINEAR', selected: true },
+      { time: 3, value: [20], inType: 'LINEAR', outType: 'LINEAR', selected: true },
+    ],
+    1
+  );
+  const secondProp = makeKeyProp(
+    [
+      { time: 2.5, value: [30], inType: 'LINEAR', outType: 'LINEAR', selected: true },
+      { time: 3.5, value: [40], inType: 'LINEAR', outType: 'LINEAR', selected: true },
+    ],
+    2
+  );
+  const layers = [makeLayer(1, 0), makeLayer(2, 0)];
+  const comp = makeComp({
+    frameDuration: 0.1,
+    selectedProperties: [firstProp.prop, secondProp.prop],
+    selectedLayers: layers,
+  });
+  const tools = loadTools({ comp });
+
+  tools.tlAdjustTiming('1', '5', 'reverse');
+  // Layer 1's group (earliest) takes the late slot, layer 2's group anchors.
+  assert.deepEqual(firstProp.snapshot().map((k) => k.time), [2.5, 3.5]);
+  assert.deepEqual(secondProp.snapshot().map((k) => k.time), [2, 3]);
+
+  tools.tlAdjustTiming('1', '5', 'reverse');
+  // Second press reverses the reversed cascade back to the original order.
+  assert.deepEqual(firstProp.snapshot().map((k) => k.time), [2, 3]);
+  assert.deepEqual(secondProp.snapshot().map((k) => k.time), [2.5, 3.5]);
+});
+
+test('reverse moves all properties of a layer group together by the group delta', () => {
+  // Layer 1 has two properties with different first-key times; both must
+  // shift by the same group delta so their relative offset is preserved.
+  const positionProp = makeKeyProp(
+    [
+      { time: 1, value: [10], inType: 'LINEAR', outType: 'LINEAR', selected: true },
+      { time: 2, value: [20], inType: 'LINEAR', outType: 'LINEAR', selected: true },
+    ],
+    1
+  );
+  const opacityProp = makeKeyProp(
+    [{ time: 1.2, value: [50], inType: 'LINEAR', outType: 'LINEAR', selected: true }],
+    1
+  );
+  const otherLayerProp = makeKeyProp(
+    [
+      { time: 2, value: [30], inType: 'LINEAR', outType: 'LINEAR', selected: true },
+      { time: 3, value: [40], inType: 'LINEAR', outType: 'LINEAR', selected: true },
+    ],
+    2
+  );
+  const layers = [makeLayer(1, 0), makeLayer(2, 0)];
+  const comp = makeComp({
+    frameDuration: 0.1,
+    selectedProperties: [positionProp.prop, opacityProp.prop, otherLayerProp.prop],
+    selectedLayers: layers,
+  });
+  const tools = loadTools({ comp });
+
+  tools.tlAdjustTiming('1', '5', 'reverse');
+  // Group firsts: layer 1 at 1, layer 2 at 2. Reversed slots: layer 1 -> 1.5,
+  // layer 2 -> 1. Layer 1 delta +0.5, layer 2 delta -1.
+  assert.deepEqual(positionProp.snapshot().map((k) => k.time), [1.5, 2.5]);
+  assert.deepEqual(opacityProp.snapshot().map((k) => k.time), [1.7]);
+  assert.deepEqual(otherLayerProp.snapshot().map((k) => k.time), [1, 2]);
+
+  tools.tlAdjustTiming('1', '5', 'reverse');
+  // Toggle back: layer 2 (now earliest at 1) takes the late slot again.
+  assert.deepEqual(positionProp.snapshot().map((k) => k.time), [1, 2]);
+  assert.deepEqual(opacityProp.snapshot().map((k) => k.time), [1.2]);
+  assert.deepEqual(otherLayerProp.snapshot().map((k) => k.time), [1.5, 2.5]);
 });
 
 test('reverse on a single property time-reverses its keys anchored at the first key', () => {

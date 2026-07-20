@@ -252,20 +252,15 @@ $.global.tlSequenceKeys = tlSequenceKeys;
 
 // Reverse must not drift the selection earlier in time (that pushed layers
 // off the front of the comp and moved further on every click). It assigns the
-// sequence slots in reverse order, anchored at the group's earliest key time.
+// sequence slots by reversing the CURRENT time order, anchored at the group's
+// earliest key time - so every press flips the cascade instead of no-oping
+// once the reversed-by-index arrangement is reached.
 function tlReverseKeys(keys, step, fd) {
     var unitStep = tlAbs(step) * fd;
-    var i, j, t, g, pr, base, groupFirst, d, deltas, newTimes, sorted, n;
+    var i, j, t, g, pr, base, groupFirst, d, deltas, newTimes, sorted, n, ranked;
     if (keys.order.length >= 2) {
         n = keys.order.length;
-        base = null;
-        for (i = 0; i < n; i++) {
-            g = keys.byIndex[keys.order[i]];
-            for (j = 0; j < g.props.length; j++) {
-                pr = g.props[j];
-                if (base === null || pr.times[0] < base) base = pr.times[0];
-            }
-        }
+        ranked = [];
         for (i = 0; i < n; i++) {
             g = keys.byIndex[keys.order[i]];
             groupFirst = null;
@@ -273,7 +268,16 @@ function tlReverseKeys(keys, step, fd) {
                 pr = g.props[j];
                 if (groupFirst === null || pr.times[0] < groupFirst) groupFirst = pr.times[0];
             }
-            d = base + (n - 1 - i) * unitStep - groupFirst;
+            ranked.push({ group: g, first: groupFirst, layerIndex: keys.order[i] });
+        }
+        ranked.sort(function (a, b) {
+            if (a.first !== b.first) return a.first - b.first;
+            return a.layerIndex - b.layerIndex;
+        });
+        base = ranked[0].first;
+        for (i = 0; i < n; i++) {
+            g = ranked[i].group;
+            d = base + (n - 1 - i) * unitStep - ranked[i].first;
             for (j = 0; j < g.props.length; j++) {
                 pr = g.props[j];
                 deltas = [];
@@ -303,12 +307,15 @@ $.global.tlReverseKeys = tlReverseKeys;
 
 function tlReverseLayers(sel, step, fd) {
     var ordered = sel.slice(0), unitStep = tlAbs(step) * fd;
-    var i, base = null, n;
-    ordered.sort(function (a, b) { return a.index - b.index; });
+    var i, base, n;
+    // rank by current start time (index breaks ties) so a second press
+    // reverses the reversed cascade back instead of recomputing the same slots
+    ordered.sort(function (a, b) {
+        if (a.startTime !== b.startTime) return a.startTime - b.startTime;
+        return a.index - b.index;
+    });
     n = ordered.length;
-    for (i = 0; i < n; i++) {
-        if (base === null || ordered[i].startTime < base) base = ordered[i].startTime;
-    }
+    base = ordered[0].startTime;
     for (i = 0; i < n; i++) ordered[i].startTime = base + (n - 1 - i) * unitStep;
     return { count: n, mode: 'layers' };
 }
